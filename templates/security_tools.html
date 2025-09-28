@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Security Tools - BountyBud{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-tools text-success"></i>
+            Security Tools
+        </h1>
+        <p class="lead text-muted mb-4">
+            A curated collection of essential tools for bug bounty hunting and security research.
+        </p>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="filter-section mb-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" class="form-control" id="searchTools" placeholder="Search Tools...">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" id="categoryFilter">
+                <option value="all">All Categories</option>
+                <option value="Reconnaissance">Reconnaissance</option>
+                <option value="Vulnerability Scanning">Vulnerability Scanning</option>
+                <option value="Exploitation">Exploitation</option>
+                <option value="Reporting">Reporting</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Tools Grid -->
+<div id="toolsGrid">
+    <!-- Subfinder -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Subfinder</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Fast passive subdomain enumeration tool that discovers valid subdomains for websites by using passive online sources.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">subdomain</span>
+            <span class="badge bg-primary me-1">passive</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('subfinder-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="subfinder-install">GO111MODULE=on go get -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder</pre>
+            </div>
+        </div>
+        <a href="https://github.com/projectdiscovery/subfinder" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Amass -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Amass</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            In-depth attack surface mapping and asset discovery tool that performs network mapping of attack surfaces and external asset discovery.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">subdomain</span>
+            <span class="badge bg-primary me-1">active</span>
+            <span class="badge bg-primary me-1">passive</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('amass-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="amass-install">go install -v github.com/OWASP/Amass/v3/...</pre>
+            </div>
+        </div>
+        <a href="https://github.com/OWASP/Amass" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Gobuster -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Gobuster</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Directory/file, DNS and Virtual Host busting tool written in Go that can be used to brute-force URIs, DNS subdomains, and virtual host names.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">directory</span>
+            <span class="badge bg-primary me-1">dns</span>
+            <span class="badge bg-primary me-1">vhost</span>
+            <span class="badge bg-primary me-1">brute-force</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('gobuster-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="gobuster-install">go install github.com/OJ/gobuster/v3@latest</pre>
+            </div>
+        </div>
+        <a href="https://github.com/OJ/gobuster" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Feroxbuster -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Feroxbuster</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Rust</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            A fast, simple, recursive content discovery tool written in Rust designed to search for unlinked content in target directories.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">directory</span>
+            <span class="badge bg-primary me-1">recursive</span>
+            <span class="badge bg-primary me-1">content-discovery</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('feroxbuster-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="feroxbuster-install">curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | bash</pre>
+            </div>
+        </div>
+        <a href="https://github.com/epi052/feroxbuster" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Nuclei -->
+    <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Nuclei</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Fast and customizable vulnerability scanner based on simple YAML-based template files for describing vulnerabilities.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">template</span>
+            <span class="badge bg-primary me-1">scanner</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('nuclei-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="nuclei-install">GO111MODULE=on go get -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei</pre>
+            </div>
+        </div>
+        <a href="https://github.com/projectdiscovery/nuclei" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Nmap -->
+    <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Nmap</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">C/C++</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            The Network Mapper, a free and open source utility for network discovery and security auditing.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">network</span>
+            <span class="badge bg-primary me-1">scanner</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('nmap-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="nmap-install">apt-get install nmap</pre>
+            </div>
+        </div>
+        <a href="https://nmap.org/" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- SQLMap -->
+    <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">SQLMap</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Automatic SQL injection and database takeover tool that detects and exploits SQL injection flaws.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">sql-injection</span>
+            <span class="badge bg-primary me-1">database</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('sqlmap-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="sqlmap-install">git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev</pre>
+            </div>
+        </div>
+        <a href="https://github.com/sqlmapproject/sqlmap" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Metasploit Framework -->
+    <div class="tool-item" data-category="Exploitation">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Metasploit Framework</h4>
+            <div>
+                <span class="badge bg-danger">Exploitation</span>
+                <span class="badge bg-secondary">Ruby</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            A penetration testing framework that provides information and tools for exploit development and research.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">exploit</span>
+            <span class="badge bg-primary me-1">framework</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('metasploit-install')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="metasploit-install">curl https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb > msfinstall && chmod 755 msfinstall && ./msfinstall</pre>
+            </div>
+        </div>
+        <a href="https://github.com/rapid7/metasploit-framework" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Burp Suite -->
+    <div class="tool-item" data-category="Exploitation">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Burp Suite</h4>
+            <div>
+                <span class="badge bg-danger">Exploitation</span>
+                <span class="badge bg-secondary">Java</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            An integrated platform for performing security testing of web applications.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">proxy</span>
+            <span class="badge bg-primary me-1">web</span>
+        </div>
+        <div class="mb-3">
+            <p class="small text-muted">Commercial tool - download from official website</p>
+        </div>
+        <a href="https://portswigger.net/burp" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+</div>
+
+<!-- No results message -->
+<div id="noResults" class="text-center py-5" style="display: none;">
+    <i class="bi bi-search display-1 text-muted"></i>
+    <h4 class="mt-3">No tools found</h4>
+    <p class="text-muted">Try adjusting your search or filter criteria.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search functionality
+document.getElementById('searchTools').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    filterTools();
+});
+
+// Category filter
+document.getElementById('categoryFilter').addEventListener('change', function() {
+    filterTools();
+});
+
+function filterTools() {
+    const searchTerm = document.getElementById('searchTools').value.toLowerCase();
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    const toolItems = document.querySelectorAll('.tool-item');
+    let visibleCount = 0;
+    
+    toolItems.forEach(item => {
+        const toolName = item.querySelector('h4').textContent.toLowerCase();
+        const toolDescription = item.querySelector('p').textContent.toLowerCase();
+        const toolCategory = item.dataset.category;
+        const toolTags = Array.from(item.querySelectorAll('.badge')).map(badge => badge.textContent.toLowerCase()).join(' ');
+        
+        const matchesSearch = toolName.includes(searchTerm) || 
+                            toolDescription.includes(searchTerm) || 
+                            toolTags.includes(searchTerm);
+        
+        const matchesCategory = selectedCategory === 'all' || toolCategory === selectedCategory;
+        
+        if (matchesSearch && matchesCategory) {
+            item.style.display = 'block';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Show/hide no results message
+    document.getElementById('noResults').style.display = visibleCount === 0 ? 'block' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}Documentation & Guides - BountyBud{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-book text-info"></i>
+            Documentation & Guides
+        </h1>
+        <p class="lead text-muted mb-4">
+            Access comprehensive guides and documentation to help you make the most of security tools and optimize your testing workflow.
+        </p>
+    </div>
+</div>
+
+<!-- Quick Navigation -->
+<div class="filter-section mb-4">
+    <h4 class="mb-3">Quick Navigation</h4>
+    <div class="row">
+        <div class="col-md-3">
+            <a href="#getting-started" class="btn btn-outline-primary w-100 mb-2">
+                <i class="bi bi-play-circle"></i> Getting Started
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="#methodology" class="btn btn-outline-primary w-100 mb-2">
+                <i class="bi bi-list-check"></i> Methodology
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="#tools-guides" class="btn btn-outline-primary w-100 mb-2">
+                <i class="bi bi-tools"></i> Tool Guides
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="#practice" class="btn btn-outline-primary w-100 mb-2">
+                <i class="bi bi-target"></i> Practice Labs
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Getting Started Section -->
+<section id="getting-started" class="mb-5">
+    <h2 class="mb-4">
+        <i class="bi bi-play-circle text-primary"></i>
+        Getting Started with Bug Bounty Hunting
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="filter-section h-100">
+                <h4>
+                    <i class="bi bi-1-circle text-primary"></i>
+                    Bug Bounty Fundamentals
+                </h4>
+                <p class="text-muted">Learn the basics of bug bounty hunting, including:</p>
+                <ul>
+                    <li>Understanding vulnerability types</li>
+                    <li>Setting up your testing environment</li>
+                    <li>Legal considerations and responsible disclosure</li>
+                    <li>Choosing the right bug bounty platforms</li>
+                    <li>Building your initial toolkit</li>
+                </ul>
+                <a href="#" class="btn btn-outline-primary btn-sm">
+                    Read Full Guide →
+                </a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="filter-section h-100">
+                <h4>
+                    <i class="bi bi-2-circle text-primary"></i>
+                    Setting Up Your Lab Environment
+                </h4>
+                <p class="text-muted">Configure your testing environment:</p>
+                <ul>
+                    <li>Virtual machine setup (Kali Linux, Parrot OS)</li>
+                    <li>Essential tools installation</li>
+                    <li>Browser configuration for security testing</li>
+                    <li>VPN and proxy setup</li>
+                    <li>Note-taking and documentation tools</li>
+                </ul>
+                <a href="#" class="btn btn-outline-primary btn-sm">
+                    Setup Guide →
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Methodology Section -->
+<section id="methodology" class="mb-5">
+    <h2 class="mb-4">
+        <i class="bi bi-list-check text-warning"></i>
+        Security Testing Methodology
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="filter-section h-100">
+                <h4>
+                    <i class="bi bi-search text-info"></i>
+                    Reconnaissance Phase
+                </h4>
+                <h6>Passive Reconnaissance</h6>
+                <ul class="small">
+                    <li>Subdomain enumeration</li>
+                    <li>DNS information gathering</li>
+                    <li>WHOIS and ASN discovery</li>
+                    <li>Social media and public information</li>
+                    <li>Google dorking techniques</li>
+                </ul>
+                <h6>Active Reconnaissance</h6>
+                <ul class="small">
+                    <li>Port scanning and service detection</li>
+                    <li>Technology stack identification</li>
+                    <li>Directory and file discovery</li>
+                    <li>Parameter fuzzing</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="filter-section h-100">
+                <h4>
+                    <i class="bi bi-shield-exclamation text-warning"></i>
+                    Vulnerability Assessment
+                </h4>
+                <h6>Common Vulnerability Types</h6>
+                <ul class="small">
+                    <li>XSS (Reflected, Stored, DOM)</li>
+                    <li>SQL Injection</li>
+                    <li>CSRF and SSRF</li>
+                    <li>Authentication bypass</li>
+                    <li>Authorization flaws</li>
+                    <li>Business logic vulnerabilities</li>
+                </ul>
+                <h6>Testing Approaches</h6>
+                <ul class="small">
+                    <li>Manual testing techniques</li>
+                    <li>Automated scanning</li>
+                    <li>Code review methods</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="filter-section h-100">
+                <h4>
+                    <i class="bi bi-file-earmark-text text-success"></i>
+                    Documentation & Reporting
+                </h4>
+                <h6>Effective Bug Reports</h6>
+                <ul class="small">
+                    <li>Clear vulnerability description</li>
+                    <li>Step-by-step reproduction</li>
+                    <li>Proof of concept (PoC)</li>
+                    <li>Impact assessment</li>
+                    <li>Remediation suggestions</li>
+                </ul>
+                <h6>Documentation Tools</h6>
+                <ul class="small">
+                    <li>Screenshot and video recording</li>
+                    <li>Markdown report templates</li>
+                    <li>Evidence organization</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tool Guides Section -->
+<section id="tools-guides" class="mb-5">
+    <h2 class="mb-4">
+        <i class="bi bi-tools text-success"></i>
+        Security Tool Guides
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="filter-section">
+                <h4>
+                    <i class="bi bi-terminal"></i>
+                    Command Line Tools
+                </h4>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Subfinder Deep Dive</strong>
+                        <p class="mb-1 small text-muted">Complete guide to subdomain enumeration with Subfinder</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Nuclei Templates Mastery</strong>
+                        <p class="mb-1 small text-muted">Creating and customizing Nuclei templates for vulnerability scanning</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Gobuster Techniques</strong>
+                        <p class="mb-1 small text-muted">Advanced directory and file discovery with Gobuster</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Directory Scanning Wordlist Guide</strong>
+                        <p class="mb-1 small text-muted">Learn how to choose the right wordlists from SecLists</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="filter-section">
+                <h4>
+                    <i class="bi bi-window"></i>
+                    GUI Applications
+                </h4>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Burp Suite Cheatsheet</strong>
+                        <p class="mb-1 small text-muted">Essential Burp Suite features and shortcuts for web testing</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>OWASP ZAP Configuration</strong>
+                        <p class="mb-1 small text-muted">Setting up and configuring OWASP ZAP for automated scanning</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Browser Extensions for Security Testing</strong>
+                        <p class="mb-1 small text-muted">Essential browser extensions for bug bounty hunters</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Practice Labs Section -->
+<section id="practice" class="mb-5">
+    <h2 class="mb-4">
+        <i class="bi bi-target text-danger"></i>
+        Practice Labs & Challenges
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="filter-section">
+                <h4>
+                    <i class="bi bi-trophy text-warning"></i>
+                    Beginner Labs
+                </h4>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>OWASP Juice Shop Guide</strong>
+                        <p class="mb-1 small text-muted">Complete walkthrough of OWASP Juice Shop challenges</p>
+                        <span class="badge bg-success">Beginner</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>DVWA Tutorial Series</strong>
+                        <p class="mb-1 small text-muted">Damn Vulnerable Web Application practice guide</p>
+                        <span class="badge bg-success">Beginner</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>WebGoat Lessons</strong>
+                        <p class="mb-1 small text-muted">Interactive security lessons with WebGoat</p>
+                        <span class="badge bg-success">Beginner</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="filter-section">
+                <h4>
+                    <i class="bi bi-award text-primary"></i>
+                    Intermediate Labs
+                </h4>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>PortSwigger Web Security Academy</strong>
+                        <p class="mb-1 small text-muted">Advanced web security labs and challenges</p>
+                        <span class="badge bg-primary">Intermediate</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>HackTheBox Web Challenges</strong>
+                        <p class="mb-1 small text-muted">Real-world web application challenges</p>
+                        <span class="badge bg-primary">Intermediate</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>PentesterLab Exercises</strong>
+                        <p class="mb-1 small text-muted">Hands-on penetration testing exercises</p>
+                        <span class="badge bg-primary">Intermediate</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="filter-section">
+                <h4>
+                    <i class="bi bi-star text-danger"></i>
+                    Advanced Labs
+                </h4>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Advanced Persistent XSS</strong>
+                        <p class="mb-1 small text-muted">Complex XSS scenarios and bypass techniques</p>
+                        <span class="badge bg-danger">Advanced</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>API Security Testing</strong>
+                        <p class="mb-1 small text-muted">Modern API vulnerability assessment</p>
+                        <span class="badge bg-danger">Advanced</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <strong>Cloud Security Challenges</strong>
+                        <p class="mb-1 small text-muted">AWS, Azure, and GCP security testing</p>
+                        <span class="badge bg-danger">Advanced</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- OWASP Top 10 Reference -->
+<section class="mb-5">
+    <h2 class="mb-4">
+        <i class="bi bi-shield-check text-warning"></i>
+        OWASP Top 10 Guide
+    </h2>
+    
+    <div class="filter-section">
+        <p class="text-muted mb-4">
+            Understanding the OWASP Top 10 is crucial for any security professional. Here's our comprehensive guide covering each vulnerability category with practical examples and testing approaches.
+        </p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Top 10 Web Application Security Risks</h5>
+                <ol class="list-group list-group-numbered list-group-flush">
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Broken Access Control</strong>
+                        <p class="mb-0 small text-muted">Restrictions on what authenticated users are allowed to do are often not properly enforced.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Cryptographic Failures</strong>
+                        <p class="mb-0 small text-muted">Failures related to cryptography which often leads to sensitive data exposure.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Injection</strong>
+                        <p class="mb-0 small text-muted">User-supplied data is not validated, filtered, or sanitized by the application.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Insecure Design</strong>
+                        <p class="mb-0 small text-muted">Risks related to design flaws and architectural vulnerabilities.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Security Misconfiguration</strong>
+                        <p class="mb-0 small text-muted">Missing appropriate security hardening across any part of the application stack.</p>
+                    </li>
+                </ol>
+            </div>
+            <div class="col-md-6">
+                <ol class="list-group list-group-numbered list-group-flush" start="6">
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Vulnerable and Outdated Components</strong>
+                        <p class="mb-0 small text-muted">Components with known vulnerabilities that may undermine application defenses.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Identification and Authentication Failures</strong>
+                        <p class="mb-0 small text-muted">Confirmation of the user's identity, authentication, and session management.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Software and Data Integrity Failures</strong>
+                        <p class="mb-0 small text-muted">Code and infrastructure that does not protect against integrity violations.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Security Logging and Monitoring Failures</strong>
+                        <p class="mb-0 small text-muted">Insufficient logging, detection, monitoring, and active response.</p>
+                    </li>
+                    <li class="list-group-item bg-transparent border-secondary">
+                        <strong>Server-Side Request Forgery</strong>
+                        <p class="mb-0 small text-muted">SSRF flaws occur when a web application fetches a remote resource without validating the user-supplied URL.</p>
+                    </li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="#" class="btn btn-primary">
+                <i class="bi bi-book"></i> Read Complete OWASP Top 10 Guide
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Additional Resources -->
+<section>
+    <h2 class="mb-4">
+        <i class="bi bi-link-45deg text-info"></i>
+        Additional Resources
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="filter-section">
+                <h5>Community & Forums</h5>
+                <ul>
+                    <li><a href="#" class="text-decoration-none">Bug Bounty Forum</a></li>
+                    <li><a href="#" class="text-decoration-none">OWASP Community</a></li>
+                    <li><a href="#" class="text-decoration-none">InfoSec Twitter Community</a></li>
+                    <li><a href="#" class="text-decoration-none">Reddit r/bugbounty</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="filter-section">
+                <h5>Podcasts & Videos</h5>
+                <ul>
+                    <li><a href="#" class="text-decoration-none">Critical Thinking Podcast</a></li>
+                    <li><a href="#" class="text-decoration-none">The Bug Bounty Podcast</a></li>
+                    <li><a href="#" class="text-decoration-none">LiveOverflow YouTube Channel</a></li>
+                    <li><a href="#" class="text-decoration-none">STÖK YouTube Channel</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="filter-section">
+                <h5>Books & Reading</h5>
+                <ul>
+                    <li><a href="#" class="text-decoration-none">Web Application Hacker's Handbook</a></li>
+                    <li><a href="#" class="text-decoration-none">Bug Bounty Bootcamp</a></li>
+                    <li><a href="#" class="text-decoration-none">Real-World Bug Hunting</a></li>
+                    <li><a href="#" class="text-decoration-none">OWASP Testing Guide</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Smooth scrolling for navigation
+document.addEventListener('DOMContentLoaded', function() {
+    const navLinks = document.querySelectorAll('a[href^="#"]');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+});
+
+// Placeholder for future guide content loading
+function loadGuideContent(guideId) {
+    showToast(`Loading ${guideId} content...`, 'info');
+    // TODO: Implement dynamic content loading
+}
+</script>
+{% endblock %}

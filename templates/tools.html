@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Command Generation - BountyBud{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-terminal text-primary"></i>
+            Command Generation Tool
+        </h1>
+        <p class="lead text-muted mb-4">
+            Generate commands for various security testing tools. Simply enter a domain and select the tool category you want to use.
+        </p>
+    </div>
+</div>
+
+<!-- Documentation Resources -->
+<div class="alert alert-info">
+    <h5 class="alert-heading">
+        <i class="bi bi-book"></i> Documentation Resources
+    </h5>
+    <p>Check out our in-depth guides to enhance your security testing:</p>
+    <ul class="mb-0">
+        <li><a href="{{ url_for('docs') }}" class="alert-link">Directory Scanning Wordlist Guide</a> - Learn how to choose the right wordlists from SecLists</li>
+        <li><a href="{{ url_for('docs') }}" class="alert-link">Browse All Documentation</a></li>
+    </ul>
+</div>
+
+<!-- Target Domain Section -->
+<div class="quick-start mb-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h3 class="mb-3">Target Domain</h3>
+            <div class="d-flex gap-2 mb-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="showHistory()">
+                    <i class="bi bi-clock-history"></i> Show History
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="showPreferences()">
+                    <i class="bi bi-gear"></i> Preferences
+                </button>
+            </div>
+            <input type="text" 
+                   class="form-control form-control-lg" 
+                   id="targetDomain" 
+                   placeholder="Enter domain for testing (e.g., example.com)" 
+                   required>
+        </div>
+        <div class="col-md-4">
+            <h3 class="mb-3">&nbsp;</h3>
+            <button class="btn btn-primary btn-lg w-100" onclick="generateCommands()">
+                <i class="bi bi-play-fill"></i> Generate Commands
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Categories Section -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <h4 class="mb-3">Categories</h4>
+        <div class="list-group" id="categoryList">
+            <button class="list-group-item list-group-item-action active" data-category="subdomain">
+                <i class="bi bi-diagram-3"></i> Subdomain Enumeration
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="url">
+                <i class="bi bi-link-45deg"></i> URL Collection
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="directory">
+                <i class="bi bi-folder"></i> Directory Scanning
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="sensitive">
+                <i class="bi bi-eye-slash"></i> Sensitive Data Discovery
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="lfi">
+                <i class="bi bi-file-earmark-text"></i> LFI Testing
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="cors">
+                <i class="bi bi-globe"></i> CORS Testing
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="wordpress">
+                <i class="bi bi-wordpress"></i> WordPress Scanning
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="network">
+                <i class="bi bi-router"></i> Network Scanning
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="service">
+                <i class="bi bi-hdd-network"></i> Service Enumeration
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="parameter">
+                <i class="bi bi-sliders"></i> Parameter Discovery
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="javascript">
+                <i class="bi bi-braces"></i> JavaScript Analysis
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="api">
+                <i class="bi bi-code-square"></i> API Security Testing
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="mobile">
+                <i class="bi bi-phone"></i> Mobile App Security Testing
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="cloud">
+                <i class="bi bi-cloud"></i> Cloud Security Testing
+            </button>
+            <button class="list-group-item list-group-item-action" data-category="vuln">
+                <i class="bi bi-shield-exclamation"></i> Vulnerability Assessment
+            </button>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <h4 class="mb-3">Commands</h4>
+        <div id="commandSection">
+            <!-- Subdomain Enumeration Commands (Default) -->
+            <div class="tool-category active" id="subdomain-commands">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="tool-item">
+                            <h5>Basic Subdomain Discovery</h5>
+                            <p class="text-muted small">Discovers subdomains using subfinder with recursive enumeration and saves results to a file.</p>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="generateCommand('subfinder')">
+                                    <i class="bi bi-play-fill"></i> Generate Command
+                                </button>
+                                <a href="https://github.com/projectdiscovery/subfinder" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                    Tool Documentation →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="tool-item">
+                            <h5>Live Subdomain Filtering (Polite)</h5>
+                            <p class="text-muted small">Filters live subdomains using httpx with polite scanning parameters.</p>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="generateCommand('httpx')">
+                                    <i class="bi bi-play-fill"></i> Generate Command
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="tool-item">
+                            <h5>Amass Subdomain Enumeration</h5>
+                            <p class="text-muted small">Comprehensive subdomain enumeration using Amass with passive sources.</p>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="generateCommand('amass')">
+                                    <i class="bi bi-play-fill"></i> Generate Command
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="tool-item">
+                            <h5>DNSGen Wordlist Generation</h5>
+                            <p class="text-muted small">Generate additional subdomains using dnsgen for wordlist-based discovery.</p>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="generateCommand('dnsgen')">
+                                    <i class="bi bi-play-fill"></i> Generate Command
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Command Output -->
+        <div id="commandOutput" class="mt-4" style="display: none;">
+            <h5>Generated Command:</h5>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('generatedCommand')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <pre id="generatedCommand"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disclaimer -->
+<div class="alert alert-warning mt-4">
+    <h5 class="alert-heading">
+        <i class="bi bi-exclamation-triangle"></i> Important Disclaimer & Ethical Scanning
+    </h5>
+    <p>These commands are provided for educational purposes only. Always ensure you have proper authorization before testing any domain. Unauthorized security testing may be illegal and unethical.</p>
+    <hr>
+    <div class="row">
+        <div class="col-md-6">
+            <h6>🌱 Polite Scanning Approach</h6>
+            <p class="small mb-0">All commands have been optimized for "polite" scanning with reduced thread counts, rate limiting, and stealth options to minimize impact on target systems.</p>
+        </div>
+        <div class="col-md-6">
+            <h6>This approach helps avoid:</h6>
+            <ul class="small mb-0">
+                <li>Overwhelming target servers with excessive requests</li>
+                <li>Triggering security alerts or WAF blocks</li>
+                <li>Causing service disruption or downtime</li>
+                <li>Being detected as malicious activity</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Command generation logic
+function generateCommand(tool) {
+    const domain = document.getElementById('targetDomain').value.trim();
+    if (!domain) {
+        showToast('Please enter a domain first', 'warning');
+        return;
+    }
+    
+    if (!validateDomain(domain)) {
+        showToast('Please enter a valid domain', 'warning');
+        return;
+    }
+    
+    let command = '';
+    
+    switch(tool) {
+        case 'subfinder':
+            command = `# Basic Subdomain Discovery for ${domain}
+subfinder -d ${domain} -all -recursive -o ${domain}_subdomains.txt
+echo "Subdomains saved to ${domain}_subdomains.txt"`;
+            break;
+        case 'httpx':
+            command = `# Live Subdomain Filtering for ${domain}
+httpx -l ${domain}_subdomains.txt -threads 10 -rate-limit 100 -timeout 10 -o ${domain}_live_subdomains.txt
+echo "Live subdomains saved to ${domain}_live_subdomains.txt"`;
+            break;
+        case 'amass':
+            command = `# Amass Subdomain Enumeration for ${domain}
+amass enum -passive -d ${domain} -o ${domain}_amass_subdomains.txt
+echo "Amass results saved to ${domain}_amass_subdomains.txt"`;
+            break;
+        case 'dnsgen':
+            command = `# DNSGen Wordlist Generation for ${domain}
+cat ${domain}_subdomains.txt | dnsgen - | head -10000 > ${domain}_dnsgen_wordlist.txt
+subfinder -dL ${domain}_dnsgen_wordlist.txt -o ${domain}_dnsgen_results.txt
+echo "DNSGen results saved to ${domain}_dnsgen_results.txt"`;
+            break;
+        default:
+            command = `# Command for ${tool} on ${domain}
+echo "Command generation for ${tool} coming soon"`;
+    }
+    
+    document.getElementById('generatedCommand').textContent = command;
+    document.getElementById('commandOutput').style.display = 'block';
+    document.getElementById('commandOutput').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Category switching
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryButtons = document.querySelectorAll('#categoryList .list-group-item');
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Update command section based on category
+            const category = this.dataset.category;
+            updateCommandSection(category);
+        });
+    });
+});
+
+function updateCommandSection(category) {
+    // For now, show placeholder for other categories
+    const commandSection = document.getElementById('commandSection');
+    if (category !== 'subdomain') {
+        commandSection.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-hammer display-1 text-muted"></i>
+                <h4 class="mt-3">Coming Soon</h4>
+                <p class="text-muted">Commands for ${category} category are being developed.</p>
+            </div>
+        `;
+    } else {
+        // Reload subdomain commands
+        location.reload();
+    }
+}
+
+function showHistory() {
+    showToast('Command history feature coming soon', 'info');
+}
+
+function showPreferences() {
+    showToast('Preferences feature coming soon', 'info');
+}
+
+function generateCommands() {
+    const domain = document.getElementById('targetDomain').value.trim();
+    if (!domain) {
+        showToast('Please enter a domain first', 'warning');
+        return;
+    }
+    generateCommand('subfinder');
+}
+</script>
+{% endblock %}
