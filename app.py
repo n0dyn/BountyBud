@@ -5,6 +5,14 @@ import os
 app = Flask(__name__)
 app.secret_key = os.getenv('SESSION_SECRET', 'dev-secret-key-please-change')
 
+# Add cache control headers to prevent caching issues in deployment
+@app.after_request
+def after_request(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -143,4 +151,6 @@ def get_xss_payloads():
         return jsonify({'error': 'Failed to load XSS payloads'}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Development server configuration
+    debug_mode = os.getenv('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
