@@ -4,74 +4,175 @@
     "tools": [
       {
         "id": "subfinder",
-        "name": "Basic Subdomain Discovery",
-        "description": "Discovers subdomains using subfinder with recursive enumeration and saves results to a file.",
-        "command": "subfinder -d {domain} -all -recursive -t 20 -o {domain}_subdomains.txt\necho \"Subdomains saved to {domain}_subdomains.txt\"",
-        "docs_url": "https://github.com/projectdiscovery/subfinder"
+        "name": "Subfinder - Fast Passive Discovery",
+        "description": "Discovers subdomains using passive sources with high-speed enumeration and multiple data sources.",
+        "command": "subfinder -d {domain} -all -recursive -t 50 -o {domain}_subfinder.txt\necho \"[+] Subfinder: $(wc -l < {domain}_subfinder.txt) subdomains found\"",
+        "docs_url": "https://github.com/projectdiscovery/subfinder",
+        "category": "passive",
+        "features": ["Passive enumeration", "Multiple sources", "Fast execution"]
       },
       {
-        "id": "httpx",
-        "name": "Live Subdomain Filtering",
-        "description": "Filters live subdomains using httpx with polite scanning parameters.",
-        "command": "httpx -l {domain}_subdomains.txt -threads 10 -rate-limit 100 -timeout 10 -o {domain}_live_subdomains.txt\necho \"Live subdomains saved to {domain}_live_subdomains.txt\""
+        "id": "httpx-probe",
+        "name": "HTTPx - Live Host Verification",
+        "description": "Probes HTTP/HTTPS services on discovered subdomains with technology detection.",
+        "command": "httpx -l {domain}_subfinder.txt -threads 50 -rate-limit 150 -timeout 10 -title -tech-detect -status-code -o {domain}_live_hosts.txt\necho \"[+] HTTPx: $(wc -l < {domain}_live_hosts.txt) live hosts found\"",
+        "docs_url": "https://github.com/projectdiscovery/httpx",
+        "category": "active",
+        "features": ["HTTP probing", "Technology detection", "Status code analysis"]
       },
       {
-        "id": "amass",
-        "name": "Amass Subdomain Enumeration",
-        "description": "Comprehensive subdomain enumeration using Amass with passive sources.",
-        "command": "amass enum -passive -d {domain} -config /opt/amass/config.ini -o {domain}_amass_subdomains.txt\necho \"Amass results saved to {domain}_amass_subdomains.txt\""
+        "id": "amass-intel",
+        "name": "Amass - Intelligence Gathering",
+        "description": "Comprehensive OSINT-based subdomain enumeration with ASN and reverse whois lookups.",
+        "command": "amass intel -d {domain} -whois -o {domain}_intel.txt\namass enum -passive -d {domain} -o {domain}_amass.txt\necho \"[+] Amass: $(wc -l < {domain}_amass.txt) subdomains discovered\"",
+        "docs_url": "https://github.com/OWASP/Amass",
+        "category": "intelligence",
+        "features": ["OSINT collection", "ASN enumeration", "Reverse whois"]
       },
       {
-        "id": "dnsgen",
-        "name": "DNSGen Wordlist Generation",
-        "description": "Generate additional subdomains using dnsgen for wordlist-based discovery.",
-        "command": "cat {domain}_subdomains.txt | dnsgen - | head -10000 > {domain}_dnsgen_wordlist.txt\nsubfinder -dL {domain}_dnsgen_wordlist.txt -o {domain}_dnsgen_results.txt\necho \"DNSGen results saved to {domain}_dnsgen_results.txt\""
+        "id": "dnsgen-mutate",
+        "name": "DNSGen - Subdomain Mutation",
+        "description": "Generates potential subdomains using permutation patterns and wordlist-based mutations.",
+        "command": "cat {domain}_subfinder.txt | dnsgen - | head -20000 > {domain}_mutations.txt\nsubfinder -dL {domain}_mutations.txt -o {domain}_resolved_mutations.txt\necho \"[+] DNSGen: $(wc -l < {domain}_resolved_mutations.txt) new subdomains via mutation\"",
+        "docs_url": "https://github.com/ProjectAnte/dnsgen",
+        "category": "active",
+        "features": ["Subdomain mutation", "Pattern generation", "Wordlist expansion"]
+      },
+      {
+        "id": "assetfinder",
+        "name": "Assetfinder - Rapid Asset Discovery",
+        "description": "Lightweight subdomain discovery tool that focuses on speed and minimal configuration.",
+        "command": "assetfinder --subs-only {domain} > {domain}_assetfinder.txt\necho \"[+] Assetfinder: $(wc -l < {domain}_assetfinder.txt) assets discovered\"",
+        "docs_url": "https://github.com/tomnomnom/assetfinder",
+        "category": "passive",
+        "features": ["Minimal setup", "Fast execution", "Certificate transparency"]
+      },
+      {
+        "id": "chaos",
+        "name": "Chaos - ProjectDiscovery Dataset",
+        "description": "Queries ProjectDiscovery's Chaos dataset for previously discovered subdomains.",
+        "command": "chaos -d {domain} -key YOUR_CHAOS_API_KEY -o {domain}_chaos.txt\necho \"[+] Chaos: $(wc -l < {domain}_chaos.txt) subdomains from dataset\"",
+        "docs_url": "https://github.com/projectdiscovery/chaos-client",
+        "category": "passive",
+        "features": ["Curated dataset", "High-quality results", "API-based"]
       }
     ]
   },
   "url": {
-    "name": "URL Collection",
+    "name": "URL Collection & Web Crawling",
     "tools": [
       {
         "id": "gau",
-        "name": "GetAllUrls (GAU)",
-        "description": "Fetches known URLs from Wayback Machine, Common Crawl, and AlienVault OTX.",
-        "command": "gau {domain} | head -10000 > {domain}_urls.txt\necho \"URLs saved to {domain}_urls.txt\""
+        "name": "GetAllUrls (GAU) - Archive Mining",
+        "description": "Fetches known URLs from Wayback Machine, Common Crawl, and AlienVault OTX for comprehensive historical coverage.",
+        "command": "gau {domain} | head -15000 | sort -u > {domain}_gau_urls.txt\necho \"[+] GAU: $(wc -l < {domain}_gau_urls.txt) unique URLs discovered\"",
+        "docs_url": "https://github.com/lc/gau",
+        "category": "archive",
+        "features": ["Archive mining", "Multiple sources", "Historical data"]
       },
       {
         "id": "waybackurls",
-        "name": "Wayback URLs",
-        "description": "Fetch URLs from the Wayback Machine for a domain.",
-        "command": "waybackurls {domain} | head -5000 > {domain}_wayback_urls.txt\necho \"Wayback URLs saved to {domain}_wayback_urls.txt\""
+        "name": "Wayback URLs - Internet Archive",
+        "description": "Specialized tool for extracting URLs from the Wayback Machine with date filtering capabilities.",
+        "command": "waybackurls {domain} | head -10000 | sort -u > {domain}_wayback.txt\necho \"[+] Wayback: $(wc -l < {domain}_wayback.txt) historical URLs found\"",
+        "docs_url": "https://github.com/tomnomnom/waybackurls",
+        "category": "archive",
+        "features": ["Wayback Machine", "Date filtering", "Clean output"]
       },
       {
         "id": "hakrawler",
-        "name": "Hakrawler",
-        "description": "Web crawler designed for gathering URLs and JavaScript file locations.",
-        "command": "echo {domain} | hakrawler -depth 2 -plain -usewayback > {domain}_crawled_urls.txt\necho \"Crawled URLs saved to {domain}_crawled_urls.txt\""
+        "name": "Hakrawler - Live Web Crawling",
+        "description": "Fast web crawler that discovers URLs, forms, and JavaScript files by actively crawling live sites.",
+        "command": "echo https://{domain} | hakrawler -depth 3 -plain -usewayback -insecure > {domain}_crawled.txt\necho \"[+] Hakrawler: $(wc -l < {domain}_crawled.txt) URLs crawled\"",
+        "docs_url": "https://github.com/hakluke/hakrawler",
+        "category": "active",
+        "features": ["Live crawling", "Form discovery", "JS file extraction"]
+      },
+      {
+        "id": "katana",
+        "name": "Katana - Next-Gen Web Crawler",
+        "description": "Modern web crawler with JavaScript rendering, form parsing, and scope control.",
+        "command": "katana -u https://{domain} -d 5 -ps -pss waybackarchive,commoncrawl -f qurl -o {domain}_katana.txt\necho \"[+] Katana: $(wc -l < {domain}_katana.txt) URLs discovered\"",
+        "docs_url": "https://github.com/projectdiscovery/katana",
+        "category": "modern",
+        "features": ["JS rendering", "Scope control", "Form parsing"]
+      },
+      {
+        "id": "gospider",
+        "name": "GoSpider - Fast Web Spider",
+        "description": "High-performance web spider written in Go with support for multiple output formats.",
+        "command": "gospider -s https://{domain} -d 2 -c 10 -t 20 --other-source --include-subs -o {domain}_spider\necho \"[+] GoSpider: Crawling completed, check {domain}_spider/ directory\"",
+        "docs_url": "https://github.com/jaeles-project/gospider",
+        "category": "active",
+        "features": ["High performance", "Multiple formats", "Subdomain inclusion"]
+      },
+      {
+        "id": "gauplus",
+        "name": "GauPlus - Enhanced Archive Mining",
+        "description": "Enhanced version of GAU with additional providers and filtering capabilities.",
+        "command": "gauplus -subs {domain} -b png,jpg,gif,jpeg,swf,woff,svg,pdf -o {domain}_gauplus.txt\necho \"[+] GauPlus: $(wc -l < {domain}_gauplus.txt) filtered URLs collected\"",
+        "docs_url": "https://github.com/bp0lr/gauplus",
+        "category": "archive",
+        "features": ["Enhanced providers", "Content filtering", "Subdomain support"]
       }
     ]
   },
   "directory": {
-    "name": "Directory Scanning",
+    "name": "Directory & Content Discovery",
     "tools": [
       {
         "id": "gobuster",
-        "name": "Gobuster Directory Scan",
-        "description": "Fast directory and file brute-forcer written in Go.",
-        "command": "gobuster dir -u https://{domain} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -o {domain}_directories.txt\necho \"Directory scan results saved to {domain}_directories.txt\""
+        "name": "Gobuster - High-Speed Directory Brute Force",
+        "description": "Ultra-fast directory and file brute-forcer with support for multiple wordlists and extensions.",
+        "command": "gobuster dir -u https://{domain} -w /usr/share/seclists/Discovery/Web-Content/raft-large-directories.txt -t 50 -x php,html,txt,js,json -q -o {domain}_gobuster.txt\necho \"[+] Gobuster: $(wc -l < {domain}_gobuster.txt) paths discovered\"",
+        "docs_url": "https://github.com/OJ/gobuster",
+        "category": "brute-force",
+        "features": ["High speed", "Extension support", "Stealth mode"]
       },
       {
         "id": "feroxbuster",
-        "name": "Feroxbuster Recursive Scan",
-        "description": "Fast, simple, recursive content discovery tool written in Rust.",
-        "command": "feroxbuster -u https://{domain} -w /usr/share/wordlists/dirb/common.txt -t 20 -C 404,403 -o {domain}_ferox_results.txt\necho \"Feroxbuster results saved to {domain}_ferox_results.txt\""
+        "name": "Feroxbuster - Recursive Content Discovery",
+        "description": "Intelligent recursive content discovery with auto-filtering and wildcard detection.",
+        "command": "feroxbuster -u https://{domain} -w /usr/share/seclists/Discovery/Web-Content/raft-large-files.txt -t 30 -C 404,403 -x js,php,txt,json --auto-tune -o {domain}_ferox.txt\necho \"[+] Feroxbuster: Recursive scan completed\"",
+        "docs_url": "https://github.com/epi052/feroxbuster",
+        "category": "recursive",
+        "features": ["Auto-tuning", "Wildcard detection", "Smart filtering"]
       },
       {
         "id": "ffuf",
-        "name": "FFUF Directory Fuzzing",
-        "description": "Fast web fuzzer written in Go for content discovery.",
-        "command": "ffuf -u https://{domain}/FUZZ -w /usr/share/wordlists/dirb/common.txt -t 20 -rate 100 -o {domain}_ffuf_results.json\necho \"FFUF results saved to {domain}_ffuf_results.json\""
+        "name": "FFUF - Fast Web Fuzzer",
+        "description": "Lightning-fast web fuzzer with advanced filtering and output options.",
+        "command": "ffuf -u https://{domain}/FUZZ -w /usr/share/seclists/Discovery/Web-Content/big.txt -t 40 -rate 200 -fc 404,403 -o {domain}_ffuf.json\necho \"[+] FFUF: Fuzzing completed, check JSON output\"",
+        "docs_url": "https://github.com/ffuf/ffuf",
+        "category": "fuzzing",
+        "features": ["Advanced filtering", "JSON output", "Rate limiting"]
+      },
+      {
+        "id": "dirsearch",
+        "name": "Dirsearch - Web Path Scanner",
+        "description": "Advanced web path scanner with smart detection and comprehensive wordlists.",
+        "command": "dirsearch -u https://{domain} -e php,asp,aspx,jsp,html,js -t 30 --random-agent -o {domain}_dirsearch.txt\necho \"[+] Dirsearch: $(grep -c \"200\" {domain}_dirsearch.txt 2>/dev/null || echo 0) paths found\"",
+        "docs_url": "https://github.com/maurosoria/dirsearch",
+        "category": "comprehensive",
+        "features": ["Smart detection", "Multiple extensions", "Random agents"]
+      },
+      {
+        "id": "dirb",
+        "name": "DIRB - Classic Directory Bruteforcer",
+        "description": "Traditional directory bruteforcer with built-in wordlists and authentication support.",
+        "command": "dirb https://{domain} /usr/share/dirb/wordlists/big.txt -r -S -w -o {domain}_dirb.txt\necho \"[+] DIRB: Classic directory scan completed\"",
+        "docs_url": "http://dirb.sourceforge.net/",
+        "category": "classic",
+        "features": ["Built-in wordlists", "Authentication", "Recursive mode"]
+      },
+      {
+        "id": "wfuzz",
+        "name": "Wfuzz - Advanced Web Fuzzer",
+        "description": "Powerful web application fuzzer with plugins and multiple injection points.",
+        "command": "wfuzz -c -z file,/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt --hc 404,403 http://{domain}/FUZZ > {domain}_wfuzz.txt\necho \"[+] Wfuzz: Advanced fuzzing completed\"",
+        "docs_url": "https://github.com/xmendez/wfuzz",
+        "category": "advanced",
+        "features": ["Plugin system", "Multiple injection", "Advanced filtering"]
       }
     ]
   },
@@ -270,6 +371,88 @@
         "name": "SQLMap Crawl & Test",
         "description": "Crawl the site and test for SQL injection vulnerabilities.",
         "command": "sqlmap -u https://{domain} --crawl=2 --batch --random-agent --level=2 --risk=2 -o {domain}_sqlmap\necho \"SQLMap results saved to {domain}_sqlmap/\""
+      }
+    ]
+  },
+  "osint": {
+    "name": "OSINT & Intelligence Gathering",
+    "tools": [
+      {
+        "id": "theHarvester",
+        "name": "theHarvester - Email & Domain Intelligence",
+        "description": "Comprehensive OSINT tool for gathering emails, names, subdomains, IPs, and URLs from public sources.",
+        "command": "theHarvester -d {domain} -l 500 -b google,bing,yahoo,duckduckgo,linkedin,twitter -f {domain}_harvest\necho \"[+] theHarvester: Intelligence gathering completed\"",
+        "docs_url": "https://github.com/laramies/theHarvester",
+        "category": "intelligence",
+        "features": ["Email harvesting", "Social media intel", "Multiple sources"]
+      },
+      {
+        "id": "sherlock",
+        "name": "Sherlock - Social Media Username Search",
+        "description": "Hunt down social media accounts by username across 400+ social networks.",
+        "command": "sherlock {domain} --output {domain}_sherlock_results.txt --csv\necho \"[+] Sherlock: Social media account search completed\"",
+        "docs_url": "https://github.com/sherlock-project/sherlock",
+        "category": "social",
+        "features": ["400+ networks", "Username hunting", "CSV export"]
+      },
+      {
+        "id": "shodan",
+        "name": "Shodan - Internet Scanner Search",
+        "description": "Search engine for Internet-connected devices, perfect for discovering exposed services.",
+        "command": "shodan search hostname:{domain} --fields ip_str,port,org,os,product --separator \",\" > {domain}_shodan.csv\necho \"[+] Shodan: Internet device search completed\"",
+        "docs_url": "https://www.shodan.io/",
+        "category": "discovery",
+        "features": ["Device discovery", "Service enumeration", "Vulnerability intel"]
+      },
+      {
+        "id": "spiderfoot",
+        "name": "SpiderFoot - Automated OSINT",
+        "description": "Automated OSINT collection with 200+ modules for footprinting and intelligence gathering.",
+        "command": "python3 /opt/spiderfoot/sf.py -s {domain} -t DOMAIN_NAME -q -o csv:{domain}_spiderfoot.csv\necho \"[+] SpiderFoot: Automated OSINT scan initiated\"",
+        "docs_url": "https://github.com/smicallef/spiderfoot",
+        "category": "automated",
+        "features": ["200+ modules", "Web interface", "Correlation analysis"]
+      }
+    ]
+  },
+  "webapp": {
+    "name": "Web Application Testing",
+    "tools": [
+      {
+        "id": "burpsuite",
+        "name": "Burp Suite - Web Security Testing Platform",
+        "description": "Industry-standard web application security testing platform with proxy, scanner, and intruder.",
+        "command": "echo \"Burp Suite requires GUI - Launch via: burpsuite\"\necho \"Configure proxy: 127.0.0.1:8080\"\necho \"[+] Burp Suite: Configure browser proxy and start testing\"",
+        "docs_url": "https://portswigger.net/burp",
+        "category": "professional",
+        "features": ["Proxy interception", "Active scanning", "Vulnerability research"]
+      },
+      {
+        "id": "zaproxy",
+        "name": "OWASP ZAP - Web Application Security Scanner",
+        "description": "Free and open-source web application security scanner with automated and manual testing capabilities.",
+        "command": "zap-baseline.py -t https://{domain} -J {domain}_zap_baseline.json\necho \"[+] ZAP: Baseline security scan completed\"",
+        "docs_url": "https://www.zaproxy.org/",
+        "category": "opensource",
+        "features": ["Automated scanning", "Manual testing", "API support"]
+      },
+      {
+        "id": "whatweb",
+        "name": "WhatWeb - Web Technology Identifier",
+        "description": "Recognizes web technologies including CMS, blogging platforms, analytics packages, and more.",
+        "command": "whatweb -a 3 --color=never --log-brief={domain}_whatweb.txt https://{domain}\necho \"[+] WhatWeb: Technology fingerprinting completed\"",
+        "docs_url": "https://github.com/urbanadventurer/WhatWeb",
+        "category": "fingerprinting",
+        "features": ["Technology detection", "Plugin system", "Detailed analysis"]
+      },
+      {
+        "id": "wafw00f",
+        "name": "WAFW00F - Web Application Firewall Detection",
+        "description": "Identifies and fingerprints Web Application Firewall (WAF) products protecting a website.",
+        "command": "wafw00f https://{domain} -a -o {domain}_waf_detection.txt\necho \"[+] WAFW00F: WAF detection completed\"",
+        "docs_url": "https://github.com/EnableSecurity/wafw00f",
+        "category": "reconnaissance",
+        "features": ["WAF detection", "Fingerprinting", "Evasion planning"]
       }
     ]
   }
