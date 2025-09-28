@@ -19,7 +19,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom border-secondary">
         <div class="container">
             <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                <i class="bi bi-shield-check text-warning"></i>
+                <img src="https://bb.nxit.cc/bb.png" alt="BountyBud" style="height: 40px; width: auto;" class="me-2">
                 BountyBud
             </a>
             
@@ -36,7 +36,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('tools') }}">
-                            <i class="bi bi-terminal"></i> Command Generation
+                            <i class="bi bi-terminal"></i> Command Tools
                         </a>
                     </li>
                     <li class="nav-item">
@@ -50,9 +50,19 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('extensions') }}">
+                            <i class="bi bi-puzzle"></i> Extensions
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('docs') }}">
                             <i class="bi bi-book"></i> Documentation
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm ms-2" onclick="toggleTheme()">
+                            <i class="bi bi-moon" id="themeIcon"></i>
+                        </button>
                     </li>
                 </ul>
             </div>

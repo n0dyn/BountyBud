@@ -81,13 +81,16 @@ function validateDomain(domain) {
 
 // Smooth scrolling for anchor links
 document.addEventListener('DOMContentLoaded', function() {
-    const links = document.querySelectorAll('a[href^="#"]');
+    const links = document.querySelectorAll('a[href^="#"]:not([href="#"])');
     links.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth' });
+            const href = this.getAttribute('href');
+            if (href && href !== '#') {
+                const target = document.querySelector(href);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
             }
         });
     });
@@ -172,4 +175,20 @@ function filterByCategory(category, itemSelector, categoryAttribute) {
         const shouldShow = category === 'all' || itemCategory === category;
         item.style.display = shouldShow ? 'block' : 'none';
     });
+}
+
+// Theme toggle functionality
+function toggleTheme() {
+    const html = document.documentElement;
+    const themeIcon = document.getElementById('themeIcon');
+    
+    if (html.getAttribute('data-theme') === 'light') {
+        html.setAttribute('data-theme', 'dark');
+        themeIcon.className = 'bi bi-moon';
+        showToast('Switched to dark theme', 'info');
+    } else {
+        html.setAttribute('data-theme', 'light');
+        themeIcon.className = 'bi bi-sun';
+        showToast('Switched to light theme', 'info');
+    }
 }

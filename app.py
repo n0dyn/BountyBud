@@ -25,6 +25,10 @@ def security_tools():
 def docs():
     return render_template('docs.html')
 
+@app.route('/extensions')
+def extensions():
+    return render_template('extensions.html')
+
 @app.route('/api/generate-command', methods=['POST'])
 def generate_command():
     data = request.get_json()
