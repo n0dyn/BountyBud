@@ -33,7 +33,7 @@
         "id": "dnsgen-mutate",
         "name": "DNSGen - Subdomain Mutation",
         "description": "Generates potential subdomains using permutation patterns and wordlist-based mutations.",
-        "command": "cat {domain}_subfinder.txt | dnsgen - | head -20000 > {domain}_mutations.txt\nsubfinder -dL {domain}_mutations.txt -o {domain}_resolved_mutations.txt\necho \"[+] DNSGen: $(wc -l < {domain}_resolved_mutations.txt) new subdomains via mutation\"",
+        "command": "cat {domain}_subfinder.txt | dnsgen - | head -20000 > {domain}_mutations.txt\npuredns resolve {domain}_mutations.txt -r /opt/resolvers.txt > {domain}_resolved_mutations.txt\necho \"[+] DNSGen: $(wc -l < {domain}_resolved_mutations.txt) new subdomains resolved via mutation\"",
         "docs_url": "https://github.com/ProjectAnte/dnsgen",
         "category": "active",
         "features": ["Subdomain mutation", "Pattern generation", "Wordlist expansion"]
@@ -183,13 +183,19 @@
         "id": "nuclei-exposures",
         "name": "Nuclei Exposure Detection",
         "description": "Scan for exposed sensitive files and configurations using Nuclei.",
-        "command": "nuclei -u https://{domain} -t exposures/ -rate-limit 50 -o {domain}_exposures.txt\necho \"Exposure scan results saved to {domain}_exposures.txt\""
+        "command": "nuclei -u https://{domain} -t exposures/ -rate-limit 50 -o {domain}_exposures.txt\necho \"[+] Nuclei: Exposure scan completed\"",
+        "docs_url": "https://github.com/projectdiscovery/nuclei",
+        "category": "detection",
+        "features": ["Exposure detection", "Template-based", "Fast scanning"]
       },
       {
         "id": "truffleHog",
         "name": "TruffleHog Secret Scanning",
-        "description": "Search for secrets accidentally committed to repositories.",
-        "command": "trufflehog git https://github.com/{domain} --only-verified > {domain}_secrets.txt\necho \"Secret scan results saved to {domain}_secrets.txt\""
+        "description": "Search for secrets accidentally committed to repositories. Note: Requires GitHub repository URL input.",
+        "command": "echo \"Enter GitHub organization/repository URL: \"\nread repo_url\ntrufflehog git $repo_url --only-verified > {domain}_secrets.txt\necho \"[+] TruffleHog: Secret scan completed for $repo_url\"",
+        "docs_url": "https://github.com/trufflesecurity/trufflehog",
+        "category": "secrets",
+        "features": ["Git scanning", "Secret detection", "Verified results"]
       }
     ]
   },
@@ -200,7 +206,10 @@
         "id": "ffuf-lfi",
         "name": "FFUF LFI Fuzzing",
         "description": "Local File Inclusion testing using FFUF with LFI payloads.",
-        "command": "ffuf -u 'https://{domain}/page?file=FUZZ' -w /opt/wordlists/lfi_payloads.txt -t 10 -rate 50 -mc 200 -o {domain}_lfi_results.json\necho \"LFI fuzzing results saved to {domain}_lfi_results.json\""
+        "command": "ffuf -u 'https://{domain}/page?file=FUZZ' -w /opt/wordlists/lfi_payloads.txt -t 10 -rate 50 -mc 200 -o {domain}_lfi_results.json\necho \"[+] FFUF: LFI fuzzing completed\"",
+        "docs_url": "https://github.com/ffuf/ffuf",
+        "category": "injection",
+        "features": ["LFI testing", "Parameter fuzzing", "JSON output"]
       }
     ]
   },
@@ -211,7 +220,10 @@
         "id": "corsy",
         "name": "Corsy CORS Scanner",
         "description": "CORS misconfiguration scanner.",
-        "command": "python3 /opt/tools/Corsy/corsy.py -u https://{domain} -t 20 -o {domain}_cors_results.txt\necho \"CORS scan results saved to {domain}_cors_results.txt\""
+        "command": "python3 /opt/tools/Corsy/corsy.py -u https://{domain} -t 20 -o {domain}_cors_results.txt\necho \"[+] Corsy: CORS scan completed\"",
+        "docs_url": "https://github.com/s0md3v/Corsy",
+        "category": "misconfiguration",
+        "features": ["CORS testing", "Misconfiguration detection", "Multi-threaded"]
       }
     ]
   },
@@ -251,7 +263,7 @@
         "id": "masscan",
         "name": "Masscan Fast Port Scan",
         "description": "Ultra-fast port scanner for large-scale scanning.",
-        "command": "masscan -p1-65535 {domain} --rate=1000 -oX {domain}_masscan.xml\necho \"Masscan results saved to {domain}_masscan.xml\""
+        "command": "dig +short {domain} | grep -E '^[0-9.]+' > {domain}_ips.txt\nmasscan -p1-65535 -iL {domain}_ips.txt --rate=1000 -oX {domain}_masscan.xml\necho \"[+] Masscan: High-speed port scan completed\""
       }
     ]
   },
@@ -356,21 +368,30 @@
     "tools": [
       {
         "id": "nuclei-full",
-        "name": "Nuclei Full Scan",
-        "description": "Comprehensive vulnerability scan using all Nuclei templates.",
-        "command": "nuclei -u https://{domain} -t cves/,vulnerabilities/,misconfiguration/ -rate-limit 50 -o {domain}_vuln_scan.txt\necho \"Vulnerability scan results saved to {domain}_vuln_scan.txt\""
+        "name": "Nuclei - Comprehensive Vulnerability Scanner",
+        "description": "Next-generation vulnerability scanner with 7000+ templates covering CVEs, misconfigurations, and exposures.",
+        "command": "nuclei -u https://{domain} -t cves/,vulnerabilities/,misconfiguration/,exposures/ -rate-limit 100 -c 50 -silent -o {domain}_nuclei_scan.txt\necho \"[+] Nuclei: $(wc -l < {domain}_nuclei_scan.txt) vulnerabilities found\"",
+        "docs_url": "https://github.com/projectdiscovery/nuclei",
+        "category": "comprehensive",
+        "features": ["7000+ templates", "CVE detection", "Misconfiguration scanning"]
       },
       {
         "id": "nikto",
-        "name": "Nikto Web Scanner",
-        "description": "Web server scanner for dangerous files and vulnerabilities.",
-        "command": "nikto -h https://{domain} -Format txt -output {domain}_nikto.txt\necho \"Nikto scan results saved to {domain}_nikto.txt\""
+        "name": "Nikto - Web Server Scanner",
+        "description": "Classic web server scanner that identifies dangerous files, misconfigurations, and vulnerabilities.",
+        "command": "nikto -h https://{domain} -Format txt -output {domain}_nikto.txt -Tuning 9\necho \"[+] Nikto: Web server scan completed\"",
+        "docs_url": "https://cirt.net/Nikto2",
+        "category": "classic",
+        "features": ["Server fingerprinting", "CGI scanning", "SSL testing"]
       },
       {
         "id": "sqlmap-crawl",
-        "name": "SQLMap Crawl & Test",
-        "description": "Crawl the site and test for SQL injection vulnerabilities.",
-        "command": "sqlmap -u https://{domain} --crawl=2 --batch --random-agent --level=2 --risk=2 -o {domain}_sqlmap\necho \"SQLMap results saved to {domain}_sqlmap/\""
+        "name": "SQLMap - Automated SQL Injection Testing",
+        "description": "Advanced SQL injection detection and exploitation tool with database fingerprinting.",
+        "command": "sqlmap -u https://{domain} --crawl=2 --batch --random-agent --level=2 --risk=2 --output-dir={domain}_sqlmap_results\necho \"[+] SQLMap: SQL injection testing completed\"",
+        "docs_url": "https://sqlmap.org/",
+        "category": "injection",
+        "features": ["Database detection", "Injection testing", "Data extraction"]
       }
     ]
   },
@@ -389,8 +410,8 @@
       {
         "id": "sherlock",
         "name": "Sherlock - Social Media Username Search",
-        "description": "Hunt down social media accounts by username across 400+ social networks.",
-        "command": "sherlock {domain} --output {domain}_sherlock_results.txt --csv\necho \"[+] Sherlock: Social media account search completed\"",
+        "description": "Hunt down social media accounts by username across 400+ social networks. Note: Requires username input.",
+        "command": "echo \"Enter username to search: \"\nread username\nsherlock $username --output {domain}_${username}_sherlock.txt --csv\necho \"[+] Sherlock: Social media search completed for $username\"",
         "docs_url": "https://github.com/sherlock-project/sherlock",
         "category": "social",
         "features": ["400+ networks", "Username hunting", "CSV export"]
