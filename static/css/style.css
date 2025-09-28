@@ -98,6 +98,14 @@ body {
     position: relative;
 }
 
+/* Categories List */
+#categoryList {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
 .command-output pre {
     margin: 0;
     white-space: pre-wrap;
