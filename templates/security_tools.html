@@ -32,6 +32,12 @@
                 <option value="Reconnaissance">Reconnaissance</option>
                 <option value="Vulnerability Scanning">Vulnerability Scanning</option>
                 <option value="Exploitation">Exploitation</option>
+                <option value="OSINT">OSINT & Intelligence</option>
+                <option value="Web Application Testing">Web Application Testing</option>
+                <option value="Container Security">Container Security</option>
+                <option value="Cloud Security">Cloud Security</option>
+                <option value="Mobile Security">Mobile Security</option>
+                <option value="Network Analysis">Network Analysis</option>
                 <option value="Reporting">Reporting</option>
             </select>
         </div>
@@ -57,15 +63,171 @@
             <span class="badge bg-primary me-1">passive</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
-                <button class="copy-btn" onclick="copyToClipboard('subfinder-install')">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('subfinder-go')">
                     <i class="bi bi-clipboard"></i>
                 </button>
-                <pre id="subfinder-install">GO111MODULE=on go get -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder</pre>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="subfinder-go">go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('subfinder-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux only):</div>
+                <pre id="subfinder-apt">sudo apt update && sudo apt install subfinder</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('subfinder-binary')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Binary Release:</div>
+                <pre id="subfinder-binary"># Download and install binary
+wget https://github.com/projectdiscovery/subfinder/releases/latest/download/subfinder_*_linux_amd64.zip
+unzip subfinder_*_linux_amd64.zip
+chmod +x subfinder_*_linux_amd64/subfinder
+sudo mv subfinder_*_linux_amd64/subfinder /usr/local/bin/</pre>
             </div>
         </div>
         <a href="https://github.com/projectdiscovery/subfinder" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- theHarvester -->
+    <div class="tool-item" data-category="OSINT">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">theHarvester</h4>
+            <div>
+                <span class="badge bg-success">OSINT & Intelligence</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Comprehensive OSINT tool for gathering emails, names, subdomains, IPs, and URLs from public sources like Google, Bing, PGP, LinkedIn.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">email</span>
+            <span class="badge bg-primary me-1">osint</span>
+            <span class="badge bg-primary me-1">intelligence</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('theharvester-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="theharvester-pip">pip3 install theHarvester</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('theharvester-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="theharvester-git">git clone https://github.com/laramies/theHarvester.git
+cd theHarvester
+pip3 install -r requirements.txt</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('theharvester-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="theharvester-apt">sudo apt update && sudo apt install theharvester</pre>
+            </div>
+        </div>
+        <a href="https://github.com/laramies/theHarvester" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Katana -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Katana</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Next-generation crawling and spidering framework designed for modern web applications with JavaScript support and advanced crawling capabilities.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">crawler</span>
+            <span class="badge bg-primary me-1">javascript</span>
+            <span class="badge bg-primary me-1">spidering</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('katana-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="katana-go">go install github.com/projectdiscovery/katana/cmd/katana@latest</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('katana-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="katana-docker">docker run projectdiscovery/katana:latest</pre>
+            </div>
+        </div>
+        <a href="https://github.com/projectdiscovery/katana" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Sherlock -->
+    <div class="tool-item" data-category="OSINT">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Sherlock</h4>
+            <div>
+                <span class="badge bg-success">OSINT & Intelligence</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Hunt down social media accounts by username across 400+ social networks. Perfect for investigating online presence and account enumeration.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">social-media</span>
+            <span class="badge bg-primary me-1">username</span>
+            <span class="badge bg-primary me-1">enumeration</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('sherlock-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Requirements Install:</div>
+                <pre id="sherlock-pip"># After git clone, install requirements
+cd sherlock
+pip3 install -r requirements.txt</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('sherlock-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="sherlock-git">git clone https://github.com/sherlock-project/sherlock.git
+cd sherlock
+pip3 install -r requirements.txt</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('sherlock-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="sherlock-docker">docker run --rm -t sherlockproject/sherlock:latest</pre>
+            </div>
+        </div>
+        <a href="https://github.com/sherlock-project/sherlock" target="_blank" class="btn btn-outline-primary">
             <i class="bi bi-box-arrow-up-right"></i> View Tool
         </a>
     </div>
@@ -80,7 +242,7 @@
             </div>
         </div>
         <p class="text-muted mb-3">
-            In-depth attack surface mapping and asset discovery tool that performs network mapping of attack surfaces and external asset discovery.
+            In-depth attack surface mapping and asset discovery tool that performs network mapping of attack surfaces and external asset discovery with active and passive techniques.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">subdomain</span>
@@ -88,15 +250,165 @@
             <span class="badge bg-primary me-1">passive</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
-                <button class="copy-btn" onclick="copyToClipboard('amass-install')">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('amass-go')">
                     <i class="bi bi-clipboard"></i>
                 </button>
-                <pre id="amass-install">go install -v github.com/OWASP/Amass/v3/...</pre>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="amass-go">go install -v github.com/OWASP/Amass/v4/cmd/amass@latest</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('amass-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="amass-apt">sudo apt update && sudo apt install amass</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('amass-snap')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Snap:</div>
+                <pre id="amass-snap">sudo snap install amass</pre>
             </div>
         </div>
         <a href="https://github.com/OWASP/Amass" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- OWASP ZAP -->
+    <div class="tool-item" data-category="Web Application Testing">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">OWASP ZAP</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
+                <span class="badge bg-secondary">Java</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Free open-source web application security scanner that automatically finds security vulnerabilities in web applications during development and testing.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">web-scanner</span>
+            <span class="badge bg-primary me-1">proxy</span>
+            <span class="badge bg-primary me-1">spider</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('zap-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Ubuntu/Debian):</div>
+                <pre id="zap-apt">sudo apt update && sudo apt install zaproxy</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('zap-snap')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Snap:</div>
+                <pre id="zap-snap">sudo snap install zaproxy --classic</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('zap-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="zap-docker">docker run -t owasp/zap2docker-stable zap.py</pre>
+            </div>
+        </div>
+        <a href="https://owasp.org/www-project-zap/" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Shodan CLI -->
+    <div class="tool-item" data-category="OSINT">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Shodan CLI</h4>
+            <div>
+                <span class="badge bg-success">OSINT & Intelligence</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Command-line interface for Shodan, the world's first search engine for Internet-connected devices. Discover vulnerable systems and exposed services.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">iot</span>
+            <span class="badge bg-primary me-1">search-engine</span>
+            <span class="badge bg-primary me-1">reconnaissance</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('shodan-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="shodan-pip">pip3 install shodan</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('shodan-setup')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Setup API Key:</div>
+                <pre id="shodan-setup">shodan init YOUR_API_KEY</pre>
+            </div>
+        </div>
+        <a href="https://github.com/achillean/shodan-python" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Docker Bench Security -->
+    <div class="tool-item" data-category="Container Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Docker Bench Security</h4>
+            <div>
+                <span class="badge bg-dark">Container Security</span>
+                <span class="badge bg-secondary">Shell</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Security audit tool that checks for common best-practices around deploying Docker containers in production environments.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">docker</span>
+            <span class="badge bg-primary me-1">security-audit</span>
+            <span class="badge bg-primary me-1">benchmark</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('docker-bench-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="docker-bench-git">git clone https://github.com/docker/docker-bench-security.git
+cd docker-bench-security
+sudo ./docker-bench-security.sh</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('docker-bench-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker Run:</div>
+                <pre id="docker-bench-docker">docker run --rm -it --net host --pid host --userns host --cap-add audit_control \
+    -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+    -v /etc:/etc:ro \
+    -v /usr/bin/containerd:/usr/bin/containerd:ro \
+    -v /usr/bin/runc:/usr/bin/runc:ro \
+    -v /usr/lib/systemd:/usr/lib/systemd:ro \
+    -v /var/lib:/var/lib:ro \
+    -v /var/run/docker.sock:/var/run/docker.sock:ro \
+    --label docker_bench_security \
+    docker/docker-bench-security</pre>
+            </div>
+        </div>
+        <a href="https://github.com/docker/docker-bench-security" target="_blank" class="btn btn-outline-primary">
             <i class="bi bi-box-arrow-up-right"></i> View Tool
         </a>
     </div>
@@ -120,15 +432,170 @@
             <span class="badge bg-primary me-1">brute-force</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
-                <button class="copy-btn" onclick="copyToClipboard('gobuster-install')">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('gobuster-go')">
                     <i class="bi bi-clipboard"></i>
                 </button>
-                <pre id="gobuster-install">go install github.com/OJ/gobuster/v3@latest</pre>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="gobuster-go">go install github.com/OJ/gobuster/v3@latest</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('gobuster-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="gobuster-apt">sudo apt update && sudo apt install gobuster</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('gobuster-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Build from Source:</div>
+                <pre id="gobuster-git">git clone https://github.com/OJ/gobuster.git
+cd gobuster
+go build</pre>
             </div>
         </div>
         <a href="https://github.com/OJ/gobuster" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- CloudMapper -->
+    <div class="tool-item" data-category="Cloud Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">CloudMapper</h4>
+            <div>
+                <span class="badge bg-primary">Cloud Security</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Security assessment tool for AWS cloud environments that helps visualize networks and identify potential security issues.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">aws</span>
+            <span class="badge bg-primary me-1">cloud</span>
+            <span class="badge bg-primary me-1">visualization</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('cloudmapper-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="cloudmapper-git">git clone https://github.com/duo-labs/cloudmapper.git
+cd cloudmapper
+pip3 install -r requirements.txt</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('cloudmapper-usage')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Usage:</div>
+                <pre id="cloudmapper-usage"># Configure AWS credentials first
+aws configure
+cd cloudmapper
+python3 cloudmapper.py collect --account-name my-account</pre>
+            </div>
+        </div>
+        <a href="https://github.com/duo-labs/cloudmapper" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- MobSF -->
+    <div class="tool-item" data-category="Mobile Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Mobile Security Framework (MobSF)</h4>
+            <div>
+                <span class="badge bg-info">Mobile Security</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Automated mobile application security testing framework capable of performing static and dynamic analysis on Android and iOS applications.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">mobile</span>
+            <span class="badge bg-primary me-1">android</span>
+            <span class="badge bg-primary me-1">ios</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('mobsf-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="mobsf-git">git clone https://github.com/MobSF/Mobile-Security-Framework-MobSF.git
+cd Mobile-Security-Framework-MobSF
+./setup.sh</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('mobsf-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="mobsf-docker">docker run -it -p 8000:8000 opensecurity/mobile-security-framework-mobsf:latest</pre>
+            </div>
+        </div>
+        <a href="https://github.com/MobSF/Mobile-Security-Framework-MobSF" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Wireshark CLI (tshark) -->
+    <div class="tool-item" data-category="Network Analysis">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Wireshark CLI (tshark)</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Network Analysis</span>
+                <span class="badge bg-secondary">C</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Command-line network protocol analyzer that captures and analyzes network traffic. Essential for network troubleshooting and security analysis.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">packet-capture</span>
+            <span class="badge bg-primary me-1">network</span>
+            <span class="badge bg-primary me-1">analysis</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('wireshark-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Ubuntu/Debian):</div>
+                <pre id="wireshark-apt">sudo apt update && sudo apt install tshark
+# Configure permissions and re-login
+sudo dpkg-reconfigure wireshark-common
+sudo usermod -a -G wireshark $USER
+# Log out and back in for group changes</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('wireshark-yum')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">YUM (RHEL/CentOS):</div>
+                <pre id="wireshark-yum">sudo yum install wireshark-cli</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('wireshark-snap')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Snap:</div>
+                <pre id="wireshark-snap">sudo snap install wireshark
+# Connect required interfaces
+sudo snap connect wireshark:network-control
+sudo snap connect wireshark:network-observe</pre>
+            </div>
+        </div>
+        <a href="https://www.wireshark.org/" target="_blank" class="btn btn-outline-primary">
             <i class="bi bi-box-arrow-up-right"></i> View Tool
         </a>
     </div>
@@ -143,7 +610,7 @@
             </div>
         </div>
         <p class="text-muted mb-3">
-            A fast, simple, recursive content discovery tool written in Rust designed to search for unlinked content in target directories.
+            A fast, simple, recursive content discovery tool written in Rust designed to search for unlinked content in target directories with modern features.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">directory</span>
@@ -151,15 +618,170 @@
             <span class="badge bg-primary me-1">content-discovery</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('feroxbuster-cargo')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Cargo Install:</div>
+                <pre id="feroxbuster-cargo">cargo install feroxbuster</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('feroxbuster-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="feroxbuster-apt">sudo apt update && sudo apt install feroxbuster</pre>
+            </div>
             <div class="command-output">
                 <button class="copy-btn" onclick="copyToClipboard('feroxbuster-install')">
                     <i class="bi bi-clipboard"></i>
                 </button>
+                <div class="fw-bold mb-1">Install Script:</div>
                 <pre id="feroxbuster-install">curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | bash</pre>
             </div>
         </div>
         <a href="https://github.com/epi052/feroxbuster" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- SpiderFoot -->
+    <div class="tool-item" data-category="OSINT">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">SpiderFoot</h4>
+            <div>
+                <span class="badge bg-success">OSINT & Intelligence</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Automated OSINT reconnaissance tool that integrates with 200+ data sources to gather intelligence about targets including domains, IPs, emails, and more.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">automation</span>
+            <span class="badge bg-primary me-1">osint</span>
+            <span class="badge bg-primary me-1">reconnaissance</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('spiderfoot-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="spiderfoot-pip">pip3 install spiderfoot</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('spiderfoot-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="spiderfoot-git">git clone https://github.com/smicallef/spiderfoot.git
+cd spiderfoot
+pip3 install -r requirements.txt</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('spiderfoot-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="spiderfoot-docker">docker run -p 5001:5001 spiderfoot/spiderfoot</pre>
+            </div>
+        </div>
+        <a href="https://github.com/smicallef/spiderfoot" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- WhatWeb -->
+    <div class="tool-item" data-category="Web Application Testing">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">WhatWeb</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
+                <span class="badge bg-secondary">Ruby</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Web scanner that identifies technologies used by websites including content management systems, blogging platforms, and JavaScript libraries.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">fingerprinting</span>
+            <span class="badge bg-primary me-1">technology</span>
+            <span class="badge bg-primary me-1">identification</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('whatweb-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="whatweb-apt">sudo apt update && sudo apt install whatweb</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('whatweb-gem')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Ruby Gem:</div>
+                <pre id="whatweb-gem">gem install whatweb</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('whatweb-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="whatweb-git">git clone https://github.com/urbanadventurer/WhatWeb.git</pre>
+            </div>
+        </div>
+        <a href="https://github.com/urbanadventurer/WhatWeb" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- FFUF -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">FFUF</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Fast web fuzzer written in Go that supports directory fuzzing, parameter fuzzing, subdomain fuzzing, and virtual host discovery.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">fuzzing</span>
+            <span class="badge bg-primary me-1">directory</span>
+            <span class="badge bg-primary me-1">parameter</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('ffuf-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="ffuf-go">go install github.com/ffuf/ffuf@latest</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('ffuf-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="ffuf-apt">sudo apt update && sudo apt install ffuf</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('ffuf-snap')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Snap:</div>
+                <pre id="ffuf-snap">sudo snap install ffuf</pre>
+            </div>
+        </div>
+        <a href="https://github.com/ffuf/ffuf" target="_blank" class="btn btn-outline-primary">
             <i class="bi bi-box-arrow-up-right"></i> View Tool
         </a>
     </div>
@@ -174,19 +796,35 @@
             </div>
         </div>
         <p class="text-muted mb-3">
-            Fast and customizable vulnerability scanner based on simple YAML-based template files for describing vulnerabilities.
+            Fast and customizable vulnerability scanner based on simple YAML-based template files with 6000+ community-contributed templates.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">template</span>
             <span class="badge bg-primary me-1">scanner</span>
+            <span class="badge bg-primary me-1">community</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
-                <button class="copy-btn" onclick="copyToClipboard('nuclei-install')">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('nuclei-go')">
                     <i class="bi bi-clipboard"></i>
                 </button>
-                <pre id="nuclei-install">GO111MODULE=on go get -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei</pre>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="nuclei-go">go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('nuclei-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="nuclei-apt">sudo apt update && sudo apt install nuclei</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('nuclei-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="nuclei-docker">docker run projectdiscovery/nuclei:latest</pre>
             </div>
         </div>
         <a href="https://github.com/projectdiscovery/nuclei" target="_blank" class="btn btn-outline-primary">
@@ -194,29 +832,178 @@
         </a>
     </div>
 
-    <!-- Nmap -->
+    <!-- Nessus CLI -->
     <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Nessus CLI</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">C</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Professional vulnerability scanner that provides comprehensive vulnerability assessment with extensive plugin database and compliance checks.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">enterprise</span>
+            <span class="badge bg-primary me-1">compliance</span>
+            <span class="badge bg-primary me-1">scanner</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('nessus-download')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Download (.deb):</div>
+                <pre id="nessus-download"># Register at https://www.tenable.com/products/nessus/nessus-essentials
+# Download from tenable.com - requires registration
+# sudo dpkg -i Nessus-*-debian6_amd64.deb</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('nessus-start')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Start Service:</div>
+                <pre id="nessus-start">sudo systemctl start nessusd</pre>
+            </div>
+        </div>
+        <a href="https://www.tenable.com/products/nessus" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- OpenVAS -->
+    <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">OpenVAS</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">C</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Open-source vulnerability assessment scanner with comprehensive vulnerability tests and automated security testing capabilities.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">open-source</span>
+            <span class="badge bg-primary me-1">assessment</span>
+            <span class="badge bg-primary me-1">automated</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('openvas-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Ubuntu/Debian):</div>
+                <pre id="openvas-apt">sudo apt update && sudo apt install openvas</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('openvas-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker (GVM):</div>
+                <pre id="openvas-docker">docker run -d -p 443:443 --name openvas mikesplain/openvas</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('openvas-setup')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Setup:</div>
+                <pre id="openvas-setup">sudo gvm-setup</pre>
+            </div>
+        </div>
+        <a href="https://www.openvas.org/" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- WAFW00F -->
+    <div class="tool-item" data-category="Web Application Testing">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">WAFW00F</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Web Application Firewall detection tool that identifies and fingerprints Web Application Firewall (WAF) products protecting web applications.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">waf</span>
+            <span class="badge bg-primary me-1">detection</span>
+            <span class="badge bg-primary me-1">fingerprinting</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('wafw00f-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="wafw00f-pip">pip3 install wafw00f</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('wafw00f-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="wafw00f-apt">sudo apt update && sudo apt install wafw00f</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('wafw00f-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="wafw00f-git">git clone https://github.com/EnableSecurity/wafw00f.git</pre>
+            </div>
+        </div>
+        <a href="https://github.com/EnableSecurity/wafw00f" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Nmap -->
+    <div class="tool-item" data-category="Network Analysis">
         <div class="d-flex justify-content-between align-items-start mb-2">
             <h4 class="mb-1">Nmap</h4>
             <div>
-                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-warning text-dark">Network Analysis</span>
                 <span class="badge bg-secondary">C/C++</span>
             </div>
         </div>
         <p class="text-muted mb-3">
-            The Network Mapper, a free and open source utility for network discovery and security auditing.
+            The Network Mapper - powerful open source tool for network discovery, port scanning, and security auditing with extensive scripting capabilities.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">network</span>
             <span class="badge bg-primary me-1">scanner</span>
+            <span class="badge bg-primary me-1">discovery</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
-                <button class="copy-btn" onclick="copyToClipboard('nmap-install')">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('nmap-apt')">
                     <i class="bi bi-clipboard"></i>
                 </button>
-                <pre id="nmap-install">apt-get install nmap</pre>
+                <div class="fw-bold mb-1">APT (Ubuntu/Debian):</div>
+                <pre id="nmap-apt">sudo apt update && sudo apt install nmap</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('nmap-yum')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">YUM (RHEL/CentOS):</div>
+                <pre id="nmap-yum">sudo yum install nmap</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('nmap-snap')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Snap:</div>
+                <pre id="nmap-snap">sudo snap install nmap</pre>
             </div>
         </div>
         <a href="https://nmap.org/" target="_blank" class="btn btn-outline-primary">
@@ -225,28 +1012,44 @@
     </div>
 
     <!-- SQLMap -->
-    <div class="tool-item" data-category="Vulnerability Scanning">
+    <div class="tool-item" data-category="Exploitation">
         <div class="d-flex justify-content-between align-items-start mb-2">
             <h4 class="mb-1">SQLMap</h4>
             <div>
-                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-danger">Exploitation</span>
                 <span class="badge bg-secondary">Python</span>
             </div>
         </div>
         <p class="text-muted mb-3">
-            Automatic SQL injection and database takeover tool that detects and exploits SQL injection flaws.
+            Automatic SQL injection and database takeover tool that detects and exploits SQL injection flaws with support for many database engines.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">sql-injection</span>
             <span class="badge bg-primary me-1">database</span>
+            <span class="badge bg-primary me-1">exploitation</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
-                <button class="copy-btn" onclick="copyToClipboard('sqlmap-install')">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('sqlmap-pip')">
                     <i class="bi bi-clipboard"></i>
                 </button>
-                <pre id="sqlmap-install">git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev</pre>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="sqlmap-pip">pip3 install sqlmap</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('sqlmap-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="sqlmap-apt">sudo apt update && sudo apt install sqlmap</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('sqlmap-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="sqlmap-git">git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev</pre>
             </div>
         </div>
         <a href="https://github.com/sqlmapproject/sqlmap" target="_blank" class="btn btn-outline-primary">
@@ -264,19 +1067,35 @@
             </div>
         </div>
         <p class="text-muted mb-3">
-            A penetration testing framework that provides information and tools for exploit development and research.
+            Comprehensive penetration testing framework with extensive exploit database, payload generation, and post-exploitation modules.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">exploit</span>
             <span class="badge bg-primary me-1">framework</span>
+            <span class="badge bg-primary me-1">payload</span>
         </div>
         <div class="mb-3">
-            <h6>Installation:</h6>
-            <div class="command-output">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
                 <button class="copy-btn" onclick="copyToClipboard('metasploit-install')">
                     <i class="bi bi-clipboard"></i>
                 </button>
+                <div class="fw-bold mb-1">Install Script:</div>
                 <pre id="metasploit-install">curl https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb > msfinstall && chmod 755 msfinstall && ./msfinstall</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('metasploit-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="metasploit-apt">sudo apt update && sudo apt install metasploit-framework</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('metasploit-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="metasploit-docker">docker run --rm -it metasploitframework/metasploit-framework</pre>
             </div>
         </div>
         <a href="https://github.com/rapid7/metasploit-framework" target="_blank" class="btn btn-outline-primary">
@@ -285,25 +1104,725 @@
     </div>
 
     <!-- Burp Suite -->
-    <div class="tool-item" data-category="Exploitation">
+    <div class="tool-item" data-category="Web Application Testing">
         <div class="d-flex justify-content-between align-items-start mb-2">
             <h4 class="mb-1">Burp Suite</h4>
             <div>
-                <span class="badge bg-danger">Exploitation</span>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
                 <span class="badge bg-secondary">Java</span>
             </div>
         </div>
         <p class="text-muted mb-3">
-            An integrated platform for performing security testing of web applications.
+            Industry-standard platform for web application security testing with proxy, scanner, intruder, and repeater tools.
         </p>
         <div class="mb-3">
             <span class="badge bg-primary me-1">proxy</span>
             <span class="badge bg-primary me-1">web</span>
+            <span class="badge bg-primary me-1">professional</span>
         </div>
         <div class="mb-3">
-            <p class="small text-muted">Commercial tool - download from official website</p>
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('burp-download')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Download (Community):</div>
+                <pre id="burp-download"># Download from https://portswigger.net/burp/communitydownload
+# Requires manual download from website</pre>
+            </div>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('burp-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="burp-apt">sudo apt update && sudo apt install burpsuite</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('burp-run')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Run:</div>
+                <pre id="burp-run">java -jar burpsuite_community.jar</pre>
+            </div>
         </div>
         <a href="https://portswigger.net/burp" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- ScoutSuite -->
+    <div class="tool-item" data-category="Cloud Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">ScoutSuite</h4>
+            <div>
+                <span class="badge bg-primary">Cloud Security</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Multi-cloud security auditing tool that assesses security posture of cloud environments including AWS, Azure, GCP, and others.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">cloud</span>
+            <span class="badge bg-primary me-1">audit</span>
+            <span class="badge bg-primary me-1">multi-cloud</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('scoutsuite-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="scoutsuite-pip">pip3 install scoutsuite</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('scoutsuite-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="scoutsuite-git">git clone https://github.com/nccgroup/ScoutSuite.git
+cd ScoutSuite
+pip3 install -r requirements.txt</pre>
+            </div>
+        </div>
+        <a href="https://github.com/nccgroup/ScoutSuite" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Dastardly -->
+    <div class="tool-item" data-category="Reporting">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Dastardly (CI/CD)</h4>
+            <div>
+                <span class="badge bg-secondary">Reporting</span>
+                <span class="badge bg-secondary">Docker</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Free lightweight web application security scanner from PortSwigger designed for CI/CD pipelines and automated security testing.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">ci-cd</span>
+            <span class="badge bg-primary me-1">automated</span>
+            <span class="badge bg-primary me-1">pipeline</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('dastardly-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="dastardly-docker">docker run --user $(id -u) --rm -v $(pwd):/dastardly:rw public.ecr.aws/portswigger/dastardly:latest</pre>
+            </div>
+        </div>
+        <a href="https://portswigger.net/burp/dastardly" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Httpx -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">HTTPx</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Fast and multi-purpose HTTP toolkit that allows probing HTTP/HTTPS services, web servers, and gathering response information.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">http</span>
+            <span class="badge bg-primary me-1">probing</span>
+            <span class="badge bg-primary me-1">web-servers</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('httpx-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="httpx-go">go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('httpx-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="httpx-apt">sudo apt update && sudo apt install httpx-toolkit</pre>
+            </div>
+        </div>
+        <a href="https://github.com/projectdiscovery/httpx" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Masscan -->
+    <div class="tool-item" data-category="Network Analysis">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Masscan</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Network Analysis</span>
+                <span class="badge bg-secondary">C</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Internet-scale port scanner capable of scanning the entire Internet in under 6 minutes, transmitting 10 million packets per second.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">port-scanner</span>
+            <span class="badge bg-primary me-1">high-speed</span>
+            <span class="badge bg-primary me-1">internet-scale</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('masscan-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Ubuntu/Debian):</div>
+                <pre id="masscan-apt">sudo apt update && sudo apt install masscan</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('masscan-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Build from Source:</div>
+                <pre id="masscan-git">git clone https://github.com/robertdavidgraham/masscan.git
+cd masscan
+make</pre>
+            </div>
+        </div>
+        <a href="https://github.com/robertdavidgraham/masscan" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Gau -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Gau (Get All URLs)</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Fetch known URLs from multiple sources including Wayback Machine, Common Crawl, and more for domain reconnaissance.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">url-collection</span>
+            <span class="badge bg-primary me-1">wayback</span>
+            <span class="badge bg-primary me-1">crawl</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('gau-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="gau-go">go install github.com/lc/gau/v2/cmd/gau@latest</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('gau-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="gau-apt">sudo apt update && sudo apt install gau</pre>
+            </div>
+        </div>
+        <a href="https://github.com/lc/gau" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Aqua Trivy -->
+    <div class="tool-item" data-category="Container Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Aqua Trivy</h4>
+            <div>
+                <span class="badge bg-dark">Container Security</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Comprehensive vulnerability scanner for containers, filesystems, and Git repositories with support for multiple package managers.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">vulnerability</span>
+            <span class="badge bg-primary me-1">container</span>
+            <span class="badge bg-primary me-1">scanner</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('trivy-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Ubuntu/Debian):</div>
+                <pre id="trivy-apt">sudo apt-get update && sudo apt-get install wget apt-transport-https gnupg lsb-release
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+sudo apt-get update && sudo apt-get install trivy</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('trivy-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="trivy-docker">docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest</pre>
+            </div>
+        </div>
+        <a href="https://github.com/aquasecurity/trivy" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Dirb -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Dirb</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">C</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Web content discovery tool that launches dictionary-based attacks against web servers to find existing or hidden directories and files.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">directory</span>
+            <span class="badge bg-primary me-1">brute-force</span>
+            <span class="badge bg-primary me-1">dictionary</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('dirb-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="dirb-apt">sudo apt update && sudo apt install dirb</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('dirb-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Build from Source:</div>
+                <pre id="dirb-git">git clone https://github.com/v0re/dirb.git
+cd dirb
+./configure && make</pre>
+            </div>
+        </div>
+        <a href="https://github.com/v0re/dirb" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Wfuzz -->
+    <div class="tool-item" data-category="Web Application Testing">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Wfuzz</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Web application fuzzer for security assessments that can test various injection attacks and discover hidden content through fuzzing.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">fuzzing</span>
+            <span class="badge bg-primary me-1">web-app</span>
+            <span class="badge bg-primary me-1">injection</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('wfuzz-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="wfuzz-pip">pip3 install wfuzz</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('wfuzz-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="wfuzz-apt">sudo apt update && sudo apt install wfuzz</pre>
+            </div>
+        </div>
+        <a href="https://github.com/xmendez/wfuzz" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Semgrep -->
+    <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Semgrep</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Static analysis tool for finding bugs, security issues, and enforcing code standards across multiple programming languages.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">static-analysis</span>
+            <span class="badge bg-primary me-1">code-security</span>
+            <span class="badge bg-primary me-1">multi-language</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('semgrep-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="semgrep-pip">pip3 install semgrep</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('semgrep-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="semgrep-docker">docker run --rm -v "${PWD}:/src" returntocorp/semgrep</pre>
+            </div>
+        </div>
+        <a href="https://github.com/returntocorp/semgrep" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Arachni -->
+    <div class="tool-item" data-category="Web Application Testing">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Arachni</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
+                <span class="badge bg-secondary">Ruby</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Feature-rich web application security scanner framework with high-performance and modular architecture for comprehensive testing.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">web-scanner</span>
+            <span class="badge bg-primary me-1">framework</span>
+            <span class="badge bg-primary me-1">modular</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('arachni-download')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Download Binary:</div>
+                <pre id="arachni-download"># Download from https://github.com/Arachni/arachni/releases
+wget https://github.com/Arachni/arachni/releases/latest
+# Extract and run</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('arachni-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker:</div>
+                <pre id="arachni-docker">docker run --rm arachni/arachni</pre>
+            </div>
+        </div>
+        <a href="https://github.com/Arachni/arachni" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- TruffleHog -->
+    <div class="tool-item" data-category="Vulnerability Scanning">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">TruffleHog</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Vulnerability Scanning</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Searches through git repositories and filesystems for high entropy strings and secrets, helping find accidentally committed credentials.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">secrets</span>
+            <span class="badge bg-primary me-1">git</span>
+            <span class="badge bg-primary me-1">credentials</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('trufflehog-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="trufflehog-go">go install github.com/trufflesecurity/trufflehog/v3@latest</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('trufflehog-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="trufflehog-apt">sudo apt update && sudo apt install trufflehog</pre>
+            </div>
+        </div>
+        <a href="https://github.com/trufflesecurity/trufflehog" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Assetfinder -->
+    <div class="tool-item" data-category="Reconnaissance">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Assetfinder</h4>
+            <div>
+                <span class="badge bg-info">Reconnaissance</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Find domains and subdomains related to a target using multiple data sources including Certificate Transparency logs and APIs.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">subdomain</span>
+            <span class="badge bg-primary me-1">certificate-transparency</span>
+            <span class="badge bg-primary me-1">api</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('assetfinder-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="assetfinder-go">go install github.com/tomnomnom/assetfinder@latest</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('assetfinder-apt')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">APT (Kali Linux):</div>
+                <pre id="assetfinder-apt">sudo apt update && sudo apt install assetfinder</pre>
+            </div>
+        </div>
+        <a href="https://github.com/tomnomnom/assetfinder" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- CloudSploit -->
+    <div class="tool-item" data-category="Cloud Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">CloudSploit</h4>
+            <div>
+                <span class="badge bg-primary">Cloud Security</span>
+                <span class="badge bg-secondary">JavaScript</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Open-source cloud security posture management tool that scans AWS, Azure, GCP, and Oracle cloud environments for security risks.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">cloud-security</span>
+            <span class="badge bg-primary me-1">posture</span>
+            <span class="badge bg-primary me-1">multi-cloud</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('cloudsploit-npm')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">NPM Install:</div>
+                <pre id="cloudsploit-npm">npm install -g cloudsploit</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('cloudsploit-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="cloudsploit-git">git clone https://github.com/aquasecurity/cloudsploit.git
+cd cloudsploit
+npm install</pre>
+            </div>
+        </div>
+        <a href="https://github.com/aquasecurity/cloudsploit" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- APKLeaks -->
+    <div class="tool-item" data-category="Mobile Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">APKLeaks</h4>
+            <div>
+                <span class="badge bg-info">Mobile Security</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Scanning APK file for URIs, endpoints & secrets to identify potential security vulnerabilities in Android applications.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">android</span>
+            <span class="badge bg-primary me-1">apk</span>
+            <span class="badge bg-primary me-1">secrets</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('apkleaks-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="apkleaks-pip">pip3 install apkleaks</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('apkleaks-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="apkleaks-git">git clone https://github.com/dwisiswant0/apkleaks.git
+cd apkleaks
+pip3 install -r requirements.txt</pre>
+            </div>
+        </div>
+        <a href="https://github.com/dwisiswant0/apkleaks" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- DefectDojo -->
+    <div class="tool-item" data-category="Reporting">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">DefectDojo</h4>
+            <div>
+                <span class="badge bg-secondary">Reporting</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Security vulnerability management tool that streamlines security testing and provides centralized vulnerability tracking and reporting.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">vulnerability-management</span>
+            <span class="badge bg-primary me-1">tracking</span>
+            <span class="badge bg-primary me-1">dashboard</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('defectdojo-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker Compose:</div>
+                <pre id="defectdojo-docker">git clone https://github.com/DefectDojo/django-DefectDojo.git
+cd django-DefectDojo
+docker-compose up -d</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('defectdojo-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="defectdojo-pip">pip3 install defectdojo</pre>
+            </div>
+        </div>
+        <a href="https://github.com/DefectDojo/django-DefectDojo" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- JWT_Tool -->
+    <div class="tool-item" data-category="Web Application Testing">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">JWT_Tool</h4>
+            <div>
+                <span class="badge bg-warning text-dark">Web Application Testing</span>
+                <span class="badge bg-secondary">Python</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Toolkit for validating, forging, scanning, and tampering with JWTs (JSON Web Tokens) to test for common security vulnerabilities.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">jwt</span>
+            <span class="badge bg-primary me-1">token</span>
+            <span class="badge bg-primary me-1">validation</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('jwt-pip')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Pip Install:</div>
+                <pre id="jwt-pip">pip3 install pyjwt</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('jwt-git')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Git Clone:</div>
+                <pre id="jwt-git">git clone https://github.com/ticarpi/jwt_tool.git
+cd jwt_tool
+pip3 install -r requirements.txt</pre>
+            </div>
+        </div>
+        <a href="https://github.com/ticarpi/jwt_tool" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> View Tool
+        </a>
+    </div>
+
+    <!-- Clair -->
+    <div class="tool-item" data-category="Container Security">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h4 class="mb-1">Clair</h4>
+            <div>
+                <span class="badge bg-dark">Container Security</span>
+                <span class="badge bg-secondary">Go</span>
+            </div>
+        </div>
+        <p class="text-muted mb-3">
+            Open-source static analysis tool for container security that scans container images for known vulnerabilities and security issues.
+        </p>
+        <div class="mb-3">
+            <span class="badge bg-primary me-1">container</span>
+            <span class="badge bg-primary me-1">vulnerability</span>
+            <span class="badge bg-primary me-1">static-analysis</span>
+        </div>
+        <div class="mb-3">
+            <h6>Installation Methods:</h6>
+            <div class="command-output mb-2">
+                <button class="copy-btn" onclick="copyToClipboard('clair-docker')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Docker Compose:</div>
+                <pre id="clair-docker">git clone https://github.com/quay/clair.git
+cd clair
+docker-compose up -d</pre>
+            </div>
+            <div class="command-output">
+                <button class="copy-btn" onclick="copyToClipboard('clair-go')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+                <div class="fw-bold mb-1">Go Install:</div>
+                <pre id="clair-go">go install github.com/quay/clair/v4/cmd/clair@latest</pre>
+            </div>
+        </div>
+        <a href="https://github.com/quay/clair" target="_blank" class="btn btn-outline-primary">
             <i class="bi bi-box-arrow-up-right"></i> View Tool
         </a>
     </div>
