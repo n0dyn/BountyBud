@@ -111,57 +111,12 @@
     <div class="col-md-9">
         <h4 class="mb-3">Commands</h4>
         <div id="commandSection">
-            <!-- Subdomain Enumeration Commands (Default) -->
-            <div class="tool-category active" id="subdomain-commands">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="tool-item">
-                            <h5>Basic Subdomain Discovery</h5>
-                            <p class="text-muted small">Discovers subdomains using subfinder with recursive enumeration and saves results to a file.</p>
-                            <div class="mt-3">
-                                <button class="btn btn-primary" onclick="generateCommand('subfinder')">
-                                    <i class="bi bi-play-fill"></i> Generate Command
-                                </button>
-                                <a href="https://github.com/projectdiscovery/subfinder" target="_blank" class="btn btn-outline-secondary btn-sm">
-                                    Tool Documentation →
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="tool-item">
-                            <h5>Live Subdomain Filtering (Polite)</h5>
-                            <p class="text-muted small">Filters live subdomains using httpx with polite scanning parameters.</p>
-                            <div class="mt-3">
-                                <button class="btn btn-primary" onclick="generateCommand('httpx')">
-                                    <i class="bi bi-play-fill"></i> Generate Command
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="tool-item">
-                            <h5>Amass Subdomain Enumeration</h5>
-                            <p class="text-muted small">Comprehensive subdomain enumeration using Amass with passive sources.</p>
-                            <div class="mt-3">
-                                <button class="btn btn-primary" onclick="generateCommand('amass')">
-                                    <i class="bi bi-play-fill"></i> Generate Command
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="tool-item">
-                            <h5>DNSGen Wordlist Generation</h5>
-                            <p class="text-muted small">Generate additional subdomains using dnsgen for wordlist-based discovery.</p>
-                            <div class="mt-3">
-                                <button class="btn btn-primary" onclick="generateCommand('dnsgen')">
-                                    <i class="bi bi-play-fill"></i> Generate Command
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Tools will be loaded dynamically -->
+            <div class="text-center py-5" id="loadingTools">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
+                <p class="mt-3 text-muted">Loading tools...</p>
             </div>
         </div>
         
@@ -205,8 +160,90 @@
 
 {% block scripts %}
 <script>
-// Command generation logic
-function generateCommand(tool) {
+let commandTemplates = {};
+let currentCategory = 'subdomain';
+
+// Load command templates on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCommandTemplates();
+    setupCategoryListeners();
+});
+
+async function loadCommandTemplates() {
+    try {
+        const response = await fetch('/api/command-templates');
+        commandTemplates = await response.json();
+        
+        // Load default category (subdomain)
+        updateCommandSection(currentCategory);
+    } catch (error) {
+        console.error('Failed to load command templates:', error);
+        showToast('Failed to load command templates', 'danger');
+        document.getElementById('loadingTools').innerHTML = `
+            <i class="bi bi-exclamation-triangle display-1 text-danger"></i>
+            <h4 class="mt-3">Failed to Load Tools</h4>
+            <p class="text-muted">Please refresh the page to try again.</p>
+        `;
+    }
+}
+
+function setupCategoryListeners() {
+    const categoryButtons = document.querySelectorAll('#categoryList .list-group-item');
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Update command section based on category
+            currentCategory = this.dataset.category;
+            updateCommandSection(currentCategory);
+        });
+    });
+}
+
+function updateCommandSection(category) {
+    const commandSection = document.getElementById('commandSection');
+    
+    if (!commandTemplates[category]) {
+        commandSection.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-hammer display-1 text-muted"></i>
+                <h4 class="mt-3">Coming Soon</h4>
+                <p class="text-muted">Commands for ${category} category are being developed.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const categoryData = commandTemplates[category];
+    let toolsHtml = '<div class="row">';
+    
+    categoryData.tools.forEach(tool => {
+        toolsHtml += `
+            <div class="col-md-6 mb-3">
+                <div class="tool-item">
+                    <h5>${tool.name}</h5>
+                    <p class="text-muted small">${tool.description}</p>
+                    <div class="mt-3">
+                        <button class="btn btn-primary" onclick="generateCommand('${tool.id}', '${category}')">
+                            <i class="bi bi-play-fill"></i> Generate Command
+                        </button>
+                        ${tool.docs_url ? `<a href="${tool.docs_url}" target="_blank" class="btn btn-outline-secondary btn-sm ms-2">
+                            Tool Documentation →
+                        </a>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    toolsHtml += '</div>';
+    commandSection.innerHTML = toolsHtml;
+}
+
+async function generateCommand(toolId, category) {
     const domain = document.getElementById('targetDomain').value.trim();
     if (!domain) {
         showToast('Please enter a domain first', 'warning');
@@ -218,71 +255,33 @@ function generateCommand(tool) {
         return;
     }
     
-    let command = '';
-    
-    switch(tool) {
-        case 'subfinder':
-            command = `# Basic Subdomain Discovery for ${domain}
-subfinder -d ${domain} -all -recursive -o ${domain}_subdomains.txt
-echo "Subdomains saved to ${domain}_subdomains.txt"`;
-            break;
-        case 'httpx':
-            command = `# Live Subdomain Filtering for ${domain}
-httpx -l ${domain}_subdomains.txt -threads 10 -rate-limit 100 -timeout 10 -o ${domain}_live_subdomains.txt
-echo "Live subdomains saved to ${domain}_live_subdomains.txt"`;
-            break;
-        case 'amass':
-            command = `# Amass Subdomain Enumeration for ${domain}
-amass enum -passive -d ${domain} -o ${domain}_amass_subdomains.txt
-echo "Amass results saved to ${domain}_amass_subdomains.txt"`;
-            break;
-        case 'dnsgen':
-            command = `# DNSGen Wordlist Generation for ${domain}
-cat ${domain}_subdomains.txt | dnsgen - | head -10000 > ${domain}_dnsgen_wordlist.txt
-subfinder -dL ${domain}_dnsgen_wordlist.txt -o ${domain}_dnsgen_results.txt
-echo "DNSGen results saved to ${domain}_dnsgen_results.txt"`;
-            break;
-        default:
-            command = `# Command for ${tool} on ${domain}
-echo "Command generation for ${tool} coming soon"`;
-    }
-    
-    document.getElementById('generatedCommand').textContent = command;
-    document.getElementById('commandOutput').style.display = 'block';
-    document.getElementById('commandOutput').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Category switching
-document.addEventListener('DOMContentLoaded', function() {
-    const categoryButtons = document.querySelectorAll('#categoryList .list-group-item');
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Remove active class from all buttons
-            categoryButtons.forEach(btn => btn.classList.remove('active'));
-            // Add active class to clicked button
-            this.classList.add('active');
-            
-            // Update command section based on category
-            const category = this.dataset.category;
-            updateCommandSection(category);
+    try {
+        const response = await fetch('/api/generate-command', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                domain: domain,
+                tool: toolId,
+                category: category
+            })
         });
-    });
-});
-
-function updateCommandSection(category) {
-    // For now, show placeholder for other categories
-    const commandSection = document.getElementById('commandSection');
-    if (category !== 'subdomain') {
-        commandSection.innerHTML = `
-            <div class="text-center py-5">
-                <i class="bi bi-hammer display-1 text-muted"></i>
-                <h4 class="mt-3">Coming Soon</h4>
-                <p class="text-muted">Commands for ${category} category are being developed.</p>
-            </div>
-        `;
-    } else {
-        // Reload subdomain commands
-        location.reload();
+        
+        const result = await response.json();
+        
+        if (result.error) {
+            showToast('Failed to generate command', 'danger');
+            return;
+        }
+        
+        document.getElementById('generatedCommand').textContent = result.command;
+        document.getElementById('commandOutput').style.display = 'block';
+        document.getElementById('commandOutput').scrollIntoView({ behavior: 'smooth' });
+        
+    } catch (error) {
+        console.error('Failed to generate command:', error);
+        showToast('Failed to generate command', 'danger');
     }
 }
 
@@ -300,7 +299,12 @@ function generateCommands() {
         showToast('Please enter a domain first', 'warning');
         return;
     }
-    generateCommand('subfinder');
+    
+    // Generate command for the first tool in the current category
+    const categoryData = commandTemplates[currentCategory];
+    if (categoryData && categoryData.tools.length > 0) {
+        generateCommand(categoryData.tools[0].id, currentCategory);
+    }
 }
 </script>
 {% endblock %}

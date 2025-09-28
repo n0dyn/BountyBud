@@ -1,0 +1,276 @@
+{
+  "subdomain": {
+    "name": "Subdomain Enumeration",
+    "tools": [
+      {
+        "id": "subfinder",
+        "name": "Basic Subdomain Discovery",
+        "description": "Discovers subdomains using subfinder with recursive enumeration and saves results to a file.",
+        "command": "subfinder -d {domain} -all -recursive -t 20 -o {domain}_subdomains.txt\necho \"Subdomains saved to {domain}_subdomains.txt\"",
+        "docs_url": "https://github.com/projectdiscovery/subfinder"
+      },
+      {
+        "id": "httpx",
+        "name": "Live Subdomain Filtering",
+        "description": "Filters live subdomains using httpx with polite scanning parameters.",
+        "command": "httpx -l {domain}_subdomains.txt -threads 10 -rate-limit 100 -timeout 10 -o {domain}_live_subdomains.txt\necho \"Live subdomains saved to {domain}_live_subdomains.txt\""
+      },
+      {
+        "id": "amass",
+        "name": "Amass Subdomain Enumeration",
+        "description": "Comprehensive subdomain enumeration using Amass with passive sources.",
+        "command": "amass enum -passive -d {domain} -config /opt/amass/config.ini -o {domain}_amass_subdomains.txt\necho \"Amass results saved to {domain}_amass_subdomains.txt\""
+      },
+      {
+        "id": "dnsgen",
+        "name": "DNSGen Wordlist Generation",
+        "description": "Generate additional subdomains using dnsgen for wordlist-based discovery.",
+        "command": "cat {domain}_subdomains.txt | dnsgen - | head -10000 > {domain}_dnsgen_wordlist.txt\nsubfinder -dL {domain}_dnsgen_wordlist.txt -o {domain}_dnsgen_results.txt\necho \"DNSGen results saved to {domain}_dnsgen_results.txt\""
+      }
+    ]
+  },
+  "url": {
+    "name": "URL Collection",
+    "tools": [
+      {
+        "id": "gau",
+        "name": "GetAllUrls (GAU)",
+        "description": "Fetches known URLs from Wayback Machine, Common Crawl, and AlienVault OTX.",
+        "command": "gau {domain} | head -10000 > {domain}_urls.txt\necho \"URLs saved to {domain}_urls.txt\""
+      },
+      {
+        "id": "waybackurls",
+        "name": "Wayback URLs",
+        "description": "Fetch URLs from the Wayback Machine for a domain.",
+        "command": "waybackurls {domain} | head -5000 > {domain}_wayback_urls.txt\necho \"Wayback URLs saved to {domain}_wayback_urls.txt\""
+      },
+      {
+        "id": "hakrawler",
+        "name": "Hakrawler",
+        "description": "Web crawler designed for gathering URLs and JavaScript file locations.",
+        "command": "echo {domain} | hakrawler -depth 2 -plain -usewayback > {domain}_crawled_urls.txt\necho \"Crawled URLs saved to {domain}_crawled_urls.txt\""
+      }
+    ]
+  },
+  "directory": {
+    "name": "Directory Scanning",
+    "tools": [
+      {
+        "id": "gobuster",
+        "name": "Gobuster Directory Scan",
+        "description": "Fast directory and file brute-forcer written in Go.",
+        "command": "gobuster dir -u https://{domain} -w /usr/share/wordlists/dirb/common.txt -t 20 -q -o {domain}_directories.txt\necho \"Directory scan results saved to {domain}_directories.txt\""
+      },
+      {
+        "id": "feroxbuster",
+        "name": "Feroxbuster Recursive Scan",
+        "description": "Fast, simple, recursive content discovery tool written in Rust.",
+        "command": "feroxbuster -u https://{domain} -w /usr/share/wordlists/dirb/common.txt -t 20 -C 404,403 -o {domain}_ferox_results.txt\necho \"Feroxbuster results saved to {domain}_ferox_results.txt\""
+      },
+      {
+        "id": "ffuf",
+        "name": "FFUF Directory Fuzzing",
+        "description": "Fast web fuzzer written in Go for content discovery.",
+        "command": "ffuf -u https://{domain}/FUZZ -w /usr/share/wordlists/dirb/common.txt -t 20 -rate 100 -o {domain}_ffuf_results.json\necho \"FFUF results saved to {domain}_ffuf_results.json\""
+      }
+    ]
+  },
+  "sensitive": {
+    "name": "Sensitive Data Discovery",
+    "tools": [
+      {
+        "id": "nuclei-exposures",
+        "name": "Nuclei Exposure Detection",
+        "description": "Scan for exposed sensitive files and configurations using Nuclei.",
+        "command": "nuclei -u https://{domain} -t exposures/ -rate-limit 50 -o {domain}_exposures.txt\necho \"Exposure scan results saved to {domain}_exposures.txt\""
+      },
+      {
+        "id": "truffleHog",
+        "name": "TruffleHog Secret Scanning",
+        "description": "Search for secrets accidentally committed to repositories.",
+        "command": "trufflehog git https://github.com/{domain} --only-verified > {domain}_secrets.txt\necho \"Secret scan results saved to {domain}_secrets.txt\""
+      }
+    ]
+  },
+  "lfi": {
+    "name": "LFI Testing",
+    "tools": [
+      {
+        "id": "ffuf-lfi",
+        "name": "FFUF LFI Fuzzing",
+        "description": "Local File Inclusion testing using FFUF with LFI payloads.",
+        "command": "ffuf -u 'https://{domain}/page?file=FUZZ' -w /opt/wordlists/lfi_payloads.txt -t 10 -rate 50 -mc 200 -o {domain}_lfi_results.json\necho \"LFI fuzzing results saved to {domain}_lfi_results.json\""
+      }
+    ]
+  },
+  "cors": {
+    "name": "CORS Testing",
+    "tools": [
+      {
+        "id": "corsy",
+        "name": "Corsy CORS Scanner",
+        "description": "CORS misconfiguration scanner.",
+        "command": "python3 /opt/tools/Corsy/corsy.py -u https://{domain} -t 20 -o {domain}_cors_results.txt\necho \"CORS scan results saved to {domain}_cors_results.txt\""
+      }
+    ]
+  },
+  "wordpress": {
+    "name": "WordPress Scanning",
+    "tools": [
+      {
+        "id": "wpscan",
+        "name": "WPScan Vulnerability Scanner",
+        "description": "WordPress Security Scanner that identifies vulnerabilities.",
+        "command": "wpscan --url https://{domain} --enumerate p,t,u --plugins-detection aggressive --api-token YOUR_API_TOKEN -o {domain}_wpscan.json\necho \"WPScan results saved to {domain}_wpscan.json\""
+      },
+      {
+        "id": "nuclei-wordpress",
+        "name": "Nuclei WordPress Templates",
+        "description": "WordPress-specific vulnerability scanning using Nuclei.",
+        "command": "nuclei -u https://{domain} -t wordpress/ -rate-limit 50 -o {domain}_wp_nuclei.txt\necho \"WordPress Nuclei scan results saved to {domain}_wp_nuclei.txt\""
+      }
+    ]
+  },
+  "network": {
+    "name": "Network Scanning",
+    "tools": [
+      {
+        "id": "nmap-basic",
+        "name": "Nmap Basic Port Scan",
+        "description": "Basic port scan with service detection and common scripts.",
+        "command": "nmap -sV -sC -T4 {domain} -oA {domain}_nmap_basic\necho \"Nmap basic scan results saved to {domain}_nmap_basic.*\""
+      },
+      {
+        "id": "nmap-full",
+        "name": "Nmap Full Port Scan",
+        "description": "Comprehensive scan of all 65535 ports.",
+        "command": "nmap -p- -T4 {domain} -oA {domain}_nmap_full\necho \"Nmap full port scan results saved to {domain}_nmap_full.*\""
+      },
+      {
+        "id": "masscan",
+        "name": "Masscan Fast Port Scan",
+        "description": "Ultra-fast port scanner for large-scale scanning.",
+        "command": "masscan -p1-65535 {domain} --rate=1000 -oX {domain}_masscan.xml\necho \"Masscan results saved to {domain}_masscan.xml\""
+      }
+    ]
+  },
+  "service": {
+    "name": "Service Enumeration",
+    "tools": [
+      {
+        "id": "nmap-scripts",
+        "name": "Nmap NSE Scripts",
+        "description": "Service enumeration using Nmap NSE scripts.",
+        "command": "nmap -sV --script=default,discovery,safe {domain} -oA {domain}_nse_enum\necho \"NSE enumeration results saved to {domain}_nse_enum.*\""
+      },
+      {
+        "id": "nuclei-services",
+        "name": "Nuclei Service Detection",
+        "description": "Service-specific vulnerability scanning using Nuclei.",
+        "command": "nuclei -u https://{domain} -t technologies/ -rate-limit 50 -o {domain}_service_detection.txt\necho \"Service detection results saved to {domain}_service_detection.txt\""
+      }
+    ]
+  },
+  "parameter": {
+    "name": "Parameter Discovery",
+    "tools": [
+      {
+        "id": "arjun",
+        "name": "Arjun Parameter Discovery",
+        "description": "HTTP parameter discovery suite.",
+        "command": "arjun -u https://{domain} -w /opt/wordlists/parameters.txt -t 20 -o {domain}_parameters.txt\necho \"Parameter discovery results saved to {domain}_parameters.txt\""
+      },
+      {
+        "id": "ffuf-params",
+        "name": "FFUF Parameter Fuzzing",
+        "description": "Parameter fuzzing using FFUF with common parameter wordlists.",
+        "command": "ffuf -u 'https://{domain}/?FUZZ=test' -w /opt/wordlists/parameters.txt -t 20 -rate 100 -mc 200 -o {domain}_param_fuzz.json\necho \"Parameter fuzzing results saved to {domain}_param_fuzz.json\""
+      }
+    ]
+  },
+  "javascript": {
+    "name": "JavaScript Analysis",
+    "tools": [
+      {
+        "id": "linkfinder",
+        "name": "LinkFinder",
+        "description": "Python script to discover endpoints in JavaScript files.",
+        "command": "python3 /opt/tools/LinkFinder/linkfinder.py -i https://{domain} -d -o {domain}_js_endpoints.html\necho \"JavaScript endpoints saved to {domain}_js_endpoints.html\""
+      },
+      {
+        "id": "getjs",
+        "name": "GetJS",
+        "description": "Tool to extract all JavaScript files from a domain.",
+        "command": "getjs --url https://{domain} --output {domain}_js_files.txt\necho \"JavaScript files saved to {domain}_js_files.txt\""
+      }
+    ]
+  },
+  "api": {
+    "name": "API Security Testing",
+    "tools": [
+      {
+        "id": "nuclei-api",
+        "name": "Nuclei API Templates",
+        "description": "API-specific vulnerability scanning using Nuclei.",
+        "command": "nuclei -u https://{domain} -t http/misconfiguration/,http/vulnerabilities/ -rate-limit 50 -o {domain}_api_scan.txt\necho \"API scan results saved to {domain}_api_scan.txt\""
+      },
+      {
+        "id": "ffuf-api",
+        "name": "FFUF API Endpoint Discovery",
+        "description": "API endpoint discovery using common API patterns.",
+        "command": "ffuf -u 'https://{domain}/api/FUZZ' -w /opt/wordlists/api_endpoints.txt -t 20 -rate 100 -mc 200,201,204 -o {domain}_api_endpoints.json\necho \"API endpoint discovery results saved to {domain}_api_endpoints.json\""
+      }
+    ]
+  },
+  "mobile": {
+    "name": "Mobile App Security Testing",
+    "tools": [
+      {
+        "id": "mobsf-api",
+        "name": "MobSF API Scan",
+        "description": "Mobile Security Framework API scanning.",
+        "command": "# Note: Requires MobSF setup and APK/IPA file\necho \"Mobile app security testing requires MobSF framework setup\"\necho \"Upload your APK/IPA file to MobSF at http://localhost:8000\""
+      }
+    ]
+  },
+  "cloud": {
+    "name": "Cloud Security Testing",
+    "tools": [
+      {
+        "id": "s3scanner",
+        "name": "S3 Bucket Scanner",
+        "description": "Scan for misconfigured S3 buckets related to the domain.",
+        "command": "python3 /opt/tools/S3Scanner/s3scanner.py -d {domain} -o {domain}_s3_buckets.txt\necho \"S3 bucket scan results saved to {domain}_s3_buckets.txt\""
+      },
+      {
+        "id": "nuclei-cloud",
+        "name": "Nuclei Cloud Templates",
+        "description": "Cloud-specific misconfigurations using Nuclei.",
+        "command": "nuclei -u https://{domain} -t cloud/ -rate-limit 50 -o {domain}_cloud_scan.txt\necho \"Cloud security scan results saved to {domain}_cloud_scan.txt\""
+      }
+    ]
+  },
+  "vuln": {
+    "name": "Vulnerability Assessment",
+    "tools": [
+      {
+        "id": "nuclei-full",
+        "name": "Nuclei Full Scan",
+        "description": "Comprehensive vulnerability scan using all Nuclei templates.",
+        "command": "nuclei -u https://{domain} -t cves/,vulnerabilities/,misconfiguration/ -rate-limit 50 -o {domain}_vuln_scan.txt\necho \"Vulnerability scan results saved to {domain}_vuln_scan.txt\""
+      },
+      {
+        "id": "nikto",
+        "name": "Nikto Web Scanner",
+        "description": "Web server scanner for dangerous files and vulnerabilities.",
+        "command": "nikto -h https://{domain} -Format txt -output {domain}_nikto.txt\necho \"Nikto scan results saved to {domain}_nikto.txt\""
+      },
+      {
+        "id": "sqlmap-crawl",
+        "name": "SQLMap Crawl & Test",
+        "description": "Crawl the site and test for SQL injection vulnerabilities.",
+        "command": "sqlmap -u https://{domain} --crawl=2 --batch --random-agent --level=2 --risk=2 -o {domain}_sqlmap\necho \"SQLMap results saved to {domain}_sqlmap/\""
+      }
+    ]
+  }
+}
