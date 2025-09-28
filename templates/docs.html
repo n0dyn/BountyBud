@@ -56,17 +56,35 @@
                     <i class="bi bi-1-circle text-primary"></i>
                     Bug Bounty Fundamentals
                 </h4>
-                <p class="text-muted">Learn the basics of bug bounty hunting, including:</p>
-                <ul>
-                    <li>Understanding vulnerability types</li>
-                    <li>Setting up your testing environment</li>
-                    <li>Legal considerations and responsible disclosure</li>
-                    <li>Choosing the right bug bounty platforms</li>
-                    <li>Building your initial toolkit</li>
+                <p class="text-muted">Learn the basics of bug bounty hunting:</p>
+                
+                <h6 class="mt-3">Understanding Vulnerability Types</h6>
+                <ul class="small">
+                    <li><strong>XSS (Cross-Site Scripting):</strong> Reflected, Stored, DOM-based</li>
+                    <li><strong>SQL Injection:</strong> Classic, Blind, Time-based</li>
+                    <li><strong>IDOR:</strong> Insecure Direct Object References</li>
+                    <li><strong>CSRF:</strong> Cross-Site Request Forgery</li>
+                    <li><strong>SSRF:</strong> Server-Side Request Forgery</li>
+                    <li><strong>Authentication Issues:</strong> Bypass, Broken logic</li>
                 </ul>
-                <a href="#" class="btn btn-outline-primary btn-sm">
-                    Read Full Guide →
-                </a>
+                
+                <h6 class="mt-3">Legal & Ethical Guidelines</h6>
+                <ul class="small">
+                    <li>Always read and follow program scope</li>
+                    <li>Never test on out-of-scope domains</li>
+                    <li>Avoid causing damage or data loss</li>
+                    <li>Practice responsible disclosure</li>
+                    <li>Respect rate limits and be "polite"</li>
+                </ul>
+                
+                <h6 class="mt-3">Choosing Bug Bounty Platforms</h6>
+                <ul class="small">
+                    <li><strong>HackerOne:</strong> Largest platform, established programs</li>
+                    <li><strong>Bugcrowd:</strong> Good variety, crowd-sourced testing</li>
+                    <li><strong>Intigriti:</strong> European focus, quality programs</li>
+                    <li><strong>YesWeHack:</strong> Growing platform with unique programs</li>
+                    <li><strong>Private Programs:</strong> Higher payouts, invitation only</li>
+                </ul>
             </div>
         </div>
         <div class="col-md-6">
@@ -75,17 +93,47 @@
                     <i class="bi bi-2-circle text-primary"></i>
                     Setting Up Your Lab Environment
                 </h4>
-                <p class="text-muted">Configure your testing environment:</p>
-                <ul>
-                    <li>Virtual machine setup (Kali Linux, Parrot OS)</li>
-                    <li>Essential tools installation</li>
-                    <li>Browser configuration for security testing</li>
-                    <li>VPN and proxy setup</li>
-                    <li>Note-taking and documentation tools</li>
+                <p class="text-muted">Complete setup guide for your testing environment:</p>
+                
+                <h6 class="mt-3">Virtual Machine Setup</h6>
+                <div class="command-output mb-2">
+                    <small class="text-muted">Download Kali Linux VM:</small>
+                    <pre class="small">wget https://cdimage.kali.org/kali-2024.1/kali-linux-2024.1-virtualbox-amd64.ova</pre>
+                </div>
+                <ul class="small">
+                    <li><strong>Recommended:</strong> 8GB RAM, 80GB storage</li>
+                    <li><strong>Alternative:</strong> Parrot Security OS, Ubuntu + tools</li>
+                    <li><strong>Cloud Options:</strong> AWS Kali AMI, DigitalOcean</li>
                 </ul>
-                <a href="#" class="btn btn-outline-primary btn-sm">
-                    Setup Guide →
-                </a>
+                
+                <h6 class="mt-3">Essential Tools Installation</h6>
+                <div class="command-output mb-2">
+                    <small class="text-muted">Install core tools (Kali Linux):</small>
+                    <pre class="small"># Install from repositories (Kali)
+sudo apt update && sudo apt install -y \
+    gobuster feroxbuster nmap sqlmap burpsuite zaproxy
+
+# Install ProjectDiscovery tools
+go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+go install github.com/projectdiscovery/httpx/cmd/httpx@latest  
+go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest</pre>
+                </div>
+                
+                <h6 class="mt-3">Browser Configuration</h6>
+                <ul class="small">
+                    <li><strong>Firefox:</strong> Install FoxyProxy, Wappalyzer, HackTools</li>
+                    <li><strong>Chrome:</strong> Install REST Client, EditThisCookie, BuiltWith</li>
+                    <li><strong>Proxy Setup:</strong> Configure to use 127.0.0.1:8080 (Burp)</li>
+                    <li><strong>Certificate:</strong> Import Burp/ZAP CA certificate</li>
+                </ul>
+                
+                <h6 class="mt-3">Documentation Setup</h6>
+                <ul class="small">
+                    <li><strong>Note-taking:</strong> Obsidian, Notion, or Joplin</li>
+                    <li><strong>Screenshots:</strong> Flameshot, Greenshot</li>
+                    <li><strong>Screen Recording:</strong> OBS Studio, SimpleScreenRecorder</li>
+                    <li><strong>Report Templates:</strong> Markdown templates for consistent reporting</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -107,18 +155,27 @@
                 </h4>
                 <h6>Passive Reconnaissance</h6>
                 <ul class="small">
-                    <li>Subdomain enumeration</li>
-                    <li>DNS information gathering</li>
-                    <li>WHOIS and ASN discovery</li>
-                    <li>Social media and public information</li>
-                    <li>Google dorking techniques</li>
+                    <li><strong>Subdomain Enumeration:</strong> Subfinder, Amass, crt.sh</li>
+                    <li><strong>DNS Information:</strong> dig, nslookup, DNSdumpster</li>
+                    <li><strong>WHOIS/ASN:</strong> whois, bgp.he.net, ASN lookup</li>
+                    <li><strong>OSINT:</strong> LinkedIn, GitHub, job postings</li>
+                    <li><strong>Google Dorking:</strong> site:, filetype:, inurl:</li>
+                    <li><strong>Archives:</strong> Wayback Machine, CommonCrawl</li>
                 </ul>
+                <div class="command-output mb-2">
+                    <small class="text-muted">Example reconnaissance workflow:</small>
+                    <pre class="small">subfinder -d target.com -all -o subdomains.txt
+httpx -l subdomains.txt -o live_subdomains.txt
+nuclei -l live_subdomains.txt -t ~/nuclei-templates/</pre>
+                </div>
+                
                 <h6>Active Reconnaissance</h6>
                 <ul class="small">
-                    <li>Port scanning and service detection</li>
-                    <li>Technology stack identification</li>
-                    <li>Directory and file discovery</li>
-                    <li>Parameter fuzzing</li>
+                    <li><strong>Port Scanning:</strong> nmap, masscan, RustScan</li>
+                    <li><strong>Technology Stack:</strong> Wappalyzer, WhatWeb</li>
+                    <li><strong>Directory Discovery:</strong> Gobuster, Feroxbuster, FFUF</li>
+                    <li><strong>Parameter Discovery:</strong> Arjun, ParamSpider</li>
+                    <li><strong>Content Discovery:</strong> GAU, Waybackurls</li>
                 </ul>
             </div>
         </div>
@@ -130,19 +187,31 @@
                 </h4>
                 <h6>Common Vulnerability Types</h6>
                 <ul class="small">
-                    <li>XSS (Reflected, Stored, DOM)</li>
-                    <li>SQL Injection</li>
-                    <li>CSRF and SSRF</li>
-                    <li>Authentication bypass</li>
-                    <li>Authorization flaws</li>
-                    <li>Business logic vulnerabilities</li>
+                    <li><strong>XSS:</strong> Reflected, Stored, DOM-based, mXSS</li>
+                    <li><strong>SQL Injection:</strong> Union, Boolean, Time-based, NoSQL</li>
+                    <li><strong>CSRF/SSRF:</strong> State-changing requests, internal services</li>
+                    <li><strong>Authentication:</strong> Brute force, bypass, session fixation</li>
+                    <li><strong>Authorization:</strong> IDOR, privilege escalation, RBAC bypass</li>
+                    <li><strong>Business Logic:</strong> Race conditions, price manipulation</li>
+                    <li><strong>Injection:</strong> Command, LDAP, XML, template injection</li>
                 </ul>
-                <h6>Testing Approaches</h6>
+                
+                <h6>Testing Methodologies</h6>
                 <ul class="small">
-                    <li>Manual testing techniques</li>
-                    <li>Automated scanning</li>
-                    <li>Code review methods</li>
+                    <li><strong>OWASP Testing Guide:</strong> Systematic web app testing</li>
+                    <li><strong>PTES:</strong> Penetration Testing Execution Standard</li>
+                    <li><strong>Bug Bounty Methodology:</strong> Jason Haddix approach</li>
+                    <li><strong>WAHH Methodology:</strong> Web Application Hacker's Handbook</li>
                 </ul>
+                
+                <div class="command-output mb-2">
+                    <small class="text-muted">XSS Testing Example:</small>
+                    <pre class="small"># Test for reflected XSS
+&lt;script&gt;alert('XSS')&lt;/script&gt;
+&lt;img src=x onerror=alert('XSS')&gt;
+&lt;svg onload=alert('XSS')&gt;
+javascript:alert('XSS')</pre>
+                </div>
             </div>
         </div>
         <div class="col-md-4">
@@ -153,18 +222,35 @@
                 </h4>
                 <h6>Effective Bug Reports</h6>
                 <ul class="small">
-                    <li>Clear vulnerability description</li>
-                    <li>Step-by-step reproduction</li>
-                    <li>Proof of concept (PoC)</li>
-                    <li>Impact assessment</li>
-                    <li>Remediation suggestions</li>
+                    <li><strong>Title:</strong> Clear, specific vulnerability description</li>
+                    <li><strong>Summary:</strong> Brief overview of the issue</li>
+                    <li><strong>Steps to Reproduce:</strong> Detailed, numbered steps</li>
+                    <li><strong>Proof of Concept:</strong> Working payload/exploit</li>
+                    <li><strong>Impact:</strong> Business risk and technical impact</li>
+                    <li><strong>Mitigation:</strong> How to fix the vulnerability</li>
+                    <li><strong>References:</strong> OWASP, CWE, CVE references</li>
                 </ul>
-                <h6>Documentation Tools</h6>
+                
+                <h6>Report Quality Tips</h6>
                 <ul class="small">
-                    <li>Screenshot and video recording</li>
-                    <li>Markdown report templates</li>
-                    <li>Evidence organization</li>
+                    <li><strong>Screenshots:</strong> Highlight key elements, add annotations</li>
+                    <li><strong>Video PoC:</strong> For complex multi-step vulnerabilities</li>
+                    <li><strong>HTTP Requests:</strong> Include full request/response</li>
+                    <li><strong>Timeline:</strong> Document discovery and testing process</li>
                 </ul>
+                
+                <div class="command-output mb-2">
+                    <small class="text-muted">Report Template Structure:</small>
+                    <pre class="small"># Vulnerability Title
+## Summary
+## Steps to Reproduce
+1. Navigate to...
+2. Enter payload...
+3. Observe...
+## Proof of Concept
+## Impact
+## Recommendation</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -185,22 +271,76 @@
                     Command Line Tools
                 </h4>
                 <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>Subfinder Deep Dive</strong>
-                        <p class="mb-1 small text-muted">Complete guide to subdomain enumeration with Subfinder</p>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Complete guide to subdomain enumeration with Subfinder</p>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Installation:</small>
+                            <pre class="small">go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest</pre>
+                        </div>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Basic usage:</small>
+                            <pre class="small">subfinder -d target.com -all -recursive -o subdomains.txt</pre>
+                        </div>
+                        <ul class="small">
+                            <li><strong>-all:</strong> Use all sources for maximum coverage</li>
+                            <li><strong>-recursive:</strong> Enable recursive subdomain discovery</li>
+                            <li><strong>-t 20:</strong> Set thread count for speed</li>
+                            <li><strong>-config:</strong> Use custom configuration file</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>Nuclei Templates Mastery</strong>
-                        <p class="mb-1 small text-muted">Creating and customizing Nuclei templates for vulnerability scanning</p>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Creating and customizing Nuclei templates</p>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Installation & update:</small>
+                            <pre class="small">go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
+nuclei -ut</pre>
+                        </div>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Running scans:</small>
+                            <pre class="small">nuclei -l targets.txt -t ~/nuclei-templates/
+nuclei -u https://target.com -tags cve,misconfig
+nuclei -l targets.txt -severity critical,high</pre>
+                        </div>
+                        <ul class="small">
+                            <li><strong>Custom Templates:</strong> Create YAML templates for specific tests</li>
+                            <li><strong>Matchers:</strong> Use status, word, regex, dsl matchers</li>
+                            <li><strong>Extractors:</strong> Extract data from responses</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>Gobuster Techniques</strong>
-                        <p class="mb-1 small text-muted">Advanced directory and file discovery with Gobuster</p>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
-                        <strong>Directory Scanning Wordlist Guide</strong>
-                        <p class="mb-1 small text-muted">Learn how to choose the right wordlists from SecLists</p>
-                    </a>
+                        <p class="mb-2 small text-muted">Advanced directory and file discovery</p>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Directory brute-forcing:</small>
+                            <pre class="small">gobuster dir -u https://target.com -w /usr/share/wordlists/dirb/common.txt -t 20 -x php,html,js
+gobuster dir -u https://target.com -w ~/SecLists/Discovery/Web-Content/big.txt -s "200,204,301,302,307,401,403"</pre>
+                        </div>
+                        <ul class="small">
+                            <li><strong>-x:</strong> Search for specific file extensions</li>
+                            <li><strong>-s:</strong> Positive status codes to look for</li>
+                            <li><strong>-k:</strong> Skip TLS certificate verification</li>
+                            <li><strong>-H:</strong> Add custom headers</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <strong>SecLists Wordlist Guide</strong>
+                        <p class="mb-2 small text-muted">Choosing the right wordlists</p>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Clone SecLists:</small>
+                            <pre class="small">git clone https://github.com/danielmiessler/SecLists.git</pre>
+                        </div>
+                        <ul class="small">
+                            <li><strong>Discovery/Web-Content/big.txt:</strong> Comprehensive directory list</li>
+                            <li><strong>Discovery/Web-Content/raft-medium-directories.txt:</strong> Quality over quantity</li>
+                            <li><strong>Discovery/Web-Content/api/api-endpoints.txt:</strong> API-specific endpoints</li>
+                            <li><strong>Fuzzing/special-chars.txt:</strong> Special characters for injection testing</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -211,18 +351,73 @@
                     GUI Applications
                 </h4>
                 <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>Burp Suite Cheatsheet</strong>
-                        <p class="mb-1 small text-muted">Essential Burp Suite features and shortcuts for web testing</p>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Essential features and shortcuts</p>
+                        <h6 class="small">Key Features:</h6>
+                        <ul class="small">
+                            <li><strong>Proxy:</strong> Intercept and modify HTTP requests</li>
+                            <li><strong>Repeater:</strong> Manual request manipulation</li>
+                            <li><strong>Intruder:</strong> Automated attack tool</li>
+                            <li><strong>Scanner:</strong> Automated vulnerability detection (Pro only)</li>
+                            <li><strong>Sequencer:</strong> Test session token randomness</li>
+                        </ul>
+                        <h6 class="small">Common Actions:</h6>
+                        <ul class="small">
+                            <li><strong>Right-click:</strong> Context menu with "Send to" options</li>
+                            <li><strong>Ctrl+R:</strong> Send to Repeater</li>
+                            <li><strong>Ctrl+I:</strong> Send to Intruder</li>
+                            <li><strong>Decoder tab:</strong> Manual encoding/decoding</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>OWASP ZAP Configuration</strong>
-                        <p class="mb-1 small text-muted">Setting up and configuring OWASP ZAP for automated scanning</p>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
-                        <strong>Browser Extensions for Security Testing</strong>
-                        <p class="mb-1 small text-muted">Essential browser extensions for bug bounty hunters</p>
-                    </a>
+                        <p class="mb-2 small text-muted">Setting up ZAP for automated scanning</p>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Installation options:</small>
+                            <pre class="small"># Kali Linux
+sudo apt update && sudo apt install zaproxy
+
+# Ubuntu/Debian via snap
+sudo snap install zaproxy --classic
+
+# Or download from https://www.zaproxy.org/download/</pre>
+                        </div>
+                        <h6 class="small">Configuration Steps:</h6>
+                        <ul class="small">
+                            <li><strong>Proxy Setup:</strong> Configure browser to use 127.0.0.1:8080</li>
+                            <li><strong>SSL Certificate:</strong> Import ZAP root CA in browser</li>
+                            <li><strong>Context Creation:</strong> Define application scope</li>
+                            <li><strong>Authentication:</strong> Configure login sequences</li>
+                            <li><strong>Spider Configuration:</strong> Set crawling parameters</li>
+                        </ul>
+                        <h6 class="small">Automated Scanning:</h6>
+                        <ul class="small">
+                            <li><strong>Quick Start:</strong> Use automated scan for rapid testing</li>
+                            <li><strong>Full Scan:</strong> Spider + Active Scan for comprehensive results</li>
+                            <li><strong>API Scan:</strong> Import OpenAPI/Postman collections</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <strong>Browser Extensions</strong>
+                        <p class="mb-2 small text-muted">Essential extensions for security testing</p>
+                        <h6 class="small">Firefox Extensions:</h6>
+                        <ul class="small">
+                            <li><strong>FoxyProxy:</strong> Proxy switching and management</li>
+                            <li><strong>Wappalyzer:</strong> Technology stack identification</li>
+                            <li><strong>HackTools:</strong> Collection of web security tools</li>
+                            <li><strong>Cookie-Editor:</strong> Advanced cookie manipulation</li>
+                        </ul>
+                        <h6 class="small">Chrome Extensions:</h6>
+                        <ul class="small">
+                            <li><strong>REST Client:</strong> In-browser API testing</li>
+                            <li><strong>EditThisCookie:</strong> Cookie editor and manager</li>
+                            <li><strong>BuiltWith:</strong> Technology profiler</li>
+                            <li><strong>User-Agent Switcher:</strong> Change browser user agent</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -244,21 +439,62 @@
                     Beginner Labs
                 </h4>
                 <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>OWASP Juice Shop Guide</strong>
-                        <p class="mb-1 small text-muted">Complete walkthrough of OWASP Juice Shop challenges</p>
-                        <span class="badge bg-success">Beginner</span>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Modern web application with OWASP Top 10 vulnerabilities</p>
+                        <span class="badge bg-success mb-2">Beginner</span>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Docker setup:</small>
+                            <pre class="small">docker run --rm -p 3000:3000 bkimminich/juice-shop</pre>
+                        </div>
+                        <h6 class="small">Key Challenges:</h6>
+                        <ul class="small">
+                            <li><strong>DOM XSS:</strong> Find and exploit DOM-based XSS vulnerability</li>
+                            <li><strong>SQL Injection:</strong> Login bypass using SQLi</li>
+                            <li><strong>Broken Access Control:</strong> Access admin section</li>
+                            <li><strong>Insecure Deserialization:</strong> Object manipulation attacks</li>
+                        </ul>
+                        <p class="small"><strong>URL:</strong> <a href="https://owasp.org/www-project-juice-shop/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">https://owasp.org/www-project-juice-shop/</a></p>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>DVWA Tutorial Series</strong>
-                        <p class="mb-1 small text-muted">Damn Vulnerable Web Application practice guide</p>
-                        <span class="badge bg-success">Beginner</span>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Damn Vulnerable Web Application for practice</p>
+                        <span class="badge bg-success mb-2">Beginner</span>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Installation:</small>
+                            <pre class="small"># Prerequisites: Install Docker and docker-compose
+git clone https://github.com/digininja/DVWA.git
+cd DVWA
+docker-compose up -d</pre>
+                        </div>
+                        <h6 class="small">Available Modules:</h6>
+                        <ul class="small">
+                            <li><strong>SQL Injection:</strong> All types with difficulty levels</li>
+                            <li><strong>XSS:</strong> Reflected and stored XSS challenges</li>
+                            <li><strong>CSRF:</strong> Cross-site request forgery</li>
+                            <li><strong>File Upload:</strong> Unrestricted file upload vulnerabilities</li>
+                        </ul>
+                        <p class="small"><strong>Default login:</strong> admin/password</p>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>WebGoat Lessons</strong>
-                        <p class="mb-1 small text-muted">Interactive security lessons with WebGoat</p>
-                        <span class="badge bg-success">Beginner</span>
-                    </a>
+                        <p class="mb-2 small text-muted">Interactive security lessons and challenges</p>
+                        <span class="badge bg-success mb-2">Beginner</span>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Docker setup:</small>
+                            <pre class="small">docker run -p 127.0.0.1:8080:8080 -p 127.0.0.1:9090:9090 webgoat/goatandwolf</pre>
+                        </div>
+                        <h6 class="small">Learning Modules:</h6>
+                        <ul class="small">
+                            <li><strong>Injection:</strong> SQL, NoSQL, and command injection</li>
+                            <li><strong>Authentication:</strong> Broken authentication mechanisms</li>
+                            <li><strong>Session Management:</strong> Session hijacking and fixation</li>
+                            <li><strong>Access Control:</strong> Horizontal and vertical privilege escalation</li>
+                        </ul>
+                        <p class="small"><strong>URL:</strong> <a href="https://owasp.org/www-project-webgoat/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">https://owasp.org/www-project-webgoat/</a></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -269,21 +505,51 @@
                     Intermediate Labs
                 </h4>
                 <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>PortSwigger Web Security Academy</strong>
-                        <p class="mb-1 small text-muted">Advanced web security labs and challenges</p>
-                        <span class="badge bg-primary">Intermediate</span>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
-                        <strong>HackTheBox Web Challenges</strong>
-                        <p class="mb-1 small text-muted">Real-world web application challenges</p>
-                        <span class="badge bg-primary">Intermediate</span>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Free online web security training from Burp Suite creators</p>
+                        <span class="badge bg-primary mb-2">Intermediate</span>
+                        <h6 class="small">Learning Paths:</h6>
+                        <ul class="small">
+                            <li><strong>Server-side:</strong> SQL injection, command injection, SSRF</li>
+                            <li><strong>Client-side:</strong> XSS, CSRF, clickjacking, DOM manipulation</li>
+                            <li><strong>Advanced:</strong> Insecure deserialization, XXE, JWT attacks</li>
+                            <li><strong>Authentication:</strong> Password-based, multi-factor bypass</li>
+                        </ul>
+                        <p class="small"><strong>Features:</strong> Interactive labs, video explanations, progress tracking</p>
+                        <p class="small"><strong>URL:</strong> <a href="https://portswigger.net/web-security" target="_blank" rel="noopener noreferrer" class="text-decoration-none">https://portswigger.net/web-security</a></p>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <strong>HackTheBox Academy & Web Challenges</strong>
+                        <p class="mb-2 small text-muted">Gamified cybersecurity learning platform</p>
+                        <span class="badge bg-primary mb-2">Intermediate</span>
+                        <h6 class="small">Web Application Modules:</h6>
+                        <ul class="small">
+                            <li><strong>Web Requests:</strong> HTTP fundamentals and manipulation</li>
+                            <li><strong>File Inclusion:</strong> LFI and RFI exploitation</li>
+                            <li><strong>File Upload Attacks:</strong> Bypass techniques</li>
+                            <li><strong>Command Injections:</strong> OS command execution</li>
+                            <li><strong>Web Attacks:</strong> IDOR, XXE, SSTI</li>
+                        </ul>
+                        <p class="small"><strong>Active Machines:</strong> Practice on live vulnerable systems</p>
+                        <p class="small"><strong>URL:</strong> <a href="https://www.hackthebox.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">https://www.hackthebox.com/</a></p>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>PentesterLab Exercises</strong>
-                        <p class="mb-1 small text-muted">Hands-on penetration testing exercises</p>
-                        <span class="badge bg-primary">Intermediate</span>
-                    </a>
+                        <p class="mb-2 small text-muted">Hands-on penetration testing exercises and courses</p>
+                        <span class="badge bg-primary mb-2">Intermediate</span>
+                        <h6 class="small">Exercise Categories:</h6>
+                        <ul class="small">
+                            <li><strong>Web Application:</strong> Real-world vulnerable apps</li>
+                            <li><strong>Unix Privilege Escalation:</strong> Linux exploitation</li>
+                            <li><strong>Windows Privilege Escalation:</strong> Windows exploitation</li>
+                            <li><strong>Code Review:</strong> Static analysis and source auditing</li>
+                        </ul>
+                        <p class="small"><strong>Format:</strong> ISO downloads for offline practice</p>
+                        <p class="small"><strong>URL:</strong> <a href="https://pentesterlab.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">https://pentesterlab.com/</a></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -294,21 +560,62 @@
                     Advanced Labs
                 </h4>
                 <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
-                        <strong>Advanced Persistent XSS</strong>
-                        <p class="mb-1 small text-muted">Complex XSS scenarios and bypass techniques</p>
-                        <span class="badge bg-danger">Advanced</span>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                    <div class="list-group-item bg-transparent border-secondary">
+                        <strong>Advanced XSS Techniques</strong>
+                        <p class="mb-2 small text-muted">Complex XSS scenarios and WAF bypass techniques</p>
+                        <span class="badge bg-danger mb-2">Advanced</span>
+                        <h6 class="small">Advanced Techniques:</h6>
+                        <ul class="small">
+                            <li><strong>mXSS (Mutation XSS):</strong> Browser parser exploitation</li>
+                            <li><strong>CSP Bypass:</strong> Content Security Policy circumvention</li>
+                            <li><strong>WAF Evasion:</strong> Filter bypass using encoding</li>
+                            <li><strong>Template Injection:</strong> SSTI to XSS escalation</li>
+                            <li><strong>Polyglot Payloads:</strong> Multi-context exploitation</li>
+                        </ul>
+                        <div class="command-output mb-2">
+                            <small class="text-muted">Example CSP bypass:</small>
+                            <pre class="small">&lt;script src="data:text/javascript,alert(1)"&gt;&lt;/script&gt;
+&lt;iframe srcdoc="&lt;script&gt;parent.alert(1)&lt;/script&gt;"&gt;</pre>
+                        </div>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>API Security Testing</strong>
-                        <p class="mb-1 small text-muted">Modern API vulnerability assessment</p>
-                        <span class="badge bg-danger">Advanced</span>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action bg-transparent border-secondary">
+                        <p class="mb-2 small text-muted">Modern API vulnerability assessment techniques</p>
+                        <span class="badge bg-danger mb-2">Advanced</span>
+                        <h6 class="small">API Testing Areas:</h6>
+                        <ul class="small">
+                            <li><strong>GraphQL:</strong> Introspection, injection, DoS attacks</li>
+                            <li><strong>REST API:</strong> BOLA, rate limiting, mass assignment</li>
+                            <li><strong>Authentication:</strong> JWT manipulation, OAuth flows</li>
+                            <li><strong>Rate Limiting:</strong> Bypass techniques and DoS</li>
+                        </ul>
+                        <h6 class="small">Tools & Resources:</h6>
+                        <ul class="small">
+                            <li><strong>Postman:</strong> API collection testing</li>
+                            <li><strong>Insomnia:</strong> GraphQL and REST testing</li>
+                            <li><strong>OWASP API Top 10:</strong> Common API vulnerabilities</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="list-group-item bg-transparent border-secondary">
                         <strong>Cloud Security Challenges</strong>
-                        <p class="mb-1 small text-muted">AWS, Azure, and GCP security testing</p>
-                        <span class="badge bg-danger">Advanced</span>
-                    </a>
+                        <p class="mb-2 small text-muted">AWS, Azure, and GCP security assessment</p>
+                        <span class="badge bg-danger mb-2">Advanced</span>
+                        <h6 class="small">Cloud Platforms:</h6>
+                        <ul class="small">
+                            <li><strong>AWS:</strong> S3 buckets, IAM misconfigurations, Lambda</li>
+                            <li><strong>Azure:</strong> Blob storage, Active Directory, Functions</li>
+                            <li><strong>GCP:</strong> Cloud Storage, IAM, Cloud Functions</li>
+                        </ul>
+                        <h6 class="small">Practice Environments:</h6>
+                        <ul class="small">
+                            <li><strong>flAWS.cloud:</strong> AWS security challenges</li>
+                            <li><strong>CloudGoat:</strong> Vulnerable AWS environment</li>
+                            <li><strong>AzureGoat:</strong> Vulnerable Azure environment</li>
+                        </ul>
+                        <p class="small"><strong>flAWS URL:</strong> <a href="http://flaws.cloud/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">http://flaws.cloud/</a></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -379,10 +686,58 @@
             </div>
         </div>
         
-        <div class="text-center mt-4">
-            <a href="#" class="btn btn-primary">
-                <i class="bi bi-book"></i> Read Complete OWASP Top 10 Guide
-            </a>
+        <div class="mt-4">
+            <h5 class="mb-3">Testing Techniques by Category</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="command-output mb-3">
+                        <h6 class="small text-primary">A01: Broken Access Control</h6>
+                        <p class="small text-muted">Test for IDOR, privilege escalation, and unauthorized access</p>
+                        <pre class="small"># Test IDOR
+GET /user/profile/123 (change to 124, 125...)
+POST /admin/delete_user {"user_id": "victim_id"}
+
+# Privilege escalation
+POST /api/promote {"role": "admin"}</pre>
+                    </div>
+                    
+                    <div class="command-output mb-3">
+                        <h6 class="small text-primary">A03: Injection</h6>
+                        <p class="small text-muted">SQL, NoSQL, OS command, and LDAP injection testing</p>
+                        <pre class="small"># SQL Injection
+' OR '1'='1' --
+' UNION SELECT version() --
+'; DROP TABLE users; --
+
+# Command Injection
+; ls -la
+| whoami
+& ping -c 4 google.com</pre>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="command-output mb-3">
+                        <h6 class="small text-primary">A02: Cryptographic Failures</h6>
+                        <p class="small text-muted">Identify weak encryption and exposed sensitive data</p>
+                        <pre class="small"># Check for:
+- Unencrypted data transmission (HTTP)
+- Weak hash algorithms (MD5, SHA1)
+- Hard-coded cryptographic keys
+- Default certificates</pre>
+                    </div>
+                    
+                    <div class="command-output mb-3">
+                        <h6 class="small text-primary">A07: Authentication Failures</h6>
+                        <p class="small text-muted">Session management and authentication bypass</p>
+                        <pre class="small"># Test vectors:
+- Brute force attacks
+- Session fixation
+- Credential stuffing
+- Weak password policies</pre>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -399,10 +754,11 @@
             <div class="filter-section">
                 <h5>Community & Forums</h5>
                 <ul>
-                    <li><a href="#" class="text-decoration-none">Bug Bounty Forum</a></li>
-                    <li><a href="#" class="text-decoration-none">OWASP Community</a></li>
-                    <li><a href="#" class="text-decoration-none">InfoSec Twitter Community</a></li>
-                    <li><a href="#" class="text-decoration-none">Reddit r/bugbounty</a></li>
+                    <li><a href="https://forum.bugcrowd.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Bugcrowd Forum</a> - Active bug bounty discussion</li>
+                    <li><a href="https://owasp.org/slack/invite" target="_blank" rel="noopener noreferrer" class="text-decoration-none">OWASP Slack</a> - Application security community</li>
+                    <li><a href="https://twitter.com/i/lists/31185506" target="_blank" rel="noopener noreferrer" class="text-decoration-none">InfoSec Twitter</a> - Security researchers and news</li>
+                    <li><a href="https://reddit.com/r/bugbounty" target="_blank" rel="noopener noreferrer" class="text-decoration-none">r/bugbounty</a> - Bug bounty subreddit</li>
+                    <li><a href="https://discord.gg/bugbounty" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Bug Bounty Discord</a> - Real-time chat community</li>
                 </ul>
             </div>
         </div>
@@ -410,21 +766,49 @@
             <div class="filter-section">
                 <h5>Podcasts & Videos</h5>
                 <ul>
-                    <li><a href="#" class="text-decoration-none">Critical Thinking Podcast</a></li>
-                    <li><a href="#" class="text-decoration-none">The Bug Bounty Podcast</a></li>
-                    <li><a href="#" class="text-decoration-none">LiveOverflow YouTube Channel</a></li>
-                    <li><a href="#" class="text-decoration-none">STÖK YouTube Channel</a></li>
+                    <li><a href="https://soundcloud.com/critical-thinking-podcast" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Critical Thinking Podcast</a> - Bug bounty insights</li>
+                    <li><a href="https://podcasts.apple.com/podcast/the-bug-bounty-podcast/id1446596497" target="_blank" rel="noopener noreferrer" class="text-decoration-none">The Bug Bounty Podcast</a> - Hunter interviews</li>
+                    <li><a href="https://youtube.com/c/LiveOverflow" target="_blank" rel="noopener noreferrer" class="text-decoration-none">LiveOverflow</a> - Technical security content</li>
+                    <li><a href="https://youtube.com/c/STOKfredrik" target="_blank" rel="noopener noreferrer" class="text-decoration-none">STÖK</a> - Bug bounty methodologies</li>
+                    <li><a href="https://youtube.com/c/Jhaddix" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Jason Haddix</a> - Advanced techniques</li>
                 </ul>
             </div>
         </div>
         <div class="col-md-4">
             <div class="filter-section">
-                <h5>Books & Reading</h5>
+                <h5>Essential Reading</h5>
                 <ul>
-                    <li><a href="#" class="text-decoration-none">Web Application Hacker's Handbook</a></li>
-                    <li><a href="#" class="text-decoration-none">Bug Bounty Bootcamp</a></li>
-                    <li><a href="#" class="text-decoration-none">Real-World Bug Hunting</a></li>
-                    <li><a href="#" class="text-decoration-none">OWASP Testing Guide</a></li>
+                    <li><a href="https://www.amazon.com/Web-Application-Hackers-Handbook-Exploiting/dp/1118026470" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Web Application Hacker's Handbook</a> - The security bible</li>
+                    <li><a href="https://nostarch.com/bug-bounty-bootcamp" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Bug Bounty Bootcamp</a> - Modern approach</li>
+                    <li><a href="https://nostarch.com/bughunting" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Real-World Bug Hunting</a> - Practical case studies</li>
+                    <li><a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">OWASP Testing Guide</a> - Comprehensive methodology</li>
+                    <li><a href="https://pentesterlab.com/badges" target="_blank" rel="noopener noreferrer" class="text-decoration-none">PentesterLab Badges</a> - Structured learning path</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tools & Wordlists Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="filter-section">
+                <h5>Essential Tool Collections</h5>
+                <ul>
+                    <li><a href="https://github.com/danielmiessler/SecLists" target="_blank" rel="noopener noreferrer" class="text-decoration-none">SecLists</a> - Comprehensive wordlist collection</li>
+                    <li><a href="https://github.com/projectdiscovery/nuclei-templates" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Nuclei Templates</a> - Vulnerability detection templates</li>
+                    <li><a href="https://github.com/OWASP/Amass" target="_blank" rel="noopener noreferrer" class="text-decoration-none">OWASP Amass</a> - In-depth subdomain enumeration</li>
+                    <li><a href="https://github.com/projectdiscovery" target="_blank" rel="noopener noreferrer" class="text-decoration-none">ProjectDiscovery Tools</a> - Modern security toolkit</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="filter-section">
+                <h5>Bug Bounty Platforms</h5>
+                <ul>
+                    <li><a href="https://hackerone.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">HackerOne</a> - Largest bug bounty platform</li>
+                    <li><a href="https://bugcrowd.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Bugcrowd</a> - Crowdsourced security testing</li>
+                    <li><a href="https://intigriti.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Intigriti</a> - European-focused platform</li>
+                    <li><a href="https://yeswehack.com/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">YesWeHack</a> - Growing platform with unique programs</li>
                 </ul>
             </div>
         </div>
