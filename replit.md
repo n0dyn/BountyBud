@@ -2,7 +2,7 @@
 
 ## Overview
 
-BountyBud is a comprehensive web-based toolkit designed for bug bounty hunters and security researchers. The application provides command generation capabilities for security testing tools, XSS payload generation, curated security tool documentation, and educational resources. It serves as a centralized platform to streamline security testing workflows by automating command generation and providing quick access to essential security tools and techniques.
+BountyBud is a comprehensive web-based toolkit designed for bug bounty hunters and security researchers. The application provides an intuitive interface for generating security testing commands, creating XSS payloads, and accessing curated security tools. Built with Flask and Bootstrap, it serves as a centralized hub for common security testing workflows, helping researchers save time and standardize their approach to vulnerability discovery.
 
 ## User Preferences
 
@@ -11,61 +11,49 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **Template Engine**: Jinja2 templates with Bootstrap 5 for responsive UI
-- **CSS Framework**: Bootstrap 5 with custom dark theme styling
-- **JavaScript**: Vanilla JavaScript for client-side interactions including clipboard functionality and dynamic content filtering
-- **Theme**: Dark mode interface optimized for security professionals
+- **Framework**: Bootstrap 5.3.2 with custom CSS for dark theme
+- **JavaScript**: Vanilla JavaScript for interactive features including clipboard functionality and toast notifications
+- **Template Engine**: Jinja2 templates with a base template structure for consistent navigation and styling
+- **Responsive Design**: Mobile-first approach using Bootstrap's grid system
 
 ### Backend Architecture
-- **Web Framework**: Flask (Python) with minimal dependencies
-- **Application Structure**: Route-based architecture with separate endpoints for each major feature
-- **Session Management**: Flask sessions with configurable secret key via environment variables
-- **API Design**: RESTful JSON API for command generation with POST endpoints
+- **Framework**: Flask web framework with Python
+- **Route Structure**: Simple route-based architecture with separate endpoints for each major feature (tools, XSS payloads, security tools, documentation)
+- **API Design**: RESTful API endpoint for command generation (`/api/generate-command`)
+- **Session Management**: Flask sessions with configurable secret key from environment variables
 
 ### Data Storage Solutions
-- **Static Data**: JSON files for command templates and XSS payload definitions
-- **File Structure**: Template-based data storage in `/static/data/` directory
-- **No Database**: Application uses file-based storage for simplicity and portability
+- **File-based Storage**: JSON files for static data including command templates and XSS payload definitions
+- **Template Data**: Command templates stored in `static/data/command_templates.json` with structured tool definitions
+- **Payload Database**: XSS payloads organized by context, encoding, and categories in `static/data/xss_payloads.json`
 
-### Authentication and Authorization
-- **Current State**: No authentication system implemented
-- **Session Security**: Basic Flask session configuration with environment-based secret key
-- **Access Control**: Open access to all features without user management
+### Security Features
+- **Cache Control**: HTTP headers configured to prevent caching issues in deployment
+- **Environment Configuration**: Secret key sourced from environment variables with fallback
+- **Input Validation**: Server-side validation for API endpoints
 
-### Key Features Implementation
-- **Command Generation**: Template-based system using JSON configuration files
-- **XSS Payload Generator**: Context-aware payload generation with encoding options
-- **Tool Documentation**: Static content management for security tool guides
-- **Responsive Design**: Mobile-friendly interface with collapsible navigation
-
-### Design Patterns
-- **MVC Pattern**: Clear separation between routes (controllers), templates (views), and data (models)
-- **Template Inheritance**: Base template system for consistent UI across all pages
-- **Configuration Management**: Environment variable support for deployment flexibility
-- **Static Asset Organization**: Structured CSS, JS, and data file organization
+### Component Organization
+- **Modular Templates**: Separate HTML templates for each major feature area
+- **Static Asset Management**: Organized CSS, JavaScript, and image assets
+- **Data Separation**: Business logic separated from presentation through JSON data files
 
 ## External Dependencies
 
 ### Frontend Dependencies
-- **Bootstrap 5.3.2**: UI framework and components via CDN
-- **Bootstrap Icons 1.11.1**: Icon library for consistent iconography
-- **External Assets**: Logo and images hosted on external domain (bb.nxit.cc)
+- **Bootstrap 5.3.2**: UI framework loaded via CDN for responsive design and components
+- **Bootstrap Icons**: Icon library for consistent iconography throughout the application
+- **CDN Strategy**: External resources loaded from CDNs for better performance and reliability
 
-### Backend Dependencies
-- **Flask**: Core web framework for Python
-- **Standard Library**: JSON, OS modules for file handling and environment variables
-
-### Development Tools
-- **Template System**: Jinja2 (included with Flask)
-- **Static File Serving**: Flask's built-in static file handler
-- **Session Management**: Flask's built-in session handling
+### Python Dependencies
+- **Flask**: Core web framework for routing and request handling
+- **Standard Library**: Uses built-in `json` and `os` modules for data handling and environment variable access
 
 ### Data Sources
-- **Command Templates**: Local JSON files defining tool commands and parameters
-- **XSS Payloads**: Local JSON files containing payload definitions and contexts
-- **Documentation**: Static HTML templates with embedded content
+- **Security Tool Information**: Curated collection of security tools with documentation links and usage guides
+- **Command Templates**: Pre-defined command structures for popular security testing tools including Subfinder, HTTPx, Amass, and DNSGen
+- **XSS Payload Database**: Comprehensive collection of XSS payloads categorized by injection context and encoding requirements
 
-### External Integrations
-- **CDN Resources**: Bootstrap and Bootstrap Icons via CDN for performance
-- **Image Hosting**: External image hosting for branding assets
-- **No Third-Party APIs**: Application operates independently without external API dependencies
+### Development Tools
+- **Static File Serving**: Flask's built-in static file handling for CSS, JavaScript, and images
+- **Template Rendering**: Jinja2 integration for dynamic content generation
+- **JSON Processing**: Built-in JSON handling for configuration and data files
