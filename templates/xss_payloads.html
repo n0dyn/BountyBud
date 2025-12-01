@@ -677,9 +677,8 @@ function generateCallbackUrl() {
         return v.toString(16);
     });
     
-    // Generate callback URL using this website's domain
-    const baseUrl = window.location.origin;
-    const callbackUrl = baseUrl + '/api/xss-callback/' + uuid;
+    // Generate callback URL using the production domain
+    const callbackUrl = 'https://bb.nxit.cc/api/xss-callback/' + uuid;
     
     const callbackInput = document.getElementById('callbackUrl');
     callbackInput.value = callbackUrl;
