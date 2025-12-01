@@ -62,9 +62,28 @@
         <div class="filter-section mb-4">
             <h4 class="mb-3">Custom Settings</h4>
             <div class="mb-3">
-                <label for="callbackUrl" class="form-label">Custom Callback URL</label>
-                <input type="url" class="form-control" id="callbackUrl" placeholder="https://your-callback.com">
-                <small class="text-muted">For blind XSS payloads</small>
+                <label for="callbackUrl" class="form-label">Callback URL</label>
+                <div class="input-group mb-2">
+                    <input type="url" class="form-control" id="callbackUrl" placeholder="https://your-callback.com">
+                    <button class="btn btn-outline-primary" type="button" onclick="generateCallbackUrl()" title="Generate a unique callback URL">
+                        <i class="bi bi-lightning-fill"></i>
+                    </button>
+                </div>
+                <small class="text-muted">For blind XSS testing - click the lightning icon to generate a unique URL</small>
+            </div>
+            
+            <!-- Callback Info -->
+            <div id="callbackInfo" class="alert alert-secondary small mb-0" style="display: none;">
+                <strong>Callback URL Generated:</strong>
+                <div class="mt-2">
+                    <code id="callbackDisplay" class="d-block p-2 bg-dark text-success rounded mb-2" style="font-size: 0.8em; word-break: break-all;"></code>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyCallbackUrl()">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="showCallbackInstructions()">
+                        <i class="bi bi-question-circle"></i> How to Use
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -648,6 +667,71 @@ function processPayload(payload) {
         return payload.replace(/CALLBACK_URL/g, callbackUrl);
     }
     return payload;
+}
+
+// Blind XSS Callback URL Generator
+function generateCallbackUrl() {
+    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+    
+    // Generate callback URL with timestamp and UUID
+    const timestamp = new Date().toISOString().split('T')[0];
+    const callbackUrl = 'https://callback.bountybud.local/' + timestamp + '/' + uuid;
+    
+    const callbackInput = document.getElementById('callbackUrl');
+    callbackInput.value = callbackUrl;
+    
+    // Show callback info
+    document.getElementById('callbackInfo').style.display = 'block';
+    document.getElementById('callbackDisplay').textContent = callbackUrl;
+    
+    // Trigger payload regeneration
+    generatePayloads();
+    
+    showToast('Callback URL generated! Use this URL in your blind XSS payloads', 'success');
+}
+
+function copyCallbackUrl() {
+    const callbackUrl = document.getElementById('callbackUrl').value;
+    navigator.clipboard.writeText(callbackUrl).then(() => {
+        showToast('Callback URL copied to clipboard!', 'success');
+    }).catch(() => {
+        showToast('Failed to copy to clipboard', 'danger');
+    });
+}
+
+function showCallbackInstructions() {
+    const instructions = '<strong>How to Use the Callback URL for Blind XSS Testing:</strong>' +
+        '<ol class="mt-2 mb-0">' +
+        '<li><strong>Generate URL:</strong> Click the lightning icon to create a unique callback URL</li>' +
+        '<li><strong>Copy to Payload:</strong> The URL automatically appears in the Callback URL field</li>' +
+        '<li><strong>Inject Payload:</strong> Use any blind XSS payload with this callback URL</li>' +
+        '<li><strong>Monitor Server:</strong> Set up a simple HTTP listener to receive callbacks:' +
+        '<code style="display: block; padding: 8px; background: #000; color: #0f0; margin: 8px 0; border-radius: 4px; font-size: 0.85em;">' +
+        '# Using netcat:<br>nc -l -p 8000<br><br>' +
+        '# Using Python:<br>python3 -m http.server 8000' +
+        '</code></li>' +
+        '<li><strong>Wait for Response:</strong> When the XSS executes, your callback URL will be accessed</li>' +
+        '</ol>' +
+        '<div class="alert alert-info mt-2 mb-0">' +
+        '<small><strong>Tip:</strong> Use a public callback service like requestbin.com, webhook.site, or burp collaborator for remote targets</small>' +
+        '</div>';
+    
+    const alertHtml = '<div class="alert alert-info alert-dismissible fade show mt-3" role="alert">' +
+        '<h6 class="alert-heading">Blind XSS Testing Guide</h6>' +
+        instructions +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+        '</div>';
+    
+    const container = document.querySelector('.filter-section:last-child').parentElement;
+    const existingAlert = container.querySelector('.alert-info');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    container.insertAdjacentHTML('beforeend', alertHtml);
 }
 </script>
 {% endblock %}
