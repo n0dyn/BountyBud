@@ -677,9 +677,9 @@ function generateCallbackUrl() {
         return v.toString(16);
     });
     
-    // Generate callback URL with timestamp and UUID
-    const timestamp = new Date().toISOString().split('T')[0];
-    const callbackUrl = 'https://callback.bountybud.local/' + timestamp + '/' + uuid;
+    // Generate callback URL using this website's domain
+    const baseUrl = window.location.origin;
+    const callbackUrl = baseUrl + '/api/xss-callback/' + uuid;
     
     const callbackInput = document.getElementById('callbackUrl');
     callbackInput.value = callbackUrl;
@@ -688,10 +688,14 @@ function generateCallbackUrl() {
     document.getElementById('callbackInfo').style.display = 'block';
     document.getElementById('callbackDisplay').textContent = callbackUrl;
     
+    // Show helpful link
+    const linkHtml = '<a href="/xss-callbacks" target="_blank" class="alert-link">View callback logs</a> after injecting payloads';
+    document.querySelector('#callbackInfo .mt-2').insertAdjacentHTML('beforeend', '<div class="mt-2 small text-muted">' + linkHtml + '</div>');
+    
     // Trigger payload regeneration
     generatePayloads();
     
-    showToast('Callback URL generated! Use this URL in your blind XSS payloads', 'success');
+    showToast('Callback URL generated! This URL will log when blind XSS executes.', 'success');
 }
 
 function copyCallbackUrl() {

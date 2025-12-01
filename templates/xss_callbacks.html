@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}XSS Callback Logs - BountyBud{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-telephone-inbound text-success"></i>
+            Blind XSS Callback Monitor
+        </h1>
+        <p class="lead text-muted mb-4">
+            Monitor incoming callbacks from blind XSS payload executions. Each request is logged with headers, cookies, and request data.
+        </p>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="filter-section text-center">
+            <h2 class="text-success" id="callbackCount">0</h2>
+            <p class="text-muted mb-0">Callbacks Received</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="filter-section text-center">
+            <h2 class="text-info" id="lastCallbackTime">--</h2>
+            <p class="text-muted mb-0">Last Callback</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="filter-section text-center">
+            <h2 class="text-warning" id="callbackRate">0/min</h2>
+            <p class="text-muted mb-0">Callback Rate</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-danger w-100 h-100" onclick="clearCallbacks()">
+            <i class="bi bi-trash"></i> Clear All Logs
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-section mb-4">
+    <h4 class="mb-3">
+        <i class="bi bi-funnel"></i> Filters
+    </h4>
+    <div class="row">
+        <div class="col-md-3">
+            <input type="text" class="form-control" id="searchBox" placeholder="Search callback ID..." onkeyup="filterCallbacks()">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="methodFilter" onchange="filterCallbacks()">
+                <option value="">All Methods</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-outline-primary w-100" onclick="autoRefresh()">
+                <i class="bi bi-arrow-clockwise"></i> Auto Refresh
+            </button>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-outline-secondary w-100" onclick="loadCallbacks()">
+                <i class="bi bi-arrow-repeat"></i> Refresh Now
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Callbacks Table -->
+<div class="filter-section">
+    <div id="callbacksList" class="table-responsive">
+        <div class="text-center py-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading callbacks...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Callback Detail Modal -->
+<div class="modal fade" id="callbackModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="modalTitle">Callback Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allCallbacks = [];
+let autoRefreshInterval = null;
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCallbacks();
+});
+
+async function loadCallbacks() {
+    try {
+        const response = await fetch('/api/xss-callbacks');
+        const data = await response.json();
+        allCallbacks = data.callbacks || [];
+        
+        // Update stats
+        updateStats();
+        renderCallbacks();
+        showToast('Callbacks loaded', 'info');
+    } catch (error) {
+        console.error('Failed to load callbacks:', error);
+        showToast('Failed to load callbacks', 'danger');
+    }
+}
+
+function updateStats() {
+    document.getElementById('callbackCount').textContent = allCallbacks.length;
+    
+    if (allCallbacks.length > 0) {
+        const lastTime = new Date(allCallbacks[allCallbacks.length - 1].timestamp);
+        const now = new Date();
+        const diffSeconds = (now - lastTime) / 1000;
+        
+        if (diffSeconds < 60) {
+            document.getElementById('lastCallbackTime').textContent = Math.round(diffSeconds) + 's ago';
+        } else if (diffSeconds < 3600) {
+            document.getElementById('lastCallbackTime').textContent = Math.round(diffSeconds / 60) + 'm ago';
+        } else {
+            document.getElementById('lastCallbackTime').textContent = lastTime.toLocaleTimeString();
+        }
+    }
+}
+
+function renderCallbacks() {
+    if (allCallbacks.length === 0) {
+        document.getElementById('callbacksList').innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-3">No Callbacks Yet</h4>
+                <p class="text-muted">
+                    Generate a callback URL in the XSS Payload Generator and inject it into blind XSS payloads. 
+                    Callbacks will appear here when the XSS executes.
+                </p>
+                <a href="/xss-payloads" class="btn btn-primary mt-3">
+                    <i class="bi bi-arrow-right"></i> Go to XSS Generator
+                </a>
+            </div>
+        `;
+        return;
+    }
+    
+    const html = `
+        <table class="table table-dark table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Callback ID</th>
+                    <th>Time</th>
+                    <th>Method</th>
+                    <th>IP Address</th>
+                    <th>User Agent</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="callbacksBody">
+            </tbody>
+        </table>
+    `;
+    document.getElementById('callbacksList').innerHTML = html;
+    
+    const tbody = document.getElementById('callbacksBody');
+    allCallbacks.slice().reverse().forEach(callback => {
+        const time = new Date(callback.timestamp);
+        const row = tbody.insertRow();
+        row.className = 'callback-row';
+        row.innerHTML = `
+            <td><code class="small">${escapeHtml(callback.id.substring(0, 8))}</code></td>
+            <td>${time.toLocaleTimeString()}</td>
+            <td><span class="badge bg-info">${callback.method}</span></td>
+            <td><code class="small">${escapeHtml(callback.remote_addr || 'Unknown')}</code></td>
+            <td><small class="text-muted">${escapeHtml((callback.user_agent || 'Unknown').substring(0, 30))}</small></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="showCallbackDetails('${callback.id}')">
+                    <i class="bi bi-eye"></i> View
+                </button>
+            </td>
+        `;
+    });
+}
+
+function showCallbackDetails(callbackId) {
+    const callback = allCallbacks.find(c => c.id === callbackId);
+    if (!callback) return;
+    
+    const time = new Date(callback.timestamp);
+    let html = `
+        <div class="mb-3">
+            <h6>Basic Information</h6>
+            <div class="bg-secondary rounded p-2">
+                <div><strong>ID:</strong> <code>${escapeHtml(callback.id)}</code></div>
+                <div><strong>Time:</strong> ${time.toLocaleString()}</div>
+                <div><strong>Method:</strong> <span class="badge bg-info">${callback.method}</span></div>
+                <div><strong>IP Address:</strong> <code>${escapeHtml(callback.remote_addr)}</code></div>
+                <div><strong>User Agent:</strong> ${escapeHtml(callback.user_agent)}</div>
+            </div>
+        </div>
+    `;
+    
+    if (callback.query_params && Object.keys(callback.query_params).length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6>Query Parameters</h6>
+                <pre class="bg-secondary rounded p-2 small"><code>${escapeHtml(JSON.stringify(callback.query_params, null, 2))}</code></pre>
+            </div>
+        `;
+    }
+    
+    if (callback.body) {
+        html += `
+            <div class="mb-3">
+                <h6>Request Body</h6>
+                <pre class="bg-secondary rounded p-2 small"><code>${escapeHtml(typeof callback.body === 'string' ? callback.body : JSON.stringify(callback.body, null, 2))}</code></pre>
+            </div>
+        `;
+    }
+    
+    if (callback.cookies && Object.keys(callback.cookies).length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6>Cookies</h6>
+                <pre class="bg-secondary rounded p-2 small"><code>${escapeHtml(JSON.stringify(callback.cookies, null, 2))}</code></pre>
+            </div>
+        `;
+    }
+    
+    html += `
+        <div class="mb-0">
+            <h6>All Headers</h6>
+            <pre class="bg-secondary rounded p-2 small"><code>${escapeHtml(JSON.stringify(callback.headers, null, 2).substring(0, 500))}</code></pre>
+        </div>
+    `;
+    
+    document.getElementById('modalTitle').textContent = 'Callback: ' + callback.id.substring(0, 8) + '...';
+    document.getElementById('modalBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('callbackModal')).show();
+}
+
+function filterCallbacks() {
+    // Implement filtering based on search and method
+    renderCallbacks();
+}
+
+async function clearCallbacks() {
+    if (!confirm('Are you sure you want to clear all callback logs? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/xss-callbacks/clear', {method: 'POST'});
+        const data = await response.json();
+        if (data.success) {
+            allCallbacks = [];
+            updateStats();
+            renderCallbacks();
+            showToast('Callbacks cleared', 'success');
+        }
+    } catch (error) {
+        showToast('Failed to clear callbacks', 'danger');
+    }
+}
+
+function autoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        showToast('Auto-refresh disabled', 'info');
+    } else {
+        autoRefreshInterval = setInterval(loadCallbacks, 2000);
+        showToast('Auto-refreshing every 2 seconds', 'success');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}
