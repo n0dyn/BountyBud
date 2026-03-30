@@ -81,25 +81,25 @@
 <!-- Stats Bar -->
 <div class="row mb-4" id="statsBar">
     <div class="col-md-3 mb-2">
-        <div class="card bg-dark border-secondary text-center p-3">
+        <div class="card card border-secondary text-center p-3">
             <h4 class="text-primary mb-0" id="statDocs">-</h4>
             <small class="text-muted">Documents</small>
         </div>
     </div>
     <div class="col-md-3 mb-2">
-        <div class="card bg-dark border-secondary text-center p-3">
+        <div class="card card border-secondary text-center p-3">
             <h4 class="text-success mb-0" id="statChunks">-</h4>
             <small class="text-muted">RAG Chunks</small>
         </div>
     </div>
     <div class="col-md-3 mb-2">
-        <div class="card bg-dark border-secondary text-center p-3">
+        <div class="card card border-secondary text-center p-3">
             <h4 class="text-warning mb-0" id="statCategories">-</h4>
             <small class="text-muted">Categories</small>
         </div>
     </div>
     <div class="col-md-3 mb-2">
-        <div class="card bg-dark border-secondary text-center p-3">
+        <div class="card card border-secondary text-center p-3">
             <h4 class="text-info mb-0" id="statTypes">-</h4>
             <small class="text-muted">Content Types</small>
         </div>
@@ -118,7 +118,7 @@
 <!-- Document Viewer Modal -->
 <div class="modal fade" id="docModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content bg-dark">
+        <div class="modal-content">
             <div class="modal-header border-secondary">
                 <h5 class="modal-title" id="docModalTitle">Document</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -295,7 +295,7 @@ function renderManifest(documents) {
 
             html += `
             <div class="col-md-6 col-lg-4 mb-3">
-                <div class="card bg-dark border-secondary h-100 doc-card"
+                <div class="card border-secondary h-100 doc-card"
                      onclick="openDocument('${doc.id}')" style="cursor: pointer;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -368,7 +368,7 @@ function renderSearchResults(data) {
         const preview = result.content.substring(0, 300).replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         html += `
-        <div class="card bg-dark border-secondary mb-3 doc-card"
+        <div class="card border-secondary mb-3 doc-card"
              onclick="openDocument('${result.document_id}')" style="cursor: pointer;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
@@ -466,31 +466,5 @@ function getDifficultyColor(diff) {
 }
 </script>
 
-<style>
-.doc-card:hover {
-    border-color: var(--bs-primary) !important;
-    transform: translateY(-2px);
-    transition: all 0.2s ease;
-}
-.kb-document-content {
-    line-height: 1.8;
-}
-.kb-document-content pre {
-    background: #1a1a2e;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-}
-.kb-document-content code {
-    color: #e2e8f0;
-}
-.kb-document-content h2 {
-    color: var(--bs-primary);
-    margin-top: 1.5rem;
-}
-.kb-document-content h3 {
-    color: var(--bs-info);
-    margin-top: 1rem;
-}
-</style>
+<!-- KB styles are in style.css -->
 {% endblock %}
