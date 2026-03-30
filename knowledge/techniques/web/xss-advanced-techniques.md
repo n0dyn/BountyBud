@@ -1,6 +1,6 @@
 ---
-id: "xss-advanced-2026"
-title: "Advanced XSS Techniques & Bypasses (2026 Edition)"
+id: "xss-advanced-techniques"
+title: "Advanced XSS Techniques & Bypasses"
 type: "technique"
 category: "web-application"
 subcategory: "xss"

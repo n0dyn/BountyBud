@@ -129,7 +129,7 @@ Form with onsubmit event handler
 
 ### Popover BeforeToggle
 
-Popover API onbeforetoggle — works on hidden inputs (2024+)
+Popover API onbeforetoggle — works on hidden inputs
 
 - **Contexts**: html
 - **Severity**: high
@@ -173,7 +173,7 @@ Dialog element with onclose event handler
 
 ### Search Element AutoFocus
 
-New HTML search element with autofocus (2023+)
+New HTML search element with autofocus
 
 - **Contexts**: html
 - **Severity**: high

