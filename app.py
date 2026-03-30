@@ -7,6 +7,10 @@ from pathlib import Path
 app = Flask(__name__)
 app.secret_key = os.getenv('SESSION_SECRET', 'dev-secret-key-please-change')
 
+# Register knowledge base blueprint
+from kb import kb_bp
+app.register_blueprint(kb_bp, url_prefix='/api/kb')
+
 # Callback storage file
 CALLBACKS_FILE = 'static/data/xss_callbacks.json'
 
@@ -73,6 +77,10 @@ def extensions():
 @app.route('/xss-callbacks')
 def xss_callbacks():
     return render_template('xss_callbacks.html')
+
+@app.route('/knowledge')
+def knowledge_browser():
+    return render_template('knowledge.html')
 
 @app.route('/api/generate-command', methods=['POST'])
 def generate_command():

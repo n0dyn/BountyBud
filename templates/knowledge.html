@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Base - BountyBud{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-database text-primary"></i>
+            Knowledge Base
+        </h1>
+        <p class="lead text-muted mb-4">
+            Search and browse the complete bug bounty and red teaming knowledge base.
+            All content is RAG-ready and accessible via the <a href="#api-docs" class="text-primary">REST API</a>.
+        </p>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="quick-start mb-4">
+    <div class="row">
+        <div class="col-md-8">
+            <input type="text"
+                   class="form-control form-control-lg"
+                   id="kbSearch"
+                   placeholder="Search knowledge base (e.g., SSRF bypass, race condition, Frida...)"
+                   autocomplete="off">
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-primary btn-lg w-100" onclick="performSearch()">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-section mb-4">
+    <div class="row">
+        <div class="col-md-3 mb-2">
+            <select class="form-select" id="filterType">
+                <option value="">All Types</option>
+                <option value="tool">Tools</option>
+                <option value="technique">Techniques</option>
+                <option value="methodology">Methodologies</option>
+                <option value="payload">Payloads</option>
+                <option value="cheatsheet">Cheatsheets</option>
+                <option value="report-template">Report Templates</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <select class="form-select" id="filterCategory">
+                <option value="">All Categories</option>
+                <option value="reconnaissance">Reconnaissance</option>
+                <option value="web-application">Web Application</option>
+                <option value="network">Network</option>
+                <option value="cloud">Cloud</option>
+                <option value="mobile">Mobile</option>
+                <option value="api-security">API Security</option>
+                <option value="cms">CMS</option>
+                <option value="reporting">Reporting</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <select class="form-select" id="filterDifficulty">
+                <option value="">All Levels</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="expert">Expert</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                <i class="bi bi-x-circle"></i> Clear Filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="row mb-4" id="statsBar">
+    <div class="col-md-3 mb-2">
+        <div class="card bg-dark border-secondary text-center p-3">
+            <h4 class="text-primary mb-0" id="statDocs">-</h4>
+            <small class="text-muted">Documents</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-2">
+        <div class="card bg-dark border-secondary text-center p-3">
+            <h4 class="text-success mb-0" id="statChunks">-</h4>
+            <small class="text-muted">RAG Chunks</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-2">
+        <div class="card bg-dark border-secondary text-center p-3">
+            <h4 class="text-warning mb-0" id="statCategories">-</h4>
+            <small class="text-muted">Categories</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-2">
+        <div class="card bg-dark border-secondary text-center p-3">
+            <h4 class="text-info mb-0" id="statTypes">-</h4>
+            <small class="text-muted">Content Types</small>
+        </div>
+    </div>
+</div>
+
+<!-- Results Area -->
+<div id="searchResults" style="display: none;">
+    <h3 class="mb-3">
+        <i class="bi bi-search"></i> Search Results
+        <span class="badge bg-primary" id="resultCount">0</span>
+    </h3>
+    <div id="resultsList"></div>
+</div>
+
+<!-- Document Viewer Modal -->
+<div class="modal fade" id="docModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="docModalTitle">Document</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="docModalBody">
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <span class="text-muted me-auto" id="docModalMeta"></span>
+                <button type="button" class="btn btn-outline-primary" onclick="copyDocMarkdown()">
+                    <i class="bi bi-clipboard"></i> Copy Markdown
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manifest / Browse All -->
+<div id="manifestSection">
+    <h3 class="mb-3"><i class="bi bi-list-ul"></i> Browse All Documents</h3>
+    <div id="manifestList">
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="text-muted mt-2">Loading knowledge base...</p>
+        </div>
+    </div>
+</div>
+
+<!-- API Documentation -->
+<section id="api-docs" class="mt-5">
+    <h3 class="mb-3"><i class="bi bi-braces"></i> RAG API Endpoints</h3>
+    <p class="text-muted">Use these endpoints to integrate BountyBud's knowledge base with your AI agents and RAG systems.</p>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-striped">
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Method</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>/api/kb/search?q=&amp;type=&amp;category=&amp;tags=&amp;difficulty=</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>Full-text search with metadata filtering</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/chunks?category=&amp;type=</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>Pre-chunked content ready for embedding</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/document/{id}</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>Full document (HTML + markdown + metadata)</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/manifest</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>All documents metadata (table of contents)</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/taxonomy</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>Category tree with document counts</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/stats</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>Aggregate knowledge base statistics</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/related/{id}</code></td>
+                    <td><span class="badge bg-success">GET</span></td>
+                    <td>Related documents by ID + tag similarity</td>
+                </tr>
+                <tr>
+                    <td><code>/api/kb/reindex</code></td>
+                    <td><span class="badge bg-warning">POST</span></td>
+                    <td>Rebuild the search index</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentDocMarkdown = '';
+
+// Load stats and manifest on page load, handle URL params
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadManifest();
+
+    // Handle URL params from homepage links
+    const urlParams = new URLSearchParams(window.location.search);
+    const cat = urlParams.get('cat');
+    const q = urlParams.get('q');
+
+    if (cat) {
+        document.getElementById('filterCategory').value = cat;
+        performSearch();
+    } else if (q) {
+        document.getElementById('kbSearch').value = q;
+        performSearch();
+    }
+});
+
+// Search on Enter key
+document.getElementById('kbSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') performSearch();
+});
+
+// Filter changes trigger search
+['filterType', 'filterCategory', 'filterDifficulty'].forEach(id => {
+    document.getElementById(id).addEventListener('change', performSearch);
+});
+
+async function loadStats() {
+    try {
+        const resp = await fetch('/api/kb/stats');
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('statDocs').textContent = data.data.total_documents;
+            document.getElementById('statChunks').textContent = data.data.total_chunks;
+            document.getElementById('statCategories').textContent = Object.keys(data.data.by_category).length;
+            document.getElementById('statTypes').textContent = Object.keys(data.data.by_type).length;
+        }
+    } catch (e) {
+        console.error('Failed to load stats:', e);
+    }
+}
+
+async function loadManifest() {
+    try {
+        const resp = await fetch('/api/kb/manifest');
+        const data = await resp.json();
+        if (data.success) {
+            renderManifest(data.data.documents);
+        }
+    } catch (e) {
+        console.error('Failed to load manifest:', e);
+    }
+}
+
+function renderManifest(documents) {
+    // Group by category
+    const grouped = {};
+    documents.forEach(doc => {
+        const cat = doc.category || 'uncategorized';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(doc);
+    });
+
+    let html = '';
+    for (const [category, docs] of Object.entries(grouped).sort()) {
+        html += `<div class="mb-4">`;
+        html += `<h5 class="text-primary text-capitalize">${category.replace(/-/g, ' ')} <span class="badge bg-secondary">${docs.length}</span></h5>`;
+        html += `<div class="row">`;
+
+        docs.forEach(doc => {
+            const typeColor = getTypeColor(doc.type);
+            const diffColor = getDifficultyColor(doc.difficulty);
+            const tags = (doc.tags || []).slice(0, 4).map(t =>
+                `<span class="badge bg-secondary me-1">${t}</span>`
+            ).join('');
+
+            html += `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card bg-dark border-secondary h-100 doc-card"
+                     onclick="openDocument('${doc.id}')" style="cursor: pointer;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-${typeColor}">${doc.type}</span>
+                            <span class="badge bg-${diffColor}">${doc.difficulty || 'n/a'}</span>
+                        </div>
+                        <h6 class="card-title">${doc.title}</h6>
+                        <div class="mt-2">${tags}</div>
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        html += `</div></div>`;
+    }
+
+    document.getElementById('manifestList').innerHTML = html;
+}
+
+async function performSearch() {
+    const q = document.getElementById('kbSearch').value.trim();
+    const type = document.getElementById('filterType').value;
+    const category = document.getElementById('filterCategory').value;
+    const difficulty = document.getElementById('filterDifficulty').value;
+
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (type) params.set('type', type);
+    if (category) params.set('category', category);
+    if (difficulty) params.set('difficulty', difficulty);
+    params.set('limit', '50');
+
+    if (!q && !type && !category && !difficulty) {
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('manifestSection').style.display = 'block';
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/kb/search?${params}`);
+        const data = await resp.json();
+        if (data.success) {
+            renderSearchResults(data.data);
+        }
+    } catch (e) {
+        console.error('Search failed:', e);
+    }
+}
+
+function renderSearchResults(data) {
+    document.getElementById('searchResults').style.display = 'block';
+    document.getElementById('manifestSection').style.display = 'none';
+    document.getElementById('resultCount').textContent = data.total;
+
+    if (data.results.length === 0) {
+        document.getElementById('resultsList').innerHTML = `
+            <div class="alert alert-secondary">No results found. Try different search terms or filters.</div>
+        `;
+        return;
+    }
+
+    let html = '';
+    data.results.forEach(result => {
+        const typeColor = getTypeColor(result.metadata.type);
+        const tags = (result.metadata.tags || []).slice(0, 3).map(t =>
+            `<span class="badge bg-secondary me-1">${t}</span>`
+        ).join('');
+
+        // Truncate content for preview
+        const preview = result.content.substring(0, 300).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        html += `
+        <div class="card bg-dark border-secondary mb-3 doc-card"
+             onclick="openDocument('${result.document_id}')" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge bg-${typeColor} me-2">${result.metadata.type}</span>
+                        <span class="badge bg-outline-secondary">${result.metadata.category}</span>
+                    </div>
+                    <small class="text-muted">${result.token_count} tokens</small>
+                </div>
+                <h6>${result.title} &mdash; <span class="text-muted">${result.section}</span></h6>
+                <p class="text-muted small mb-2">${preview}...</p>
+                <div>${tags}</div>
+            </div>
+        </div>`;
+    });
+
+    document.getElementById('resultsList').innerHTML = html;
+}
+
+async function openDocument(docId) {
+    const modal = new bootstrap.Modal(document.getElementById('docModal'));
+    document.getElementById('docModalTitle').textContent = 'Loading...';
+    document.getElementById('docModalBody').innerHTML = `
+        <div class="text-center p-5"><div class="spinner-border text-primary"></div></div>
+    `;
+    modal.show();
+
+    try {
+        const resp = await fetch(`/api/kb/document/${docId}`);
+        const data = await resp.json();
+        if (data.success) {
+            const doc = data.data;
+            currentDocMarkdown = doc.body_markdown;
+            document.getElementById('docModalTitle').textContent = doc.metadata.title || doc.id;
+
+            const meta = doc.metadata;
+            const tags = (meta.tags || []).map(t => `<span class="badge bg-secondary me-1">${t}</span>`).join('');
+            const typeColor = getTypeColor(meta.type);
+            const diffColor = getDifficultyColor(meta.difficulty);
+
+            document.getElementById('docModalBody').innerHTML = `
+                <div class="mb-3">
+                    <span class="badge bg-${typeColor} me-2">${meta.type || ''}</span>
+                    <span class="badge bg-info me-2">${meta.category || ''}</span>
+                    <span class="badge bg-${diffColor} me-2">${meta.difficulty || ''}</span>
+                    ${tags}
+                </div>
+                <hr class="border-secondary">
+                <div class="kb-document-content">${doc.body_html}</div>
+            `;
+            document.getElementById('docModalMeta').textContent = `ID: ${doc.id} | Updated: ${meta.updated || 'n/a'}`;
+        }
+    } catch (e) {
+        document.getElementById('docModalBody').innerHTML = `
+            <div class="alert alert-danger">Failed to load document.</div>
+        `;
+    }
+}
+
+function copyDocMarkdown() {
+    navigator.clipboard.writeText(currentDocMarkdown).then(() => {
+        showToast('Markdown copied to clipboard!', 'success');
+    });
+}
+
+function clearFilters() {
+    document.getElementById('kbSearch').value = '';
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterCategory').value = '';
+    document.getElementById('filterDifficulty').value = '';
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('manifestSection').style.display = 'block';
+}
+
+function getTypeColor(type) {
+    const colors = {
+        tool: 'primary',
+        technique: 'warning',
+        methodology: 'success',
+        payload: 'danger',
+        cheatsheet: 'info',
+        'report-template': 'secondary',
+    };
+    return colors[type] || 'secondary';
+}
+
+function getDifficultyColor(diff) {
+    const colors = {
+        beginner: 'success',
+        intermediate: 'info',
+        advanced: 'warning',
+        expert: 'danger',
+    };
+    return colors[diff] || 'secondary';
+}
+</script>
+
+<style>
+.doc-card:hover {
+    border-color: var(--bs-primary) !important;
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+}
+.kb-document-content {
+    line-height: 1.8;
+}
+.kb-document-content pre {
+    background: #1a1a2e;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+}
+.kb-document-content code {
+    color: #e2e8f0;
+}
+.kb-document-content h2 {
+    color: var(--bs-primary);
+    margin-top: 1.5rem;
+}
+.kb-document-content h3 {
+    color: var(--bs-info);
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}

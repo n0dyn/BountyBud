@@ -121,6 +121,10 @@ attached_assets/
 # Package manager lock files (optional, remove if you want to include them)
 uv.lock
 
+# AI-specific files
+.claude/
+.gemini*
+
 # Secrets and credentials
 secrets.json
 credentials.json

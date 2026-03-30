@@ -6,4 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "flask>=3.1.2",
     "gunicorn>=23.0.0",
+    "python-frontmatter>=1.1.0",
+    "markdown>=3.5",
+    "pygments>=2.17",
 ]

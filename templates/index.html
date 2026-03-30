@@ -76,6 +76,86 @@
     </div>
 </div>
 
+<!-- Knowledge Base Section -->
+<div class="row my-5">
+    <div class="col-12">
+        <h2 class="text-center mb-2">Knowledge Base</h2>
+        <p class="text-center text-muted mb-4">AI-ready techniques, payloads, and methodologies — searchable and structured for RAG systems</p>
+    </div>
+
+    <div class="col-md-8 mb-3">
+        <div class="quick-start">
+            <div class="d-flex gap-2 mb-3">
+                <input type="text" class="form-control" id="kbHomeSearch" placeholder="Search techniques, tools, payloads...">
+                <button class="btn btn-primary" onclick="homeKBSearch()">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <div id="kbHomeResults" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="quick-start h-100">
+            <h5 class="mb-3">Quick Stats</h5>
+            <div id="kbHomeStats">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Documents</span>
+                    <span class="text-primary fw-bold" id="homeStatDocs">-</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">RAG Chunks</span>
+                    <span class="text-success fw-bold" id="homeStatChunks">-</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Categories</span>
+                    <span class="text-warning fw-bold" id="homeStatCats">-</span>
+                </div>
+            </div>
+            <a href="{{ url_for('knowledge_browser') }}" class="btn btn-outline-primary w-100 mt-3">
+                <i class="bi bi-database"></i> Browse Knowledge Base
+            </a>
+        </div>
+    </div>
+
+    <div class="col-md-4 col-lg-2 mb-3">
+        <a href="{{ url_for('knowledge_browser') }}?cat=web-application" class="feature-card d-block text-center p-3">
+            <i class="bi bi-globe text-warning" style="font-size:1.5rem;"></i>
+            <div class="mt-2 small">Web Attacks</div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2 mb-3">
+        <a href="{{ url_for('knowledge_browser') }}?cat=network" class="feature-card d-block text-center p-3">
+            <i class="bi bi-hdd-network text-info" style="font-size:1.5rem;"></i>
+            <div class="mt-2 small">Network</div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2 mb-3">
+        <a href="{{ url_for('knowledge_browser') }}?cat=cloud" class="feature-card d-block text-center p-3">
+            <i class="bi bi-cloud text-primary" style="font-size:1.5rem;"></i>
+            <div class="mt-2 small">Cloud</div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2 mb-3">
+        <a href="{{ url_for('knowledge_browser') }}?cat=privilege-escalation" class="feature-card d-block text-center p-3">
+            <i class="bi bi-arrow-up-circle text-danger" style="font-size:1.5rem;"></i>
+            <div class="mt-2 small">Privesc</div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2 mb-3">
+        <a href="{{ url_for('knowledge_browser') }}?cat=api-security" class="feature-card d-block text-center p-3">
+            <i class="bi bi-braces text-success" style="font-size:1.5rem;"></i>
+            <div class="mt-2 small">API Security</div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-2 mb-3">
+        <a href="{{ url_for('knowledge_browser') }}?cat=post-exploitation" class="feature-card d-block text-center p-3">
+            <i class="bi bi-key text-secondary" style="font-size:1.5rem;"></i>
+            <div class="mt-2 small">Post-Exploit</div>
+        </a>
+    </div>
+</div>
+
 <!-- Quick Start Section -->
 <div class="quick-start">
     <h3 class="mb-3">Quick Start</h3>
@@ -129,6 +209,58 @@
 
 {% block scripts %}
 <script>
+// Knowledge Base integration
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/kb/stats').then(r => r.json()).then(data => {
+        if (data.success) {
+            document.getElementById('homeStatDocs').textContent = data.data.total_documents;
+            document.getElementById('homeStatChunks').textContent = data.data.total_chunks;
+            document.getElementById('homeStatCats').textContent = Object.keys(data.data.by_category).length;
+        }
+    }).catch(() => {});
+
+    // Handle category links from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const cat = urlParams.get('cat');
+    if (cat) {
+        window.location.href = '/knowledge?cat=' + cat;
+    }
+});
+
+document.getElementById('kbHomeSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') homeKBSearch();
+});
+
+async function homeKBSearch() {
+    const q = document.getElementById('kbHomeSearch').value.trim();
+    if (!q) return;
+
+    const resp = await fetch(`/api/kb/search?q=${encodeURIComponent(q)}&limit=5`);
+    const data = await resp.json();
+    const el = document.getElementById('kbHomeResults');
+
+    if (data.success && data.data.results.length > 0) {
+        let html = '<div class="mt-3">';
+        data.data.results.forEach(r => {
+            const typeColors = {tool:'primary',technique:'warning',methodology:'success',payload:'danger',cheatsheet:'info'};
+            const color = typeColors[r.metadata.type] || 'secondary';
+            html += `<div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background:rgba(255,255,255,0.03);border-radius:6px;">
+                <div>
+                    <span class="badge bg-${color} me-2">${r.metadata.type}</span>
+                    <strong>${r.title}</strong> <span class="text-muted">— ${r.section}</span>
+                </div>
+            </div>`;
+        });
+        html += `<a href="/knowledge?q=${encodeURIComponent(q)}" class="btn btn-sm btn-outline-primary mt-2">View all ${data.data.total} results</a>`;
+        html += '</div>';
+        el.innerHTML = html;
+        el.style.display = 'block';
+    } else {
+        el.innerHTML = '<p class="text-muted mt-3">No results found.</p>';
+        el.style.display = 'block';
+    }
+}
+
 document.getElementById('quickStartForm').addEventListener('submit', function(e) {
     e.preventDefault();
     

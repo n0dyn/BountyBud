@@ -1,0 +1,126 @@
+taxonomy:
+  categories:
+    reconnaissance:
+      name: Reconnaissance
+      subcategories:
+        - subdomain-enumeration
+        - url-collection
+        - directory-discovery
+        - osint
+        - network-scanning
+        - service-enumeration
+        - parameter-discovery
+        - javascript-analysis
+        - sensitive-data-discovery
+
+    web-application:
+      name: Web Application Testing
+      subcategories:
+        - xss
+        - sqli
+        - ssrf
+        - idor
+        - csrf
+        - open-redirect
+        - xxe
+        - deserialization
+        - file-upload
+        - template-injection
+        - cors
+        - lfi
+        - rfi
+        - authentication
+        - authorization
+        - session-management
+        - business-logic
+        - race-conditions
+
+    network:
+      name: Network Penetration Testing
+      subcategories:
+        - port-scanning
+        - service-exploitation
+        - protocol-attacks
+        - wireless
+        - sniffing
+
+    cloud:
+      name: Cloud Security
+      subcategories:
+        - aws
+        - azure
+        - gcp
+        - kubernetes
+        - s3-misconfiguration
+        - iam
+
+    mobile:
+      name: Mobile Security
+      subcategories:
+        - android
+        - ios
+        - api-intercept
+        - binary-analysis
+        - runtime-hooking
+
+    api-security:
+      name: API Security
+      subcategories:
+        - rest
+        - graphql
+        - grpc
+        - soap
+        - websocket
+        - authentication
+        - rate-limiting
+
+    social-engineering:
+      name: Social Engineering
+      subcategories:
+        - phishing
+        - pretexting
+        - vishing
+
+    privilege-escalation:
+      name: Privilege Escalation
+      subcategories:
+        - linux
+        - windows
+        - ad-escalation
+
+    post-exploitation:
+      name: Post-Exploitation
+      subcategories:
+        - persistence
+        - lateral-movement
+        - data-exfiltration
+        - credential-harvesting
+
+    reporting:
+      name: Reporting
+      subcategories:
+        - vulnerability-reports
+        - executive-summary
+        - remediation
+        - payout-maximization
+
+    cms:
+      name: CMS Security
+      subcategories:
+        - wordpress
+        - drupal
+        - joomla
+
+  types:
+    - tool
+    - technique
+    - methodology
+    - payload
+    - cheatsheet
+    - report-template
+
+  difficulty_levels:
+    - beginner
+    - intermediate
+    - advanced
+    - expert
