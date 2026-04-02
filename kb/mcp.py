@@ -471,19 +471,20 @@ def mcp_sse():
         _sessions[session_id] = q
 
     def generate():
-        # Send the endpoint event first
-        messages_url = f"/mcp/messages/{session_id}"
+        # Send the endpoint event first — use absolute URL for client compatibility
+        base_url = request.url_root.rstrip('/')
+        messages_url = f"{base_url}/mcp/messages/{session_id}"
         yield f"event: endpoint\ndata: {messages_url}\n\n"
 
         try:
             while True:
                 try:
-                    msg = q.get(timeout=30)
+                    msg = q.get(timeout=15)
                     if msg is None:
                         break
                     yield f"event: message\ndata: {json.dumps(msg)}\n\n"
                 except queue.Empty:
-                    # Send keepalive comment
+                    # Send keepalive comment (every 15s to survive aggressive proxies)
                     yield ": keepalive\n\n"
         finally:
             with _sessions_lock:

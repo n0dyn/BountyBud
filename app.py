@@ -46,9 +46,19 @@ def get_request_domain():
         return request.host_url.rstrip('/')
     return 'http://localhost:5000'
 
+# Explicit OAuth rejection — Claude Code probes this before SSE connect.
+# Return proper 404 JSON so the client skips OAuth and uses Bearer token auth.
+@app.route('/.well-known/oauth-authorization-server')
+@app.route('/.well-known/oauth-protected-resource')
+def oauth_not_supported():
+    return jsonify({"error": "OAuth is not supported. Use Bearer token authentication."}), 404
+
 # Add cache control headers to prevent caching issues in deployment
 @app.after_request
 def after_request(response):
+    # Don't override headers on SSE streams — they set their own cache/buffering headers
+    if response.content_type and 'text/event-stream' in response.content_type:
+        return response
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
