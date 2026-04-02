@@ -1,5 +1,7 @@
 """RAG API endpoints for the knowledge base."""
 
+import os
+
 from flask import jsonify, request
 
 from kb import kb_bp
@@ -13,12 +15,15 @@ from kb.search import (
     search_chunks,
 )
 
+# API key — set via API_KEY env var. If set, all API requests must include it.
+_API_KEY = os.getenv('API_KEY', '') or os.getenv('MCP_API_KEY', '')
+
 
 def add_cors_headers(response):
     """Add CORS headers for cross-origin AI agent access."""
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
 
@@ -29,8 +34,15 @@ def after_request(response):
 
 @kb_bp.before_request
 def before_request():
-    """Ensure index exists before handling requests."""
+    """Ensure index exists and validate API key before handling requests."""
     ensure_index()
+    # Enforce API key if configured
+    if _API_KEY:
+        auth = request.headers.get('Authorization', '')
+        token = auth[7:].strip() if auth.startswith('Bearer ') else ''
+        key_param = request.args.get('api_key', '')
+        if token != _API_KEY and key_param != _API_KEY:
+            return jsonify({'success': False, 'error': 'Invalid or missing API key'}), 401
 
 
 @kb_bp.route('/search')
