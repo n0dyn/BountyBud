@@ -11,6 +11,10 @@ app.secret_key = os.getenv('SESSION_SECRET', 'dev-secret-key-please-change')
 from kb import kb_bp
 app.register_blueprint(kb_bp, url_prefix='/api/kb')
 
+# Register MCP server blueprint
+from kb.mcp import mcp_bp
+app.register_blueprint(mcp_bp, url_prefix='/mcp')
+
 # Callback storage file
 CALLBACKS_FILE = 'static/data/xss_callbacks.json'
 

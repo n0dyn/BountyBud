@@ -44,6 +44,40 @@ POST /api/kb/reindex
 
 The `/api/kb/chunks` endpoint returns pre-chunked content with metadata and token counts — ready to embed into any vector store.
 
+### MCP Server (Model Context Protocol)
+
+BountyBud exposes an MCP-compatible SSE endpoint so AI tools like Claude Desktop, Claude Code, Gemini, etc. can connect directly to the knowledge base.
+
+**Endpoint:** `GET /mcp/sse` (requires API key)
+
+**Tools available to AI clients:**
+| Tool | Description |
+|------|-------------|
+| `search_knowledge` | Full-text search with category/type/difficulty filters |
+| `get_document` | Retrieve a full document by ID |
+| `list_documents` | Browse all documents with optional filters |
+| `get_related` | Find related documents |
+| `get_stats` | Knowledge base statistics |
+
+**Connect from Claude Code:**
+```bash
+claude mcp add --transport sse bountybud https://bb.nxit.cc/mcp/sse?api_key=YOUR_KEY
+```
+
+**Connect from Claude Desktop** (via `claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "bountybud": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://bb.nxit.cc/mcp/sse?api_key=YOUR_KEY"]
+    }
+  }
+}
+```
+
+**Security:** API key required (set `MCP_API_KEY` env var). Rate limited to 60 req/min per IP, max 20 concurrent sessions, 8KB request size cap, strict method allowlist.
+
 ### Security Tools Catalog
 Curated collection of tools with descriptions, installation instructions, and documentation links.
 
@@ -70,6 +104,9 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 # or: pip install flask gunicorn python-frontmatter markdown pygments
+
+# Set MCP API key (required for MCP access)
+export MCP_API_KEY="your-secret-key-here"
 
 # Run
 python3 app.py
