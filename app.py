@@ -279,4 +279,4 @@ def clear_xss_callbacks():
 if __name__ == '__main__':
     # Development server configuration
     debug_mode = os.getenv('FLASK_ENV') == 'development'
-    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode, threaded=True)

@@ -504,19 +504,18 @@ def mcp_sse():
 
 @mcp_bp.route('/messages/<session_id>', methods=['POST', 'OPTIONS'])
 def mcp_messages(session_id):
-    """Message endpoint — client sends JSON-RPC requests here."""
+    """Message endpoint — client sends JSON-RPC requests here.
+
+    Auth is NOT required here — the session_id itself is the auth token.
+    It's a random UUID issued only to authenticated SSE connections.
+    Requiring auth again would break MCP clients that don't forward headers to the POST endpoint.
+    """
     if request.method == 'OPTIONS':
         return Response('', 204, headers={
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         })
-
-    # API key check
-    if MCP_API_KEY:
-        err = _check_api_key()
-        if err:
-            return {"error": err}, 401
 
     client_ip = request.remote_addr or "unknown"
 
