@@ -32,3 +32,33 @@ echo "[+] WhatWeb: Technology fingerprinting completed"
 ## Documentation
 
 - [Official Documentation](https://github.com/urbanadventurer/WhatWeb)
+
+## Effectiveness Scores
+
+| Target Type | Score |
+|-------------|-------|
+| Web         | 0.80  |
+| API         | 0.70  |
+| Network     | 0.30  |
+| Cloud       | 0.60  |
+| CMS         | 0.85  |
+
+## Fallback Alternatives
+
+httpx -tech-detect → wappalyzer → builtwith
+
+## Context-Aware Parameters
+
+```bash
+# Quick scan (aggression level 1)
+whatweb -a 1 https://{domain} --log-brief={domain}_whatweb_quick.txt
+
+# Aggressive scan (aggression level 3)
+whatweb -a 3 https://{domain} --log-brief={domain}_whatweb_aggressive.txt
+
+# From file
+whatweb -i urls.txt --log-brief={domain}_whatweb_batch.txt
+
+# Verbose with plugins
+whatweb -a 3 -v https://{domain} --log-verbose={domain}_whatweb_verbose.txt
+```

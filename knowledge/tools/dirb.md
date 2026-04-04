@@ -32,3 +32,41 @@ echo "[+] DIRB: Classic directory scan completed"
 ## Documentation
 
 - [Official Documentation](http://dirb.sourceforge.net/)
+
+## Effectiveness Scores
+
+| Category   | Score |
+|------------|-------|
+| Web App    | 0.7   |
+| API        | 0.4   |
+| Network    | 0.0   |
+| Cloud      | 0.1   |
+| CMS        | 0.5   |
+
+## Fallback Alternatives
+
+- **ffuf** - Much faster, more flexible fuzzer
+- **gobuster** - Go-based, faster than DIRB
+- **feroxbuster** - Recursive discovery with better performance
+
+## Context-Aware Parameters
+
+**Standard directory scan**
+```bash
+dirb https://{domain} /usr/share/dirb/wordlists/big.txt -r -S -w -o {domain}_dirb.txt
+```
+
+**Authenticated scan with cookies**
+```bash
+dirb https://{domain} /usr/share/dirb/wordlists/big.txt -c "PHPSESSID=abc123" -r -S -o {domain}_dirb_auth.txt
+```
+
+**Scan with custom extensions**
+```bash
+dirb https://{domain} /usr/share/dirb/wordlists/common.txt -X ".php,.bak,.old,.conf" -r -o {domain}_dirb_ext.txt
+```
+
+**Quick scan with small wordlist**
+```bash
+dirb https://{domain} /usr/share/dirb/wordlists/small.txt -S -o {domain}_dirb_quick.txt
+```

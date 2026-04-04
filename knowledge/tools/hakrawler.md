@@ -32,3 +32,33 @@ echo "[+] Hakrawler: $(wc -l < {domain}_crawled.txt) URLs crawled"
 ## Documentation
 
 - [Official Documentation](https://github.com/hakluke/hakrawler)
+
+## Effectiveness Scores
+
+| Target Type | Score |
+|-------------|-------|
+| Web         | 0.80  |
+| API         | 0.70  |
+| Network     | 0.15  |
+| Cloud       | 0.50  |
+| CMS         | 0.75  |
+
+## Fallback Alternatives
+
+katana → gospider → crawley
+
+## Context-Aware Parameters
+
+```bash
+# With depth
+echo https://{domain} | hakrawler -depth 5 -plain > {domain}_crawl_deep.txt
+
+# With scope restriction
+echo https://{domain} | hakrawler -scope subs -plain > {domain}_crawl_scoped.txt
+
+# Plain output
+echo https://{domain} | hakrawler -plain > {domain}_crawl_plain.txt
+
+# With JS parsing
+echo https://{domain} | hakrawler -js -plain > {domain}_crawl_js.txt
+```

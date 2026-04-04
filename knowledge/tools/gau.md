@@ -32,3 +32,33 @@ echo "[+] GAU: $(wc -l < {domain}_gau_urls.txt) unique URLs discovered"
 ## Documentation
 
 - [Official Documentation](https://github.com/lc/gau)
+
+## Effectiveness Scores
+
+| Target Type | Score |
+|-------------|-------|
+| Web         | 0.85  |
+| API         | 0.75  |
+| Network     | 0.30  |
+| Cloud       | 0.70  |
+| CMS         | 0.85  |
+
+## Fallback Alternatives
+
+waybackurls → gauplus → waymore
+
+## Context-Aware Parameters
+
+```bash
+# With subdomains included
+gau --subs {domain} | sort -u > {domain}_gau_subs.txt
+
+# Specific providers only
+gau --providers wayback,commoncrawl {domain} > {domain}_gau_providers.txt
+
+# Date filter
+gau --from 202301 --to 202312 {domain} > {domain}_gau_dated.txt
+
+# Output with dedup
+gau {domain} | sort -u | tee {domain}_gau_dedup.txt
+```

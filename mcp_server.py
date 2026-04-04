@@ -29,12 +29,16 @@ CAPABILITIES = {
 }
 
 INSTRUCTIONS = (
-    "BountyBud is a comprehensive bug bounty and red teaming knowledge base with 115+ documents "
-    "and 600+ searchable chunks. Key workflow: "
-    "1) search_knowledge to find relevant content, "
-    "2) get_document for full guides, "
-    "3) Always validate findings with the 5-Gate Verification before claiming vulnerabilities. "
-    "4) Use deep dig prompts from technique docs with target-specific data."
+    "BountyBud is a comprehensive bug bounty and red teaming knowledge base with 120+ documents "
+    "and 700+ searchable chunks covering tools, techniques, payloads, and methodologies. Key workflow: "
+    "1) search_knowledge to find relevant techniques, payloads, and tool guidance, "
+    "2) get_document for full guides with context-aware parameters and effectiveness scores, "
+    "3) search_cves / get_cve for live CVE intelligence from the NVD, "
+    "4) Follow the 4-phase workflow: Discovery → Enumeration → Hunting → Exploitation, "
+    "5) Use the vulnerability priority matrix to focus on high-impact findings first, "
+    "6) Validate all findings with the 5-Gate Verification before reporting. "
+    "Tool docs include effectiveness scores by target type and fallback alternatives. "
+    "Use deep dig prompts from technique docs with target-specific data."
 )
 
 TOOLS = [
@@ -118,6 +122,56 @@ TOOLS = [
         "name": "get_stats",
         "description": "Get KB stats: total documents, chunks, counts by category/type/difficulty.",
         "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "search_cves",
+        "description": (
+            "Search the NVD (National Vulnerability Database) for recent CVEs. "
+            "Use to find vulnerabilities affecting specific technologies during hunting. "
+            "Returns CVE IDs, descriptions, CVSS scores, and references."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "keyword": {
+                    "type": "string",
+                    "description": "Search term (e.g., 'apache log4j', 'wordpress plugin', 'nginx')",
+                },
+                "severity": {
+                    "type": "string",
+                    "description": "Filter by CVSS v3 severity",
+                    "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "CVEs published in the last N days (default 30, max 120)",
+                    "default": 30,
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (default 20, max 50)",
+                    "default": 20,
+                },
+            },
+            "required": ["keyword"],
+        },
+    },
+    {
+        "name": "get_cve",
+        "description": (
+            "Get full details for a specific CVE by ID. Returns description, CVSS score, "
+            "affected products, CWE weaknesses, and references."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "cve_id": {
+                    "type": "string",
+                    "description": "CVE identifier (e.g., 'CVE-2024-12345')",
+                },
+            },
+            "required": ["cve_id"],
+        },
     },
 ]
 
@@ -259,6 +313,84 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             for k, v in sorted(stats.get(key, {}).items()):
                 text += f"  - {k}: {v}\n"
             text += "\n"
+        return [{"type": "text", "text": text}]
+
+    elif name == "search_cves":
+        keyword = arguments.get("keyword", "")
+        if not keyword:
+            return [{"type": "text", "text": "A keyword is required."}]
+        params = {
+            "keyword": keyword,
+            "severity": arguments.get("severity", ""),
+            "days": str(arguments.get("days", 30)),
+            "limit": str(arguments.get("limit", 20)),
+        }
+        # Use the CVE endpoint on the BountyBud API
+        cve_base = API_BASE.replace("/api/kb", "/api/cve")
+        qs = urllib.parse.urlencode({k: v for k, v in params.items() if v})
+        url = f"{cve_base}/search?{qs}"
+        req = urllib.request.Request(url)
+        if API_KEY:
+            req.add_header("Authorization", f"Bearer {API_KEY}")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+        except Exception as e:
+            return [{"type": "text", "text": f"CVE search error: {e}"}]
+
+        vulns = data.get("data", {}).get("vulnerabilities", [])
+        total = data.get("data", {}).get("total_results", 0)
+        if not vulns:
+            return [{"type": "text", "text": f"No CVEs found for '{keyword}'."}]
+
+        lines = [f"**{total} CVEs found for '{keyword}'** (showing {len(vulns)}):\n"]
+        for v in vulns:
+            score = v.get("cvss_score", "N/A")
+            severity = v.get("cvss_severity", "N/A")
+            lines.append(
+                f"### {v['id']} — CVSS {score} ({severity})\n"
+                f"**Published:** {v.get('published', '')[:10]}\n\n"
+                f"{v.get('description', '')[:300]}\n\n"
+                f"**References:** {', '.join(v.get('references', [])[:3])}\n\n---\n"
+            )
+        return [{"type": "text", "text": "\n".join(lines)}]
+
+    elif name == "get_cve":
+        cve_id = arguments.get("cve_id", "")
+        if not cve_id:
+            return [{"type": "text", "text": "A cve_id is required."}]
+        cve_base = API_BASE.replace("/api/kb", "/api/cve")
+        url = f"{cve_base}/{urllib.parse.quote(cve_id, safe='')}"
+        req = urllib.request.Request(url)
+        if API_KEY:
+            req.add_header("Authorization", f"Bearer {API_KEY}")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+        except Exception as e:
+            return [{"type": "text", "text": f"CVE lookup error: {e}"}]
+
+        cve = data.get("data", {})
+        if not cve:
+            return [{"type": "text", "text": f"CVE {cve_id} not found."}]
+
+        score = cve.get("cvss_score", "N/A")
+        severity = cve.get("cvss_severity", "N/A")
+        cwes = ", ".join(cve.get("weaknesses", [])) or "N/A"
+        refs = "\n".join(f"- {r.get('url', '')}" for r in cve.get("references", [])[:10])
+        affected = "\n".join(f"- `{a}`" for a in cve.get("affected_products", [])[:10])
+
+        text = (
+            f"# {cve.get('id', cve_id)}\n\n"
+            f"**CVSS Score:** {score} ({severity})\n"
+            f"**Published:** {cve.get('published', '')[:10]}\n"
+            f"**Last Modified:** {cve.get('lastModified', '')[:10]}\n"
+            f"**CWE:** {cwes}\n"
+            f"**Vector:** {cve.get('cvss_vector', 'N/A')}\n\n"
+            f"## Description\n\n{cve.get('description', '')}\n\n"
+            f"## Affected Products\n\n{affected or 'N/A'}\n\n"
+            f"## References\n\n{refs or 'N/A'}\n"
+        )
         return [{"type": "text", "text": text}]
 
     return [{"type": "text", "text": f"Unknown tool: {name}"}]

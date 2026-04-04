@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 import json
 import os
+import urllib.request
+import urllib.parse
+import urllib.error
 from datetime import datetime
 from pathlib import Path
 
@@ -261,6 +264,169 @@ def clear_xss_callbacks():
         return jsonify({'success': True, 'message': 'Callbacks cleared'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ── CVE Intelligence API ───────────────────────────────────────
+
+NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
+@app.route('/api/cve/search', methods=['GET'])
+def cve_search():
+    """Search NVD for CVEs by keyword, product, or date range.
+
+    Query params:
+      keyword   — search term (e.g., 'apache log4j', 'wordpress')
+      severity  — filter by CVSS severity: LOW, MEDIUM, HIGH, CRITICAL
+      days      — CVEs published in the last N days (default 30, max 120)
+      limit     — max results (default 20, max 50)
+    """
+    keyword = request.args.get('keyword', '')
+    severity = request.args.get('severity', '')
+    days = min(int(request.args.get('days', 30)), 120)
+    limit = min(int(request.args.get('limit', 20)), 50)
+
+    params = {"resultsPerPage": str(limit)}
+
+    if keyword:
+        params["keywordSearch"] = keyword
+
+    if severity and severity.upper() in ("LOW", "MEDIUM", "HIGH", "CRITICAL"):
+        params["cvssV3Severity"] = severity.upper()
+
+    if days:
+        from datetime import timedelta, timezone
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(days=days)
+        params["pubStartDate"] = start.strftime("%Y-%m-%dT%H:%M:%S.000")
+        params["pubEndDate"] = end.strftime("%Y-%m-%dT%H:%M:%S.000")
+
+    url = f"{NVD_API_BASE}?{urllib.parse.urlencode(params)}"
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", "BountyBud/1.0")
+
+    # NVD API key (optional, for higher rate limits)
+    nvd_key = os.getenv("NVD_API_KEY", "")
+    if nvd_key:
+        req.add_header("apiKey", nvd_key)
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        return jsonify({"success": False, "error": f"NVD API error: {e.code}"}), 502
+    except urllib.error.URLError as e:
+        return jsonify({"success": False, "error": f"NVD connection error: {e.reason}"}), 502
+
+    vulnerabilities = []
+    for item in data.get("vulnerabilities", []):
+        cve = item.get("cve", {})
+        # Extract CVSS v3 score
+        metrics = cve.get("metrics", {})
+        cvss_data = None
+        for key in ("cvssMetricV31", "cvssMetricV30"):
+            if key in metrics and metrics[key]:
+                cvss_data = metrics[key][0].get("cvssData", {})
+                break
+
+        descriptions = cve.get("descriptions", [])
+        desc = next((d["value"] for d in descriptions if d.get("lang") == "en"), "")
+
+        vuln = {
+            "id": cve.get("id", ""),
+            "published": cve.get("published", ""),
+            "lastModified": cve.get("lastModified", ""),
+            "description": desc,
+            "cvss_score": cvss_data.get("baseScore") if cvss_data else None,
+            "cvss_severity": cvss_data.get("baseSeverity") if cvss_data else None,
+            "cvss_vector": cvss_data.get("vectorString") if cvss_data else None,
+            "references": [
+                ref.get("url") for ref in cve.get("references", [])[:5]
+            ],
+        }
+        vulnerabilities.append(vuln)
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "total_results": data.get("totalResults", 0),
+            "results_per_page": data.get("resultsPerPage", 0),
+            "vulnerabilities": vulnerabilities,
+        }
+    })
+
+
+@app.route('/api/cve/<cve_id>')
+def cve_detail(cve_id):
+    """Get full details for a specific CVE ID (e.g., CVE-2024-12345)."""
+    if not cve_id.upper().startswith("CVE-"):
+        return jsonify({"success": False, "error": "Invalid CVE ID format"}), 400
+
+    url = f"{NVD_API_BASE}?cveId={urllib.parse.quote(cve_id.upper())}"
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", "BountyBud/1.0")
+
+    nvd_key = os.getenv("NVD_API_KEY", "")
+    if nvd_key:
+        req.add_header("apiKey", nvd_key)
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        return jsonify({"success": False, "error": f"NVD API error: {e.code}"}), 502
+    except urllib.error.URLError as e:
+        return jsonify({"success": False, "error": f"NVD connection error: {e.reason}"}), 502
+
+    vulns = data.get("vulnerabilities", [])
+    if not vulns:
+        return jsonify({"success": False, "error": f"CVE {cve_id} not found"}), 404
+
+    cve = vulns[0].get("cve", {})
+    metrics = cve.get("metrics", {})
+    cvss_data = None
+    for key in ("cvssMetricV31", "cvssMetricV30"):
+        if key in metrics and metrics[key]:
+            cvss_data = metrics[key][0].get("cvssData", {})
+            break
+
+    descriptions = cve.get("descriptions", [])
+    desc = next((d["value"] for d in descriptions if d.get("lang") == "en"), "")
+
+    # Extract affected products (CPE)
+    configurations = cve.get("configurations", [])
+    affected = []
+    for config in configurations:
+        for node in config.get("nodes", []):
+            for match in node.get("cpeMatch", []):
+                if match.get("vulnerable"):
+                    affected.append(match.get("criteria", ""))
+
+    # Extract weakness (CWE)
+    weaknesses = cve.get("weaknesses", [])
+    cwes = []
+    for w in weaknesses:
+        for d in w.get("description", []):
+            if d.get("value", "").startswith("CWE-"):
+                cwes.append(d["value"])
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "id": cve.get("id", ""),
+            "published": cve.get("published", ""),
+            "lastModified": cve.get("lastModified", ""),
+            "description": desc,
+            "cvss_score": cvss_data.get("baseScore") if cvss_data else None,
+            "cvss_severity": cvss_data.get("baseSeverity") if cvss_data else None,
+            "cvss_vector": cvss_data.get("vectorString") if cvss_data else None,
+            "weaknesses": cwes,
+            "affected_products": affected[:20],
+            "references": [
+                {"url": ref.get("url"), "source": ref.get("source")}
+                for ref in cve.get("references", [])
+            ],
+        }
+    })
+
 
 if __name__ == '__main__':
     # Development server configuration

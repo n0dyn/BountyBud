@@ -34,6 +34,7 @@ taxonomy:
         - session-management
         - business-logic
         - race-conditions
+        - command-injection
 
     network:
       name: Network Penetration Testing

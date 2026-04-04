@@ -34,3 +34,41 @@ echo "[+] Sherlock: Social media search completed for $username"
 ## Documentation
 
 - [Official Documentation](https://github.com/sherlock-project/sherlock)
+
+## Effectiveness Scores
+
+| Category   | Score |
+|------------|-------|
+| Web App    | 0.2   |
+| API        | 0.1   |
+| Network    | 0.0   |
+| Cloud      | 0.1   |
+| CMS        | 0.1   |
+
+## Fallback Alternatives
+
+- **spiderfoot** - Broader OSINT with social media modules
+- **theHarvester** - Email and name harvesting from public sources
+- **whatbreach** - Username breach checking alternative
+
+## Context-Aware Parameters
+
+**Standard username search with CSV export**
+```bash
+sherlock $username --output {domain}_${username}_sherlock.txt --csv
+```
+
+**Quick scan on popular sites only**
+```bash
+sherlock $username --site twitter --site github --site instagram --site linkedin --output {domain}_${username}_quick.txt
+```
+
+**Verbose scan with timeout control**
+```bash
+sherlock $username --timeout 10 --print-found --csv --output {domain}_${username}_full.txt
+```
+
+**Multiple username search**
+```bash
+sherlock user1 user2 user3 --csv --output {domain}_multi_sherlock.txt
+```

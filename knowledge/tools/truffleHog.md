@@ -34,3 +34,41 @@ echo "[+] TruffleHog: Secret scan completed for $repo_url"
 ## Documentation
 
 - [Official Documentation](https://github.com/trufflesecurity/trufflehog)
+
+## Effectiveness Scores
+
+| Category   | Score |
+|------------|-------|
+| Web App    | 0.5   |
+| API        | 0.7   |
+| Network    | 0.1   |
+| Cloud      | 0.8   |
+| CMS        | 0.3   |
+
+## Fallback Alternatives
+
+- **gitleaks** - Fast git secret scanner with SARIF output
+- **nuclei** - Exposure templates can find some leaked secrets
+- **grep + regex** - Manual pattern matching for known secret formats
+
+## Context-Aware Parameters
+
+**Scan a Git repository (verified only)**
+```bash
+trufflehog git $repo_url --only-verified > {domain}_secrets.txt
+```
+
+**Scan a GitHub organization**
+```bash
+trufflehog github --org={org_name} --only-verified > {domain}_org_secrets.txt
+```
+
+**Scan filesystem for secrets**
+```bash
+trufflehog filesystem --directory=/path/to/code --only-verified > {domain}_fs_secrets.txt
+```
+
+**Scan S3 bucket for leaked credentials**
+```bash
+trufflehog s3 --bucket={bucket_name} --only-verified > {domain}_s3_secrets.txt
+```

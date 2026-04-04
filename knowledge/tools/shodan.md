@@ -32,3 +32,36 @@ echo "[+] Shodan: Internet device search completed"
 ## Documentation
 
 - [Official Documentation](https://www.shodan.io/)
+
+## Effectiveness Scores
+
+| Target Type | Score |
+|-------------|-------|
+| Web         | 0.75  |
+| API         | 0.70  |
+| Network     | 0.90  |
+| Cloud       | 0.85  |
+| CMS         | 0.75  |
+
+## Fallback Alternatives
+
+censys → zoomeye → fofa
+
+## Context-Aware Parameters
+
+```bash
+# Host lookup
+shodan host {ip_address}
+
+# Search query
+shodan search hostname:{domain} --fields ip_str,port,org,os,product
+
+# Org search
+shodan search "org:\"{org_name}\"" --fields ip_str,port,product
+
+# SSL cert search
+shodan search "ssl.cert.subject.cn:{domain}" --fields ip_str,port,org
+
+# With facets
+shodan search hostname:{domain} --facets port,org,os
+```

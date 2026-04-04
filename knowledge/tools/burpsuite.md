@@ -33,3 +33,31 @@ echo "[+] Burp Suite: Configure browser proxy and start testing"
 ## Documentation
 
 - [Official Documentation](https://portswigger.net/burp)
+
+## Effectiveness Scores
+
+| Target Type | Score |
+|-------------|-------|
+| Web         | 0.95  |
+| API         | 0.90  |
+| Network     | 0.30  |
+| Cloud       | 0.50  |
+| CMS         | 0.90  |
+
+## Fallback Alternatives
+
+zaproxy → mitmproxy → caido
+
+## Context-Aware Parameters
+
+N/A (GUI tool). Common CLI integrations and extensions:
+
+```bash
+# Headless scan via Burp Suite Enterprise/CLI (if available)
+# Use with proxy chains for automation:
+curl --proxy http://127.0.0.1:8080 https://{domain}
+
+# Common extensions: Autorize, Logger++, Param Miner, Turbo Intruder, Hackvertor
+# Export project via CLI:
+# java -jar burpsuite_pro.jar --project-file={domain}.burp
+```
