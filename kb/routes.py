@@ -15,8 +15,8 @@ from kb.search import (
     search_chunks,
 )
 
-# API key — set via API_KEY env var. If set, all API requests must include it.
-_API_KEY = os.getenv('API_KEY', '') or os.getenv('MCP_API_KEY', '')
+# API key — set via MCP_API_KEY env var. If set, all API requests must include it.
+_API_KEY = os.getenv('MCP_API_KEY', '')
 
 
 def add_cors_headers(response):
