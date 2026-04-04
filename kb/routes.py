@@ -15,10 +15,6 @@ from kb.search import (
     search_chunks,
 )
 
-# API key — set via MCP_API_KEY env var. If set, all API requests must include it.
-_API_KEY = os.getenv('MCP_API_KEY', '')
-
-
 def add_cors_headers(response):
     """Add CORS headers for cross-origin AI agent access."""
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -34,20 +30,8 @@ def after_request(response):
 
 @kb_bp.before_request
 def before_request():
-    """Ensure index exists and validate API key before handling requests."""
+    """Ensure index exists before handling requests."""
     ensure_index()
-    # Enforce API key if configured — but skip for same-origin browser requests
-    # (the web UI's own JS calls don't send an API key)
-    if _API_KEY:
-        auth = request.headers.get('Authorization', '')
-        token = auth[7:].strip() if auth.startswith('Bearer ') else ''
-        key_param = request.args.get('api_key', '')
-        # Allow requests from the web UI (same-origin Referer or no key provided
-        # from a browser navigating the site)
-        referer = request.headers.get('Referer', '')
-        is_same_origin = referer and request.host and request.host in referer
-        if not is_same_origin and token != _API_KEY and key_param != _API_KEY:
-            return jsonify({'success': False, 'error': 'Invalid or missing API key'}), 401
 
 
 @kb_bp.route('/search')
