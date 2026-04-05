@@ -28,6 +28,19 @@ import urllib.request
 API_BASE = os.getenv("BOUNTYBUD_URL", "https://bb.nxit.cc/api/kb").rstrip("/")
 API_KEY = os.getenv("BOUNTYBUD_KEY", "")
 
+# Ensure common tool directories are on PATH
+_extra_paths = [
+    os.path.expanduser("~/go/bin"),
+    os.path.expanduser("~/.local/bin"),
+    os.path.expanduser("~/.cargo/bin"),
+    os.path.expanduser("~/.bountybud-tools/bin"),
+]
+_current_path = os.environ.get("PATH", "")
+for _p in _extra_paths:
+    if _p not in _current_path:
+        _current_path = f"{_p}:{_current_path}"
+os.environ["PATH"] = _current_path
+
 # ── Local Tool Execution ───────────────────────────────────────
 
 # Track running/completed processes
@@ -140,6 +153,10 @@ TOOLBELT = {
     "exiftool":       {"bin": "exiftool",        "cat": "forensics","desc": "Read/write metadata in files (images, PDFs, etc.)"},
     "steghide":       {"bin": "steghide",        "cat": "forensics","desc": "Steganography — hide/extract data in images/audio"},
     "foremost":       {"bin": "foremost",        "cat": "forensics","desc": "File carving and recovery from disk images"},
+    # ── Exploitation Frameworks ──
+    "msfconsole":     {"bin": "msfconsole",      "cat": "exploit",  "desc": "Metasploit Framework console — exploit, payload, and post modules"},
+    "msfvenom":       {"bin": "msfvenom",        "cat": "exploit",  "desc": "Metasploit payload generator (shellcode, exe, scripts)"},
+    "msfrpcd":        {"bin": "msfrpcd",         "cat": "exploit",  "desc": "Metasploit RPC daemon for remote/scripted access"},
     # ── Utility ──
     "interactsh":     {"bin": "interactsh-client","cat": "util",     "desc": "OOB interaction server for SSRF/XXE/blind testing"},
     "anew":           {"bin": "anew",            "cat": "util",     "desc": "Append lines to file only if they don't already exist"},
@@ -169,11 +186,12 @@ def _get_toolbelt_status() -> str:
     lines = ["# BountyBud Toolbelt\n"]
     lines.append(f"[Y] = installed, [-] = not found on PATH\n")
 
-    cat_order = ["recon", "network", "vuln", "cms", "osint", "cloud", "auth",
-                 "proxy", "binary", "forensics", "util"]
+    cat_order = ["recon", "network", "vuln", "exploit", "cms", "osint", "cloud",
+                 "auth", "proxy", "binary", "forensics", "util"]
     cat_names = {
         "recon": "Reconnaissance", "network": "Network", "vuln": "Vulnerability Scanning",
-        "cms": "CMS", "osint": "OSINT", "cloud": "Cloud Security", "auth": "Auth & Cracking",
+        "exploit": "Exploitation Frameworks", "cms": "CMS", "osint": "OSINT",
+        "cloud": "Cloud Security", "auth": "Auth & Cracking",
         "proxy": "Proxy & Interception", "binary": "Binary / RE", "forensics": "Forensics",
         "util": "Utility",
     }
@@ -257,13 +275,33 @@ CAPABILITIES = {
 }
 
 INSTRUCTIONS = (
-    "BountyBud is a bug bounty and red teaming assistant with a 125-document knowledge base "
+    "BountyBud is a bug bounty and red teaming assistant with a 125+ document knowledge base "
     "AND local tool execution. You can both research and act.\n\n"
     "WORKFLOW:\n"
     "1) get_toolbelt — see what's installed locally (call once at start)\n"
     "2) search_knowledge — find techniques, payloads, tool parameters, and methodology\n"
     "3) execute_tool — run security tools locally, informed by KB guidance\n"
     "4) search_cves / get_cve — live CVE intelligence from the NVD\n\n"
+    "CRITICAL — TOOL EXECUTION RULES:\n"
+    "Tools WILL timeout on broad targets. You MUST work in small, targeted chunks:\n"
+    "- NEVER run recon tools against an entire root domain with all subdomains at once\n"
+    "- BREAK large scopes into individual subdomains or small batches (5-10 targets max)\n"
+    "- USE short timeouts (60-120s) with tight scope, not long timeouts with broad scope\n"
+    "- FILTER aggressively — pipe through grep/awk/head BEFORE processing\n"
+    "- CHAIN small steps: discover → filter interesting → scan filtered set → analyze\n"
+    "- For subdomain enum: run subfinder/amass FIRST (fast, passive), THEN probe live hosts,\n"
+    "  THEN scan interesting hosts individually\n"
+    "- For vuln scanning: target ONE host with specific templates, not a list with all templates\n"
+    "- For URL collection: limit with --threads 2, pipe to head -500, filter noise immediately\n"
+    "- For nuclei: use -tags to target specific vuln types, NOT broad full-template scans\n"
+    "- ALWAYS check output size before piping to next tool (wc -l first)\n\n"
+    "Example GOOD pattern:\n"
+    "  subfinder -d target.com -silent | head -50 > subs.txt\n"
+    "  httpx -l subs.txt -silent -sc > live.txt\n"
+    "  # pick the 3 most interesting hosts, scan each individually:\n"
+    "  nuclei -u https://app.target.com -tags exposure,misconfig -timeout 5\n\n"
+    "Example BAD pattern:\n"
+    "  gau --subs target.com | nuclei  # will timeout, too broad\n\n"
     "METHODOLOGY: Follow the 4-phase workflow: Discovery → Enumeration → Hunting → Exploitation.\n"
     "Use the vulnerability priority matrix (RCE > SQLi > SSRF > IDOR > XSS).\n"
     "Tool docs include effectiveness scores by target type, context-aware parameters, "
