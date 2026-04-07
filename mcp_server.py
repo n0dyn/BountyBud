@@ -33,6 +33,11 @@ import urllib.request
 API_BASE = os.getenv("BOUNTYBUD_URL", "https://bb.nxit.cc/api/kb").rstrip("/")
 API_KEY = os.getenv("BOUNTYBUD_KEY", "")
 
+# ── Mitmproxy Integration ─────────────────────────────────────
+MITMPROXY_API = os.getenv("MITMPROXY_API", "http://localhost:8081")
+PROXY_PORT = int(os.getenv("PROXY_PORT", "8080"))
+_proxy_started = False
+
 # Ensure common tool directories are on PATH
 _extra_paths = [
     os.path.expanduser("~/go/bin"),
@@ -53,6 +58,10 @@ os.makedirs(os.path.join(DATA_DIR, "primitives"), exist_ok=True)
 os.makedirs(os.path.join(DATA_DIR, "findings"), exist_ok=True)
 os.makedirs(os.path.join(DATA_DIR, "sessions"), exist_ok=True)
 os.makedirs(os.path.join(DATA_DIR, "targets"), exist_ok=True)
+os.makedirs(os.path.join(DATA_DIR, "huntlogs"), exist_ok=True)
+
+# Learning database — single JSONL file that accumulates across all targets
+LEARNING_DB = os.path.join(DATA_DIR, "learning.jsonl")
 
 # ── Local Tool Execution ───────────────────────────────────────
 
@@ -416,6 +425,488 @@ def _save_findings(target: str, findings: list[dict]):
         json.dump(findings, f, indent=2, default=str)
 
 
+# ── Hunt Log (survives context compression) ───────────────────
+
+def _huntlog_file(target: str) -> str:
+    safe = re.sub(r'[^a-zA-Z0-9._-]', '_', target)
+    return os.path.join(DATA_DIR, "huntlogs", f"{safe}.jsonl")
+
+
+def _append_huntlog(target: str, entry: dict):
+    entry["timestamp"] = datetime.datetime.now().isoformat()
+    fpath = _huntlog_file(target)
+    with open(fpath, "a") as f:
+        f.write(json.dumps(entry, default=str) + "\n")
+
+
+def _read_huntlog(target: str, last_n: int = 50) -> list[dict]:
+    fpath = _huntlog_file(target)
+    if not os.path.exists(fpath):
+        return []
+    with open(fpath) as f:
+        lines = f.readlines()
+    entries = []
+    for line in lines[-(last_n):]:
+        line = line.strip()
+        if line:
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    return entries
+
+
+def _format_huntlog(entries: list[dict]) -> str:
+    """Format hunt log entries into a readable state reconstruction."""
+    if not entries:
+        return "No hunt log entries."
+
+    lines = []
+    # Group by phase for clearer reconstruction
+    current_phase = None
+    for e in entries:
+        phase = e.get("phase", "")
+        if phase and phase != current_phase:
+            current_phase = phase
+            lines.append(f"\n## Phase: {phase}")
+
+        entry_type = e.get("type", "note")
+        ts = e.get("timestamp", "")[:16]
+        msg = e.get("message", "")
+
+        if entry_type == "status":
+            lines.append(f"[{ts}] **STATUS:** {msg}")
+        elif entry_type == "finding":
+            sev = e.get("severity", "?")
+            lines.append(f"[{ts}] **FINDING [{sev.upper()}]:** {msg}")
+        elif entry_type == "tested":
+            result = e.get("result", "")
+            lines.append(f"[{ts}] TESTED: {msg} → {result}")
+        elif entry_type == "todo":
+            lines.append(f"[{ts}] TODO: {msg}")
+        elif entry_type == "blocked":
+            lines.append(f"[{ts}] BLOCKED: {msg}")
+        elif entry_type == "plan":
+            lines.append(f"[{ts}] **PLAN:** {msg}")
+        else:
+            lines.append(f"[{ts}] {msg}")
+
+        # Include data if present
+        data = e.get("data")
+        if data and isinstance(data, dict):
+            for k, v in data.items():
+                lines.append(f"  {k}: {v}")
+
+    return "\n".join(lines)
+
+
+# ── Learning Engine ───────────────────────────────────────────
+
+def _record_learning(entry: dict):
+    """Append a learning outcome to the database."""
+    entry["timestamp"] = datetime.datetime.now().isoformat()
+    with open(LEARNING_DB, "a") as f:
+        f.write(json.dumps(entry, default=str) + "\n")
+
+
+def _load_all_learnings() -> list[dict]:
+    """Load all learning outcomes."""
+    if not os.path.exists(LEARNING_DB):
+        return []
+    entries = []
+    with open(LEARNING_DB) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    return entries
+
+
+def _temporal_decay(timestamp_str: str, half_life_days: float = 30.0) -> float:
+    """Calculate temporal decay weight. Recent outcomes matter more."""
+    try:
+        ts = datetime.datetime.fromisoformat(timestamp_str)
+        age_days = (datetime.datetime.now() - ts).total_seconds() / 86400
+        import math
+        return math.pow(0.5, age_days / half_life_days)
+    except (ValueError, TypeError):
+        return 0.5  # Unknown age gets medium weight
+
+
+def _confidence_score(successes: int, total: int) -> tuple[float, str]:
+    """Wilson score interval lower bound — better than raw percentage for small samples.
+    Returns (score, confidence_level)."""
+    if total == 0:
+        return (0.0, "none")
+    import math
+    z = 1.96  # 95% confidence
+    p = successes / total
+    denominator = 1 + z * z / total
+    centre = p + z * z / (2 * total)
+    spread = z * math.sqrt((p * (1 - p) + z * z / (4 * total)) / total)
+    lower_bound = (centre - spread) / denominator
+
+    if total >= 20:
+        level = "high"
+    elif total >= 5:
+        level = "medium"
+    else:
+        level = "low"
+
+    return (max(0, lower_bound), level)
+
+
+def _detect_cross_target_patterns(all_data: list[dict]) -> list[dict]:
+    """Detect patterns that recur across multiple targets."""
+    from collections import defaultdict
+    patterns = []
+
+    # Group by (vuln_type, target_type) to find recurring vuln classes
+    vuln_by_target_type = defaultdict(lambda: {"targets": set(), "successes": 0, "total": 0})
+    for entry in all_data:
+        vuln = entry.get("vuln_type", "")
+        ttype = entry.get("target_type", "")
+        target = entry.get("target", "")
+        if vuln and ttype:
+            key = (vuln, ttype)
+            vuln_by_target_type[key]["total"] += 1
+            if target:
+                vuln_by_target_type[key]["targets"].add(target)
+            if entry.get("outcome") == "success":
+                vuln_by_target_type[key]["successes"] += 1
+
+    for (vuln, ttype), stats in vuln_by_target_type.items():
+        if len(stats["targets"]) >= 2 and stats["successes"] >= 2:
+            rate = stats["successes"] / stats["total"]
+            patterns.append({
+                "type": "recurring_vuln",
+                "vuln_type": vuln,
+                "target_type": ttype,
+                "targets_affected": len(stats["targets"]),
+                "success_rate": rate,
+                "total_tests": stats["total"],
+                "insight": f"{vuln} found on {len(stats['targets'])} different {ttype} targets ({rate:.0%} success rate)",
+            })
+
+    # Group by (technique, waf) to find WAF-specific effectiveness
+    tech_by_waf = defaultdict(lambda: {"successes": 0, "blocked": 0, "total": 0, "bypasses": []})
+    for entry in all_data:
+        technique = entry.get("technique", "")
+        waf = entry.get("waf", "")
+        if technique and waf and waf.lower() != "none":
+            key = (technique, waf)
+            tech_by_waf[key]["total"] += 1
+            if entry.get("outcome") == "success":
+                tech_by_waf[key]["successes"] += 1
+                if entry.get("bypass_used"):
+                    tech_by_waf[key]["bypasses"].append(entry["bypass_used"])
+            elif entry.get("outcome") == "blocked":
+                tech_by_waf[key]["blocked"] += 1
+
+    for (technique, waf), stats in tech_by_waf.items():
+        if stats["total"] >= 3 and stats["blocked"] >= 2:
+            patterns.append({
+                "type": "waf_blocker",
+                "technique": technique,
+                "waf": waf,
+                "block_rate": stats["blocked"] / stats["total"],
+                "insight": f"{technique} blocked {stats['blocked']}/{stats['total']} times by {waf}",
+                "bypasses": stats["bypasses"],
+            })
+        elif stats["total"] >= 2 and stats["successes"] >= 2:
+            patterns.append({
+                "type": "waf_effective",
+                "technique": technique,
+                "waf": waf,
+                "success_rate": stats["successes"] / stats["total"],
+                "insight": f"{technique} works against {waf} ({stats['successes']}/{stats['total']})",
+                "bypasses": stats["bypasses"],
+            })
+
+    # Detect technique evolution (same technique improving or degrading over time)
+    tech_timeline = defaultdict(list)
+    for entry in all_data:
+        technique = entry.get("technique", "")
+        if technique:
+            tech_timeline[technique].append(entry)
+
+    for technique, entries in tech_timeline.items():
+        if len(entries) >= 4:
+            # Split into halves and compare success rates
+            sorted_entries = sorted(entries, key=lambda e: e.get("timestamp", ""))
+            mid = len(sorted_entries) // 2
+            early = sorted_entries[:mid]
+            recent = sorted_entries[mid:]
+            early_rate = sum(1 for e in early if e.get("outcome") == "success") / len(early) if early else 0
+            recent_rate = sum(1 for e in recent if e.get("outcome") == "success") / len(recent) if recent else 0
+            delta = recent_rate - early_rate
+
+            if abs(delta) >= 0.25:  # Significant change
+                direction = "improving" if delta > 0 else "degrading"
+                patterns.append({
+                    "type": "trend",
+                    "technique": technique,
+                    "direction": direction,
+                    "early_rate": early_rate,
+                    "recent_rate": recent_rate,
+                    "insight": f"{technique} is {direction}: {early_rate:.0%} early → {recent_rate:.0%} recent",
+                })
+
+    return sorted(patterns, key=lambda p: p.get("targets_affected", 0) + p.get("success_rate", 0), reverse=True)
+
+
+def _generate_playbook(tech_stack: list[str], waf: str = "", target_type: str = "") -> str:
+    """Generate an advanced adaptive playbook with temporal decay, confidence scoring, and pattern detection."""
+    all_data = _load_all_learnings()
+
+    if not all_data:
+        return (
+            "No learning data yet. BountyBud learns from outcomes you record with `record_outcome`.\n"
+            "After a few hunts, this will return personalized recommendations ranked by success rate.\n\n"
+            "**Bootstrap recommendations for this context:**\n"
+            + _bootstrap_recommendations(tech_stack, waf, target_type)
+        )
+
+    tech_lower = set(t.lower() for t in tech_stack)
+    waf_lower = waf.lower() if waf else ""
+
+    # Score relevance with temporal decay
+    technique_stats: dict[str, dict] = {}
+    waf_bypass_stats: dict[str, list[tuple[str, float]]] = {}
+
+    for entry in all_data:
+        decay = _temporal_decay(entry.get("timestamp", ""))
+        entry_techs = set(t.lower() for t in entry.get("tech_stack", []))
+        entry_waf = entry.get("waf", "").lower()
+        entry_type = entry.get("target_type", "").lower()
+
+        # Contextual relevance score
+        relevance = 1.0  # Base relevance
+        overlap = tech_lower & entry_techs
+        relevance += len(overlap) * 2.0
+        if waf_lower and entry_waf and waf_lower in entry_waf:
+            relevance += 3.0
+        if target_type and entry_type and target_type.lower() == entry_type:
+            relevance += 1.5
+
+        # Combined weight = relevance * recency
+        weight = relevance * decay
+
+        technique = entry.get("technique", "unknown")
+        outcome = entry.get("outcome", "unknown")
+        vuln_type = entry.get("vuln_type", "")
+        key = f"{technique}:{vuln_type}" if vuln_type else technique
+
+        if key not in technique_stats:
+            technique_stats[key] = {
+                "technique": technique, "vuln_type": vuln_type,
+                "weighted_success": 0, "weighted_total": 0,
+                "raw_success": 0, "raw_fail": 0, "raw_blocked": 0, "raw_partial": 0, "raw_total": 0,
+                "max_relevance": 0, "details": [], "recent_outcomes": [],
+            }
+
+        stats = technique_stats[key]
+        stats["weighted_total"] += weight
+        stats["raw_total"] += 1
+        stats["max_relevance"] = max(stats["max_relevance"], relevance)
+
+        if outcome == "success":
+            stats["weighted_success"] += weight
+            stats["raw_success"] += 1
+            detail = entry.get("details", "")
+            if detail:
+                stats["details"].append(detail[:120])
+        elif outcome == "blocked":
+            stats["raw_blocked"] += 1
+        elif outcome == "partial":
+            stats["raw_partial"] += 1
+        else:
+            stats["raw_fail"] += 1
+
+        # Track last 5 outcomes for trend display
+        stats["recent_outcomes"].append(outcome[0].upper())
+        stats["recent_outcomes"] = stats["recent_outcomes"][-5:]
+
+        # Track WAF bypasses with recency weight
+        if outcome == "success" and entry.get("bypass_used") and entry.get("waf"):
+            waf_name = entry["waf"]
+            if waf_name not in waf_bypass_stats:
+                waf_bypass_stats[waf_name] = []
+            waf_bypass_stats[waf_name].append((entry["bypass_used"], decay))
+
+    # Rank by weighted success rate with confidence
+    ranked = []
+    for key, stats in technique_stats.items():
+        w_total = stats["weighted_total"]
+        w_success = stats["weighted_success"]
+        w_rate = w_success / w_total if w_total > 0 else 0
+
+        # Wilson confidence on raw counts
+        conf_score, conf_level = _confidence_score(stats["raw_success"], stats["raw_total"])
+
+        # Final score: weighted_rate * confidence * relevance
+        final_score = w_rate * (0.5 + conf_score) * min(stats["max_relevance"], 10)
+
+        ranked.append((final_score, w_rate, conf_score, conf_level, stats))
+
+    ranked.sort(key=lambda x: x[0], reverse=True)
+
+    # Cross-target pattern detection
+    patterns = _detect_cross_target_patterns(all_data)
+
+    # Build playbook
+    lines = [f"# Adaptive Playbook\n"]
+    lines.append(f"**Context:** tech={', '.join(tech_stack) or 'any'}, waf={waf or 'unknown'}, type={target_type or 'any'}")
+    lines.append(f"**Learning base:** {len(all_data)} outcomes across {len(set(e.get('target','') for e in all_data if e.get('target')))} targets\n")
+
+    # Cross-target patterns first (highest value intel)
+    if patterns:
+        lines.append("## Cross-Target Intelligence\n")
+        for p in patterns[:6]:
+            if p["type"] == "recurring_vuln":
+                lines.append(f"  PATTERN: {p['insight']}")
+            elif p["type"] == "waf_blocker":
+                lines.append(f"  AVOID: {p['insight']}")
+                if p.get("bypasses"):
+                    lines.append(f"    Bypasses that worked: {', '.join(set(p['bypasses']))}")
+            elif p["type"] == "waf_effective":
+                lines.append(f"  WORKS: {p['insight']}")
+            elif p["type"] == "trend":
+                icon = "^" if p["direction"] == "improving" else "v"
+                lines.append(f"  TREND {icon}: {p['insight']}")
+        lines.append("")
+
+    # Top recommendations with confidence
+    lines.append("## Recommended Techniques\n")
+    conf_icons = {"high": "***", "medium": "**", "low": "*", "none": ""}
+
+    for i, (fscore, wrate, cscore, clevel, stats) in enumerate(ranked[:15], 1):
+        technique = stats["technique"]
+        vuln = stats["vuln_type"]
+        total = stats["raw_total"]
+        success = stats["raw_success"]
+        trend = "".join(stats["recent_outcomes"][-5:])
+
+        label = f"{technique}" + (f" ({vuln})" if vuln else "")
+        conf_star = conf_icons.get(clevel, "")
+        lines.append(
+            f"  {i:2d}. {conf_star}**{label}**{conf_star} — "
+            f"{success}/{total} ({wrate:.0%} weighted) "
+            f"confidence={clevel} trend=[{trend}]"
+        )
+
+        if stats["details"]:
+            for d in stats["details"][:2]:
+                lines.append(f"      Worked: {d}")
+
+    # WAF bypass intelligence with recency
+    if waf_lower and waf_bypass_stats:
+        lines.append(f"\n## WAF Bypass Intelligence\n")
+        for waf_name, bypass_list in waf_bypass_stats.items():
+            if waf_lower in waf_name.lower():
+                lines.append(f"**{waf_name}** — bypasses (sorted by recency):")
+                from collections import Counter
+                # Weight by recency
+                weighted_bypasses: dict[str, float] = {}
+                for bypass, decay_w in bypass_list:
+                    weighted_bypasses[bypass] = weighted_bypasses.get(bypass, 0) + decay_w
+                for bypass, score in sorted(weighted_bypasses.items(), key=lambda x: x[1], reverse=True)[:7]:
+                    count = sum(1 for b, _ in bypass_list if b == bypass)
+                    lines.append(f"  - {bypass} ({count}x, recency_score={score:.2f})")
+
+    # Anti-patterns
+    lines.append("\n## Anti-Patterns (avoid these)\n")
+    anti = [(wrate, stats) for _, wrate, _, _, stats in ranked if stats["raw_total"] >= 2 and wrate < 0.15]
+    anti.sort(key=lambda x: x[0])
+    if anti:
+        for wrate, stats in anti[:5]:
+            label = f"{stats['technique']}" + (f" ({stats['vuln_type']})" if stats['vuln_type'] else "")
+            lines.append(f"  - **{label}** — {stats['raw_success']}/{stats['raw_total']} ({wrate:.0%}) — low ROI in this context")
+    else:
+        lines.append("  (not enough data yet)")
+
+    # Knowledge gaps
+    lines.append("\n## Knowledge Gaps\n")
+    common_techniques = {
+        "idor_test", "cors_test", "auth_bypass", "sqli", "xss_reflected",
+        "xss_stored", "ssrf", "ssti", "lfi", "xxe", "race_condition",
+        "mass_assignment", "workflow_bypass", "price_manipulation",
+        "jwt_attack", "graphql_introspection", "subdomain_takeover",
+        "open_redirect", "header_injection", "cache_poisoning",
+    }
+    tested = {stats["technique"] for _, _, _, _, stats in ranked}
+    untested = common_techniques - tested
+    if untested:
+        lines.append("Never tested (consider trying):")
+        for t in sorted(untested):
+            lines.append(f"  - {t}")
+
+    # Adaptive strategy suggestion
+    lines.append("\n## Adaptive Strategy\n")
+    if waf_lower:
+        blocked_count = sum(s["raw_blocked"] for _, _, _, _, s in ranked)
+        total_count = sum(s["raw_total"] for _, _, _, _, s in ranked)
+        if total_count and blocked_count / total_count > 0.3:
+            lines.append(f"HIGH BLOCK RATE ({blocked_count}/{total_count}). Recommendations:")
+            lines.append("  1. Hunt for origin IP to bypass WAF entirely")
+            lines.append("  2. Focus on business logic bugs (WAF can't block logical flaws)")
+            lines.append("  3. Test API endpoints which often have different WAF rules")
+            lines.append("  4. Use the working bypasses listed above")
+
+    top_success = [(wrate, stats) for _, wrate, _, _, stats in ranked if wrate > 0.5 and stats["raw_total"] >= 2]
+    if top_success:
+        lines.append(f"\nHIGH-VALUE FOCUS: These techniques work well on this context:")
+        for wrate, stats in top_success[:3]:
+            lines.append(f"  - {stats['technique']} ({wrate:.0%}) — double down on this")
+
+    return "\n".join(lines)
+
+
+def _bootstrap_recommendations(tech_stack: list[str], waf: str, target_type: str) -> str:
+    """Provide default recommendations when no learning data exists yet."""
+    lines = []
+    tech_lower = [t.lower() for t in tech_stack]
+
+    if target_type in ("saas", "web_app"):
+        lines.append("- IDOR testing on all endpoints with IDs (highest ROI for SaaS)")
+        lines.append("- CORS misconfiguration on API endpoints")
+        lines.append("- Auth bypass (method switch, header mangle)")
+        lines.append("- Business logic: workflow bypass, price manipulation")
+    elif target_type == "api":
+        lines.append("- BFLA: access admin endpoints with regular user token")
+        lines.append("- Mass assignment: add extra fields to POST/PUT requests")
+        lines.append("- Rate limiting: race conditions on stateful operations")
+        lines.append("- GraphQL introspection and batching attacks")
+    elif target_type == "ecommerce":
+        lines.append("- Price manipulation in checkout flow")
+        lines.append("- Coupon race conditions (concurrent redemption)")
+        lines.append("- IDOR on order/invoice endpoints")
+        lines.append("- Workflow bypass: skip payment step")
+
+    if any(t in tech_lower for t in ["react", "angular", "vue", "next"]):
+        lines.append("- DOM XSS in client-side routing")
+        lines.append("- Hidden API endpoints in JavaScript bundles")
+    if any(t in tech_lower for t in ["express", "node", "fastify"]):
+        lines.append("- Prototype pollution")
+        lines.append("- SSRF in server-side rendering")
+    if any(t in tech_lower for t in ["graphql"]):
+        lines.append("- Introspection query for full schema")
+        lines.append("- Nested query DoS")
+        lines.append("- Batching attacks to bypass rate limits")
+    if waf:
+        lines.append(f"- WAF ({waf}): start with business logic bugs that WAF can't block")
+        lines.append(f"- Search for origin IP via DNS history, censys, or shodan")
+
+    if not lines:
+        lines.append("- Start with fingerprinting, then IDOR + auth bypass + CORS")
+        lines.append("- Record outcomes with record_outcome to build the learning database")
+
+    return "\n".join(lines)
+
+
 # ── Headless Browser Verification ─────────────────────────────
 
 def _verify_xss_headless(url: str, expected_alert: str = "") -> dict:
@@ -466,6 +957,60 @@ def _verify_curl(curl_command: str) -> dict:
     }
 
 
+# ── Mitmproxy Helpers ─────────────────────────────────────────
+
+def _start_mitmproxy(port: int) -> bool:
+    """Start mitmproxy in background if not running."""
+    global _proxy_started
+    if _proxy_started:
+        return True
+    try:
+        subprocess.Popen(
+            ["mitmproxy", "-p", str(port), "--mode", "regular", "-q"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(2)
+        _proxy_started = True
+        return True
+    except Exception as e:
+        raise RuntimeError(f"Failed to start mitmproxy: {e}")
+
+
+def _mitm_api_get(path: str) -> dict:
+    """GET request to mitmproxy API."""
+    url = f"{MITMPROXY_API}{path}"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        raise RuntimeError(f"mitmproxy API error: {e}")
+
+
+def _http_request(method: str, url: str, headers: dict | None = None, body: str = "") -> dict:
+    """Make an HTTP request and return response with status, headers, body."""
+    req = urllib.request.Request(url, method=method)
+    if headers:
+        for k, v in headers.items():
+            req.add_header(k, v)
+    if body:
+        req.data = body.encode()
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            resp_headers = dict(resp.headers)
+            resp_body = resp.read().decode(errors="ignore")
+            return {"status": resp.status, "headers": resp_headers, "body": resp_body[:3000]}
+    except urllib.error.HTTPError as e:
+        return {
+            "status": e.code,
+            "headers": dict(e.headers),
+            "body": e.read().decode(errors="ignore")[:3000],
+        }
+    except Exception as e:
+        return {"status": 0, "headers": {}, "body": f"Error: {e}"}
+
+
 # ── MCP Protocol ──────────────────────────────────────────────
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -505,7 +1050,12 @@ INSTRUCTIONS = (
     "  - Store interesting observations with store_primitive\n\n"
 
     "PHASE 3 — HUNTING (manual, proxy-driven):\n"
-    "  - Use the app as a real user, capture flows in mitmproxy\n"
+    "  - start_proxy → launch mitmproxy for HTTP/HTTPS interception\n"
+    "  - capture_requests → see all intercepted traffic\n"
+    "  - replay_request → modify and resend requests (change IDs for IDOR, swap cookies for auth bypass)\n"
+    "  - cors_test → test CORS misconfiguration (origin reflection = account takeover)\n"
+    "  - auth_bypass_test → automated auth bypass checks (no-auth, method-switch, header-mangle)\n"
+    "  - header_injection_test → test X-Forwarded-For, X-Original-URL, Host override\n"
     "  - Test business logic: IDOR, auth bypass, workflow skip, price manipulation\n"
     "  - Every interesting observation → store_primitive\n"
     "  - Periodically: analyze_chains to find multi-primitive exploits\n\n"
@@ -515,6 +1065,14 @@ INSTRUCTIONS = (
     "  - verify_finding requires a reproducible curl/script + evidence\n"
     "  - For XSS: headless browser verification available (fires real alert?)\n"
     "  - NO finding is valid without POC. 'POC or GTFO.'\n\n"
+
+    "PHASE 5 — LEARN (after every test):\n"
+    "  - record_outcome for EVERY technique tested — success, fail, blocked, or partial\n"
+    "  - Include tech_stack, WAF, and what specifically worked/failed in details\n"
+    "  - If you bypassed a WAF, record the bypass_used (critical intelligence for future hunts)\n"
+    "  - This is how BountyBud gets SMARTER over time\n"
+    "  - At the START of each new hunt, call get_playbook with the target's tech/WAF\n"
+    "  - The playbook ranks techniques by historical success rate for similar targets\n\n"
 
     "═══ CRITICAL RULES ═══\n\n"
 
@@ -545,9 +1103,20 @@ INSTRUCTIONS = (
     "- analyze_chains reviews all primitives and suggests exploit chains.\n"
     "- Real bounties come from chains: info disclosure + IDOR = account takeover.\n\n"
 
+    "HUNT LOG — SURVIVING CONTEXT LOSS:\n"
+    "- USE hunt_log FREQUENTLY to record progress, decisions, findings, and next steps.\n"
+    "- Log after EVERY phase, major finding, decision point, and when planning next steps.\n"
+    "- After context compression: call get_hunt_log FIRST to reconstruct your state.\n"
+    "- The hunt log is your external memory — what you don't log, you lose.\n"
+    "- Log TODOs explicitly so you can pick them up after context loss.\n"
+    "- Include specific details: URLs, endpoints, parameters, response codes, observations.\n"
+    "- The log also shows target context, primitive counts, and outstanding TODOs.\n\n"
+
     "HUNTER MENTALITY:\n"
     "- Automated scan found nothing? GOOD. Now hunt manually.\n"
-    "- Use mitmproxy to capture traffic. Break assumptions. Change IDs, skip steps, modify prices.\n"
+    "- Use start_proxy + capture_requests + replay_request to intercept and modify traffic.\n"
+    "- Break assumptions: change IDs (IDOR), skip steps (workflow bypass), modify prices.\n"
+    "- Use cors_test on every API endpoint. Use auth_bypass_test on every authenticated route.\n"
     "- NEVER say 'target appears well-hardened'. Say 'switching to manual testing'.\n"
     "- Bugs live in NEW code. Hunt what changed, not what's been scanned for years.\n"
     "- Search BB: 'business-logic-hunting' for manual testing methodology.\n"
@@ -973,6 +1542,339 @@ TOOLS = [
         "name": "session_status",
         "description": "Get current session status including time elapsed, primitives found, and verified findings.",
         "inputSchema": {"type": "object", "properties": {}},
+    },
+    # ── Hunt Log (context survival) ──
+    {
+        "name": "hunt_log",
+        "description": (
+            "Write an entry to the persistent hunt log for a target. USE THIS FREQUENTLY to record "
+            "your progress, decisions, findings, and next steps. The hunt log survives context "
+            "compression — after context loss, call get_hunt_log to reconstruct your state.\n\n"
+            "WHEN TO LOG:\n"
+            "- After completing each phase or major step\n"
+            "- When you find something interesting (even if not exploitable)\n"
+            "- When you decide what to test next (type=plan)\n"
+            "- When something is blocked or fails (type=blocked)\n"
+            "- When you mark something as tested with its result (type=tested)\n"
+            "- When you have TODOs to pick up later (type=todo)\n\n"
+            "Log DETAILS — your future self (or a new context window) needs to understand "
+            "exactly where you left off and what to do next."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target domain"},
+                "type": {
+                    "type": "string",
+                    "description": "Entry type",
+                    "enum": ["status", "finding", "tested", "todo", "blocked", "plan", "note"],
+                },
+                "phase": {
+                    "type": "string",
+                    "description": "Current hunt phase for grouping",
+                    "enum": ["setup", "intel", "discovery", "hunting", "verification", "reporting"],
+                },
+                "message": {
+                    "type": "string",
+                    "description": "What happened, what you found, or what to do next. Be specific — include URLs, params, endpoints.",
+                },
+                "data": {
+                    "type": "object",
+                    "description": "Structured data to persist (e.g., {\"endpoint\": \"/api/users\", \"param\": \"id\", \"status\": 200})",
+                },
+                "severity": {
+                    "type": "string",
+                    "description": "For findings: severity level",
+                    "enum": ["info", "low", "medium", "high", "critical"],
+                },
+                "result": {
+                    "type": "string",
+                    "description": "For tested entries: outcome (e.g., 'not vulnerable', 'WAF blocked', 'needs further testing')",
+                },
+            },
+            "required": ["target", "type", "message"],
+        },
+    },
+    {
+        "name": "get_hunt_log",
+        "description": (
+            "Read the hunt log to reconstruct state after context compression. "
+            "Returns timestamped entries showing what was done, found, tested, and planned. "
+            "CALL THIS FIRST after context loss to understand where you left off. "
+            "Also useful to review progress mid-hunt."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target domain"},
+                "last_n": {
+                    "type": "integer",
+                    "description": "Number of recent entries to return (default 50, max 200)",
+                    "default": 50,
+                },
+            },
+            "required": ["target"],
+        },
+    },
+    {
+        "name": "clear_hunt_log",
+        "description": "Clear the hunt log for a target. Use when starting a completely fresh hunt.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target domain"},
+            },
+            "required": ["target"],
+        },
+    },
+    # ── Learning Engine ──
+    {
+        "name": "record_outcome",
+        "description": (
+            "Record the outcome of a technique/test. This is how BountyBud LEARNS. "
+            "After every test — whether it succeeds, fails, or gets blocked — record it. "
+            "Over time, BountyBud builds up knowledge of what works on which tech stacks, "
+            "which WAF bypasses succeed, and which techniques are waste of time. "
+            "This data feeds into get_playbook for adaptive recommendations."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "technique": {
+                    "type": "string",
+                    "description": "What technique/tool was used (e.g., 'cors_test', 'sqlmap', 'idor_test', 'auth_bypass_header_mangle', 'nuclei_cve_scan')",
+                },
+                "vuln_type": {
+                    "type": "string",
+                    "description": "Vulnerability class tested",
+                    "enum": [
+                        "xss_reflected", "xss_stored", "sqli", "ssrf", "idor",
+                        "cors_misconfig", "auth_bypass", "rce", "lfi", "xxe",
+                        "ssti", "csrf", "open_redirect", "race_condition",
+                        "mass_assignment", "workflow_bypass", "price_manipulation",
+                        "jwt_attack", "subdomain_takeover", "info_disclosure",
+                        "graphql_introspection", "header_injection", "other",
+                    ],
+                },
+                "outcome": {
+                    "type": "string",
+                    "description": "What happened",
+                    "enum": ["success", "fail", "blocked", "partial"],
+                },
+                "tech_stack": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Target's tech stack (e.g., ['React', 'Express', 'MongoDB'])",
+                },
+                "waf": {
+                    "type": "string",
+                    "description": "WAF if any (e.g., 'Cloudflare', 'AWS WAF', 'none')",
+                },
+                "target_type": {
+                    "type": "string",
+                    "description": "Type of target",
+                    "enum": ["web_app", "api", "mobile_api", "saas", "ecommerce", "cms", "network", "cloud", "other"],
+                },
+                "target": {
+                    "type": "string",
+                    "description": "Target domain (for reference)",
+                },
+                "details": {
+                    "type": "string",
+                    "description": "What specifically worked or failed (be specific — this is what future playbooks show)",
+                },
+                "bypass_used": {
+                    "type": "string",
+                    "description": "If WAF was bypassed, what encoding/technique worked (e.g., 'double URL encode', 'unicode normalization', 'chunked transfer')",
+                },
+            },
+            "required": ["technique", "outcome"],
+        },
+    },
+    {
+        "name": "get_playbook",
+        "description": (
+            "Get an adaptive playbook based on accumulated learning data. "
+            "Returns techniques ranked by historical success rate for the given tech stack and WAF. "
+            "Also shows WAF bypass intelligence, anti-patterns to avoid, and untested techniques. "
+            "Call this at the START of a hunt to plan your approach based on what has worked before."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tech_stack": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Target tech stack (e.g., ['React', 'Express', 'MongoDB'])",
+                },
+                "waf": {
+                    "type": "string",
+                    "description": "Target WAF if known",
+                },
+                "target_type": {
+                    "type": "string",
+                    "description": "Type of target",
+                    "enum": ["web_app", "api", "mobile_api", "saas", "ecommerce", "cms", "network", "cloud", "other"],
+                },
+            },
+        },
+    },
+    {
+        "name": "learning_stats",
+        "description": "Get overall learning statistics — total outcomes recorded, success rates by technique, most effective approaches.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "export_training_data",
+        "description": (
+            "Export all learning data as structured training data (JSONL format). "
+            "This can be used to fine-tune future models or analyze hunting patterns. "
+            "Each record includes technique, outcome, tech stack, WAF, details, and context. "
+            "Export formats: 'raw' (full JSONL), 'training' (instruction/response pairs for fine-tuning), "
+            "'summary' (aggregated statistics as JSON)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "description": "Export format",
+                    "enum": ["raw", "training", "summary"],
+                    "default": "raw",
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "File path to write to (default: ~/.bountybud/exports/training_<timestamp>.jsonl)",
+                },
+            },
+        },
+    },
+    {
+        "name": "web_research",
+        "description": (
+            "Fetch a URL and extract useful content for hunting intelligence. "
+            "Use for: checking target changelogs, reading HackerOne disclosed reports, "
+            "fetching robots.txt/sitemap, reading API docs, checking status pages. "
+            "Returns extracted text content (HTML stripped)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "URL to fetch (e.g., 'https://target.com/changelog', 'https://hackerone.com/target/hacktivity')",
+                },
+                "extract_mode": {
+                    "type": "string",
+                    "description": "What to extract from the response",
+                    "enum": ["text", "links", "headers", "full"],
+                    "default": "text",
+                },
+                "max_length": {
+                    "type": "integer",
+                    "description": "Max response length in chars (default 5000)",
+                    "default": 5000,
+                },
+            },
+            "required": ["url"],
+        },
+    },
+    # ── Mitmproxy / Interception ──
+    {
+        "name": "start_proxy",
+        "description": (
+            "Start mitmproxy in background for HTTP/HTTPS interception. "
+            "This is your Burp Suite equivalent — capture, modify, and replay requests. "
+            "Configure browser/tool to use localhost:8080 as proxy."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "port": {
+                    "type": "integer",
+                    "description": "Proxy port (default 8080)",
+                    "default": 8080,
+                },
+            },
+        },
+    },
+    {
+        "name": "capture_requests",
+        "description": "Get all captured HTTP requests from mitmproxy. Returns method, URL, status, size for each flow.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "replay_request",
+        "description": (
+            "Replay an HTTP request with optional modifications. Use to test IDOR (change IDs), "
+            "auth bypass (swap/remove cookies), CORS, parameter manipulation. "
+            "This is the core manual testing tool — capture a request, then replay with modifications."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "method": {"type": "string", "description": "HTTP method (GET, POST, PUT, DELETE, PATCH)"},
+                "url": {"type": "string", "description": "Target URL"},
+                "headers": {"type": "object", "description": "HTTP headers dict (e.g., {\"Cookie\": \"session=abc\", \"Origin\": \"https://evil.com\"})"},
+                "body": {"type": "string", "description": "Request body for POST/PUT/PATCH"},
+                "follow_redirects": {"type": "boolean", "description": "Follow redirects (default true)", "default": True},
+            },
+            "required": ["method", "url"],
+        },
+    },
+    {
+        "name": "cors_test",
+        "description": (
+            "Test CORS misconfiguration on a URL. Simulates browser request with attacker Origin. "
+            "Checks Access-Control-Allow-Origin reflection, wildcard, null origin, and credential headers. "
+            "A CORS misconfig with credentials = account takeover via malicious page."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Target URL to test"},
+                "origin": {"type": "string", "description": "Attacker origin (default: https://attacker.example.com)", "default": "https://attacker.example.com"},
+                "credentials": {"type": "boolean", "description": "Include credentials (default true)", "default": True},
+            },
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "header_injection_test",
+        "description": (
+            "Test header-based vulnerabilities. Injects custom headers (X-Forwarded-For, X-Original-URL, "
+            "Host override, etc.) and checks for behavior changes. Useful for WAF bypass, SSRF, "
+            "internal access, and cache poisoning."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Target URL"},
+                "header": {"type": "string", "description": "Header name to inject (e.g., X-Forwarded-For, X-Original-URL, Host)"},
+                "value": {"type": "string", "description": "Header value to inject"},
+            },
+            "required": ["url", "header", "value"],
+        },
+    },
+    {
+        "name": "auth_bypass_test",
+        "description": (
+            "Test authentication bypass techniques on a URL. Techniques: "
+            "no-auth (strip all auth headers), method-switch (try all HTTP methods), "
+            "param-inject (add admin params), header-mangle (X-Original-URL, X-Forwarded-For, etc.)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Target URL (should be an authenticated endpoint)"},
+                "technique": {
+                    "type": "string",
+                    "enum": ["no-auth", "method-switch", "param-inject", "header-mangle"],
+                    "description": "Bypass technique to test",
+                },
+            },
+            "required": ["url", "technique"],
+        },
     },
 ]
 
@@ -1781,6 +2683,389 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
         return [{"type": "text", "text": text}]
 
+    # ── Hunt Log ──
+
+    elif name == "hunt_log":
+        target = arguments.get("target", "")
+        if not target:
+            return [{"type": "text", "text": "A target is required."}]
+
+        entry = {
+            "type": arguments.get("type", "note"),
+            "phase": arguments.get("phase", ""),
+            "message": arguments.get("message", ""),
+        }
+        if arguments.get("data"):
+            entry["data"] = arguments["data"]
+        if arguments.get("severity"):
+            entry["severity"] = arguments["severity"]
+        if arguments.get("result"):
+            entry["result"] = arguments["result"]
+
+        _append_huntlog(target, entry)
+
+        count = len(_read_huntlog(target, last_n=9999))
+        return [{"type": "text", "text": f"Logged [{entry['type']}] for {target}. Total entries: {count}."}]
+
+    elif name == "get_hunt_log":
+        target = arguments.get("target", "")
+        if not target:
+            return [{"type": "text", "text": "A target is required."}]
+
+        last_n = min(int(arguments.get("last_n", 50)), 200)
+        entries = _read_huntlog(target, last_n=last_n)
+
+        if not entries:
+            return [{"type": "text", "text": f"No hunt log for {target}. Start logging with hunt_log."}]
+
+        # Build full state reconstruction
+        header = f"# Hunt Log — {target}\n"
+        header += f"**{len(entries)} entries** (showing last {last_n})\n"
+
+        # Also pull in target context and primitive/finding counts for full picture
+        ctx = _load_target(target)
+        primitives = _load_primitives(target)
+        findings = _load_findings(target)
+
+        header += f"\n**Target Context:** {'loaded' if ctx else 'not set'}"
+        if ctx:
+            header += f" — tech: {', '.join(ctx.get('technologies', []))}, waf: {ctx.get('waf', 'unknown')}"
+        header += f"\n**Primitives:** {len(primitives)} stored"
+        header += f"\n**Findings:** {len(findings)} recorded"
+
+        # Show uncompleted TODOs
+        todos = [e for e in entries if e.get("type") == "todo"]
+        if todos:
+            header += f"\n\n**Outstanding TODOs:**"
+            for t in todos[-10:]:
+                header += f"\n  - {t.get('message', '')}"
+
+        header += "\n\n---\n"
+
+        formatted = _format_huntlog(entries)
+        return [{"type": "text", "text": header + formatted}]
+
+    elif name == "clear_hunt_log":
+        target = arguments.get("target", "")
+        if not target:
+            return [{"type": "text", "text": "A target is required."}]
+
+        fpath = _huntlog_file(target)
+        if os.path.exists(fpath):
+            os.remove(fpath)
+            return [{"type": "text", "text": f"Hunt log cleared for {target}."}]
+        return [{"type": "text", "text": f"No hunt log found for {target}."}]
+
+    # ── Learning Engine ──
+
+    elif name == "record_outcome":
+        technique = arguments.get("technique", "")
+        outcome = arguments.get("outcome", "")
+        if not technique or not outcome:
+            return [{"type": "text", "text": "technique and outcome are required."}]
+
+        entry = {
+            "technique": technique,
+            "vuln_type": arguments.get("vuln_type", ""),
+            "outcome": outcome,
+            "tech_stack": arguments.get("tech_stack", []),
+            "waf": arguments.get("waf", ""),
+            "target_type": arguments.get("target_type", ""),
+            "target": arguments.get("target", ""),
+            "details": arguments.get("details", ""),
+            "bypass_used": arguments.get("bypass_used", ""),
+        }
+
+        _record_learning(entry)
+
+        all_data = _load_all_learnings()
+        total = len(all_data)
+        successes = sum(1 for d in all_data if d.get("outcome") == "success")
+
+        icon = {"success": "+", "fail": "-", "blocked": "x", "partial": "~"}.get(outcome, "?")
+        text = f"**[{icon}] Outcome recorded:** {technique} → {outcome}\n"
+        if arguments.get("details"):
+            text += f"Details: {arguments['details']}\n"
+        if arguments.get("bypass_used"):
+            text += f"Bypass: {arguments['bypass_used']}\n"
+        text += f"\nLearning DB: {total} total outcomes, {successes} successes ({successes/total:.0%} overall rate)"
+
+        return [{"type": "text", "text": text}]
+
+    elif name == "get_playbook":
+        tech_stack = arguments.get("tech_stack", [])
+        waf = arguments.get("waf", "")
+        target_type = arguments.get("target_type", "")
+
+        playbook = _generate_playbook(tech_stack, waf, target_type)
+        return [{"type": "text", "text": playbook}]
+
+    elif name == "learning_stats":
+        all_data = _load_all_learnings()
+        if not all_data:
+            return [{"type": "text", "text": "No learning data yet. Use record_outcome after each test."}]
+
+        total = len(all_data)
+        by_outcome = {}
+        by_technique = {}
+        by_vuln = {}
+        by_waf = {}
+        targets_seen = set()
+
+        for entry in all_data:
+            outcome = entry.get("outcome", "unknown")
+            technique = entry.get("technique", "unknown")
+            vuln = entry.get("vuln_type", "") or "unspecified"
+            waf = entry.get("waf", "") or "none"
+            target = entry.get("target", "")
+
+            by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
+
+            if technique not in by_technique:
+                by_technique[technique] = {"success": 0, "fail": 0, "blocked": 0, "partial": 0, "total": 0}
+            by_technique[technique][outcome] = by_technique[technique].get(outcome, 0) + 1
+            by_technique[technique]["total"] += 1
+
+            if vuln != "unspecified":
+                if vuln not in by_vuln:
+                    by_vuln[vuln] = {"success": 0, "total": 0}
+                by_vuln[vuln]["total"] += 1
+                if outcome == "success":
+                    by_vuln[vuln]["success"] += 1
+
+            if waf != "none":
+                if waf not in by_waf:
+                    by_waf[waf] = {"success": 0, "blocked": 0, "total": 0}
+                by_waf[waf]["total"] += 1
+                if outcome == "success":
+                    by_waf[waf]["success"] += 1
+                elif outcome == "blocked":
+                    by_waf[waf]["blocked"] += 1
+
+            if target:
+                targets_seen.add(target)
+
+        text = f"# BountyBud Learning Stats\n\n"
+        text += f"**Total outcomes:** {total}\n"
+        text += f"**Targets tested:** {len(targets_seen)}\n"
+        text += f"**Outcomes:** " + ", ".join(f"{k}: {v}" for k, v in sorted(by_outcome.items())) + "\n"
+
+        # Top techniques by success rate (min 2 attempts)
+        text += f"\n## Technique Effectiveness\n"
+        ranked_tech = []
+        for tech, stats in by_technique.items():
+            if stats["total"] >= 1:
+                rate = stats["success"] / stats["total"]
+                ranked_tech.append((rate, stats["total"], tech, stats))
+        ranked_tech.sort(key=lambda x: (-x[0], -x[1]))
+
+        for rate, total_t, tech, stats in ranked_tech[:20]:
+            bar = "+" * stats["success"] + "-" * stats["fail"] + "x" * stats.get("blocked", 0) + "~" * stats.get("partial", 0)
+            text += f"  {tech:30s} {stats['success']}/{total_t} ({rate:.0%}) [{bar}]\n"
+
+        # Vuln type success rates
+        if by_vuln:
+            text += f"\n## Vulnerability Class Success Rates\n"
+            ranked_vuln = [(v["success"] / v["total"], v["total"], k, v) for k, v in by_vuln.items()]
+            ranked_vuln.sort(key=lambda x: (-x[0], -x[1]))
+            for rate, total_v, vuln, stats in ranked_vuln:
+                text += f"  {vuln:25s} {stats['success']}/{total_v} ({rate:.0%})\n"
+
+        # WAF encounter stats
+        if by_waf:
+            text += f"\n## WAF Encounters\n"
+            for waf_name, stats in sorted(by_waf.items()):
+                block_rate = stats["blocked"] / stats["total"] if stats["total"] else 0
+                text += f"  {waf_name:20s} {stats['total']} encounters, {stats['blocked']} blocked ({block_rate:.0%}), {stats['success']} successful\n"
+
+        return [{"type": "text", "text": text}]
+
+    elif name == "export_training_data":
+        fmt = arguments.get("format", "raw")
+        all_data = _load_all_learnings()
+
+        if not all_data:
+            return [{"type": "text", "text": "No learning data to export."}]
+
+        os.makedirs(os.path.join(DATA_DIR, "exports"), exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_file = os.path.join(DATA_DIR, "exports", f"training_{timestamp}.jsonl")
+        output_file = arguments.get("output_file", default_file)
+
+        if fmt == "raw":
+            with open(output_file, "w") as f:
+                for entry in all_data:
+                    f.write(json.dumps(entry, default=str) + "\n")
+
+        elif fmt == "training":
+            # Generate instruction/response pairs for fine-tuning
+            training_pairs = []
+            for entry in all_data:
+                tech = ", ".join(entry.get("tech_stack", [])) or "unknown"
+                waf = entry.get("waf", "") or "none"
+                vuln = entry.get("vuln_type", "") or "general"
+                technique = entry.get("technique", "")
+                outcome = entry.get("outcome", "")
+                details = entry.get("details", "")
+                bypass = entry.get("bypass_used", "")
+
+                instruction = (
+                    f"You are testing a {entry.get('target_type', 'web')} application "
+                    f"with tech stack: {tech}. WAF: {waf}. "
+                    f"You want to test for {vuln} using {technique}."
+                )
+
+                if outcome == "success":
+                    response = f"This technique was SUCCESSFUL. {details}"
+                    if bypass:
+                        response += f" WAF bypass used: {bypass}."
+                    response += " Record this as a verified finding and continue testing related endpoints."
+                elif outcome == "blocked":
+                    response = (
+                        f"This technique was BLOCKED by {waf}. {details} "
+                        f"Adapt by: trying encoding bypasses, switching to business logic testing, "
+                        f"or hunting for origin IP to bypass WAF."
+                    )
+                elif outcome == "partial":
+                    response = (
+                        f"PARTIAL result — interesting but not fully exploitable yet. {details} "
+                        f"Store this as a primitive and look for chaining opportunities."
+                    )
+                else:
+                    response = (
+                        f"This technique FAILED against this target. {details} "
+                        f"Move to the next technique in the playbook."
+                    )
+
+                training_pairs.append({
+                    "instruction": instruction,
+                    "response": response,
+                    "metadata": {
+                        "technique": technique,
+                        "vuln_type": vuln,
+                        "outcome": outcome,
+                        "tech_stack": entry.get("tech_stack", []),
+                        "waf": waf,
+                    },
+                })
+
+            with open(output_file, "w") as f:
+                for pair in training_pairs:
+                    f.write(json.dumps(pair) + "\n")
+
+        elif fmt == "summary":
+            # Aggregated summary as JSON
+            from collections import Counter, defaultdict
+            summary = {
+                "total_outcomes": len(all_data),
+                "date_range": {
+                    "earliest": min((e.get("timestamp", "") for e in all_data), default=""),
+                    "latest": max((e.get("timestamp", "") for e in all_data), default=""),
+                },
+                "outcomes": dict(Counter(e.get("outcome", "unknown") for e in all_data)),
+                "targets_tested": len(set(e.get("target", "") for e in all_data if e.get("target"))),
+                "techniques_used": dict(Counter(e.get("technique", "") for e in all_data)),
+                "vuln_types_tested": dict(Counter(e.get("vuln_type", "") for e in all_data if e.get("vuln_type"))),
+                "waf_encounters": dict(Counter(e.get("waf", "") for e in all_data if e.get("waf"))),
+                "tech_stacks_seen": dict(Counter(t for e in all_data for t in e.get("tech_stack", []))),
+                "success_by_technique": {},
+                "patterns": _detect_cross_target_patterns(all_data),
+            }
+
+            # Success rates per technique
+            tech_outcomes = defaultdict(lambda: {"success": 0, "total": 0})
+            for e in all_data:
+                t = e.get("technique", "")
+                if t:
+                    tech_outcomes[t]["total"] += 1
+                    if e.get("outcome") == "success":
+                        tech_outcomes[t]["success"] += 1
+            summary["success_by_technique"] = {
+                t: {"success": s["success"], "total": s["total"], "rate": round(s["success"]/s["total"], 3)}
+                for t, s in tech_outcomes.items()
+            }
+
+            output_file = output_file.replace(".jsonl", ".json")
+            with open(output_file, "w") as f:
+                json.dump(summary, f, indent=2, default=str)
+
+        file_size = os.path.getsize(output_file)
+        return [{"type": "text", "text": (
+            f"**Exported {len(all_data)} records** in '{fmt}' format.\n"
+            f"**File:** {output_file}\n"
+            f"**Size:** {file_size:,} bytes\n\n"
+            f"This data can be used for:\n"
+            f"- Fine-tuning models on real hunting outcomes (use 'training' format)\n"
+            f"- Analyzing patterns and improving methodology (use 'summary' format)\n"
+            f"- Importing into other systems or sharing with team (use 'raw' format)"
+        )}]
+
+    elif name == "web_research":
+        url = arguments.get("url", "")
+        if not url:
+            return [{"type": "text", "text": "URL is required."}]
+
+        extract_mode = arguments.get("extract_mode", "text")
+        max_length = min(int(arguments.get("max_length", 5000)), 15000)
+
+        try:
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            req.add_header("Accept", "text/html,application/json,*/*")
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                content_type = resp.headers.get("Content-Type", "")
+                raw = resp.read().decode(errors="ignore")
+                resp_headers = dict(resp.headers)
+                status = resp.status
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode(errors="ignore") if e.fp else ""
+            resp_headers = dict(e.headers)
+            status = e.code
+            content_type = e.headers.get("Content-Type", "")
+        except Exception as e:
+            return [{"type": "text", "text": f"Fetch error: {e}"}]
+
+        parts = [f"**{status}** — {url}\n"]
+
+        if extract_mode == "headers" or extract_mode == "full":
+            parts.append("**Response Headers:**\n```")
+            for k, v in resp_headers.items():
+                parts.append(f"{k}: {v}")
+            parts.append("```\n")
+
+        if extract_mode in ("text", "full"):
+            # Strip HTML tags for readability
+            if "html" in content_type.lower():
+                # Simple HTML stripping
+                text = re.sub(r'<script[^>]*>.*?</script>', '', raw, flags=re.DOTALL | re.IGNORECASE)
+                text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL | re.IGNORECASE)
+                text = re.sub(r'<[^>]+>', ' ', text)
+                text = re.sub(r'\s+', ' ', text).strip()
+            else:
+                text = raw
+
+            if len(text) > max_length:
+                text = text[:max_length] + f"\n\n... [truncated at {max_length} chars]"
+            parts.append(f"**Content:**\n```\n{text}\n```")
+
+        if extract_mode == "links" or extract_mode == "full":
+            # Extract all links
+            links = re.findall(r'href=["\']([^"\']+)["\']', raw)
+            if links:
+                unique_links = list(dict.fromkeys(links))[:50]  # Dedupe, limit
+                parts.append(f"\n**Links ({len(unique_links)}):**")
+                for link in unique_links:
+                    parts.append(f"  - {link}")
+
+        # Smart analysis
+        advisories = _analyze_output(raw, "")
+        if advisories:
+            parts.append("\n**━━━ BOUNTYBUD ANALYSIS ━━━**")
+            for adv in advisories:
+                parts.append(adv)
+
+        return [{"type": "text", "text": "\n".join(parts)}]
+
     # ── CVE Tools ──
 
     elif name == "search_cves":
@@ -1859,6 +3144,242 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             f"## References\n\n{refs or 'N/A'}\n"
         )
         return [{"type": "text", "text": text}]
+
+    # ── Mitmproxy Tools ──
+
+    elif name == "start_proxy":
+        port = int(arguments.get("port", PROXY_PORT))
+        try:
+            _start_mitmproxy(port)
+            return [{"type": "text", "text": (
+                f"**mitmproxy started on localhost:{port}**\n\n"
+                f"Configure browser/tools to use this proxy:\n"
+                f"- HTTP/HTTPS Proxy: localhost:{port}\n"
+                f"- CA cert: http://mitm.it (visit through proxy)\n\n"
+                f"Use `capture_requests` to see intercepted traffic.\n"
+                f"Use `replay_request` to modify and resend requests."
+            )}]
+        except Exception as e:
+            return [{"type": "text", "text": f"Error starting proxy: {e}"}]
+
+    elif name == "capture_requests":
+        try:
+            flows = _mitm_api_get("/flows")
+            if not flows:
+                return [{"type": "text", "text": "No requests captured yet. Browse the target through the proxy."}]
+
+            lines = [f"**{len(flows)} requests captured:**\n"]
+            for flow in flows[-30:]:  # Last 30
+                req = flow.get("request", {})
+                resp = flow.get("response", {})
+                method = req.get("method", "?")
+                url = req.get("pretty_url", "?")
+                status = resp.get("status_code", "?")
+                content_type = resp.get("headers", {}).get("content-type", "")[:30] if resp.get("headers") else ""
+                lines.append(f"- `{method} {url}` → {status} {content_type}")
+            return [{"type": "text", "text": "\n".join(lines)}]
+        except Exception as e:
+            return [{"type": "text", "text": f"Error (is mitmproxy running?): {e}"}]
+
+    elif name == "replay_request":
+        method = arguments.get("method", "GET")
+        url = arguments.get("url", "")
+        headers = arguments.get("headers", {})
+        body = arguments.get("body", "")
+
+        if not url:
+            return [{"type": "text", "text": "URL is required."}]
+
+        resp = _http_request(method, url, headers, body)
+
+        # Smart analysis of the response
+        advisories = _analyze_output(resp.get("body", ""), "")
+
+        parts = [
+            f"**{method} {url}**\n",
+            f"**Status:** {resp['status']}\n",
+            f"**Response Headers:**\n```\n" + "\n".join(f"{k}: {v}" for k, v in resp.get("headers", {}).items()) + "\n```\n",
+            f"**Body (first 3000 chars):**\n```\n{resp.get('body', '')}\n```",
+        ]
+
+        if advisories:
+            parts.append("\n**━━━ BOUNTYBUD ANALYSIS ━━━**")
+            for adv in advisories:
+                parts.append(adv)
+            parts.append("**━━━━━━━━━━━━━━━━━━━━━━━━━**")
+
+        return [{"type": "text", "text": "\n".join(parts)}]
+
+    elif name == "cors_test":
+        url = arguments.get("url", "")
+        origin = arguments.get("origin", "https://attacker.example.com")
+        creds = arguments.get("credentials", True)
+
+        if not url:
+            return [{"type": "text", "text": "URL is required."}]
+
+        headers = {"Origin": origin, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        if creds:
+            headers["Cookie"] = "placeholder=value"
+
+        # GET request
+        resp = _http_request("GET", url, headers)
+
+        # Also test preflight OPTIONS
+        options_headers = {
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Authorization,Content-Type",
+        }
+        preflight = _http_request("OPTIONS", url, options_headers)
+
+        # Analyze CORS headers (case-insensitive lookup)
+        resp_h = {k.lower(): v for k, v in resp.get("headers", {}).items()}
+        pre_h = {k.lower(): v for k, v in preflight.get("headers", {}).items()}
+
+        acao = resp_h.get("access-control-allow-origin", "")
+        acac = resp_h.get("access-control-allow-credentials", "")
+        pre_acao = pre_h.get("access-control-allow-origin", "")
+        pre_methods = pre_h.get("access-control-allow-methods", "")
+        pre_headers = pre_h.get("access-control-allow-headers", "")
+
+        # Vulnerability assessment
+        findings = []
+        if acao == origin:
+            findings.append("CRITICAL: Origin is reflected in ACAO! Attacker-controlled origin accepted.")
+            if acac.lower() == "true":
+                findings.append("CRITICAL: Credentials allowed with reflected origin = FULL ACCOUNT TAKEOVER via malicious page.")
+        elif acao == "*":
+            findings.append("WARNING: Wildcard ACAO (*). Cross-origin reads possible (but not with credentials).")
+        elif acao == "null":
+            findings.append("WARNING: null origin accepted. Exploitable via sandboxed iframe (data: URI, file://).")
+        else:
+            findings.append("OK: CORS properly restricted for this origin.")
+
+        if pre_acao:
+            findings.append(f"Preflight allows origin: {pre_acao}")
+        if pre_methods:
+            findings.append(f"Preflight allows methods: {pre_methods}")
+
+        text = f"**CORS Test: {url}**\n"
+        text += f"**Tested Origin:** {origin}\n\n"
+        text += f"**GET Response:**\n"
+        text += f"  - Access-Control-Allow-Origin: `{acao or '(not set)'}`\n"
+        text += f"  - Access-Control-Allow-Credentials: `{acac or '(not set)'}`\n"
+        text += f"  - Status: {resp['status']}\n\n"
+        text += f"**OPTIONS Preflight:**\n"
+        text += f"  - Allow-Origin: `{pre_acao or '(not set)'}`\n"
+        text += f"  - Allow-Methods: `{pre_methods or '(not set)'}`\n"
+        text += f"  - Allow-Headers: `{pre_headers or '(not set)'}`\n"
+        text += f"  - Status: {preflight['status']}\n\n"
+        text += f"**Assessment:**\n"
+        for f in findings:
+            text += f"  - {f}\n"
+
+        return [{"type": "text", "text": text}]
+
+    elif name == "header_injection_test":
+        url = arguments.get("url", "")
+        header = arguments.get("header", "")
+        value = arguments.get("value", "")
+
+        if not all([url, header, value]):
+            return [{"type": "text", "text": "URL, header, and value are required."}]
+
+        # Make baseline request (no injection)
+        baseline = _http_request("GET", url, {"User-Agent": "Mozilla/5.0"})
+
+        # Make injected request
+        injected = _http_request("GET", url, {header: value, "User-Agent": "Mozilla/5.0"})
+
+        # Compare
+        status_changed = baseline["status"] != injected["status"]
+        body_changed = baseline["body"][:500] != injected["body"][:500]
+        size_diff = len(injected["body"]) - len(baseline["body"])
+
+        text = f"**Header Injection Test: `{header}: {value}`**\n"
+        text += f"**Target:** {url}\n\n"
+        text += f"**Baseline:** status={baseline['status']}, body_size={len(baseline['body'])}\n"
+        text += f"**Injected:** status={injected['status']}, body_size={len(injected['body'])}\n\n"
+
+        if status_changed:
+            text += f"**STATUS CHANGED:** {baseline['status']} → {injected['status']} — behavior differs with injected header!\n"
+        if body_changed:
+            text += f"**BODY CHANGED:** Response differs by {size_diff} bytes — header is influencing response!\n"
+        if not status_changed and not body_changed:
+            text += "**No change detected** — header appears to be ignored.\n"
+
+        text += f"\n**Injected Response Body (first 1500 chars):**\n```\n{injected['body'][:1500]}\n```\n"
+
+        # Check for common indicators
+        advisories = _analyze_output(injected["body"], "")
+        if advisories:
+            text += "\n**━━━ BOUNTYBUD ANALYSIS ━━━**\n"
+            for adv in advisories:
+                text += adv + "\n"
+
+        return [{"type": "text", "text": text}]
+
+    elif name == "auth_bypass_test":
+        url = arguments.get("url", "")
+        technique = arguments.get("technique", "no-auth")
+
+        if not url:
+            return [{"type": "text", "text": "URL is required."}]
+
+        results = []
+
+        if technique == "no-auth":
+            resp = _http_request("GET", url, {"User-Agent": "Mozilla/5.0"})
+            if resp["status"] == 200:
+                results.append(f"**NO AUTH → 200 OK** — Endpoint accessible without authentication!")
+                results.append("This may be a valid finding if the endpoint should require auth.")
+            elif resp["status"] in (401, 403):
+                results.append(f"**NO AUTH → {resp['status']}** — Auth is enforced (expected).")
+            else:
+                results.append(f"**NO AUTH → {resp['status']}** — Unexpected status. Investigate.")
+            results.append(f"Body preview: `{resp['body'][:200]}`")
+
+        elif technique == "method-switch":
+            results.append("**HTTP Method Switch Test:**")
+            for m in ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]:
+                resp = _http_request(m, url, {"User-Agent": "Mozilla/5.0"})
+                marker = "***" if resp["status"] == 200 else ""
+                results.append(f"  {m:8s} → {resp['status']} {marker}")
+            results.append("\n*** = potential bypass (200 on unexpected method)")
+
+        elif technique == "param-inject":
+            results.append("**Parameter Injection Test:**")
+            for param_url in [
+                f"{url}{'&' if '?' in url else '?'}admin=true",
+                f"{url}{'&' if '?' in url else '?'}role=admin",
+                f"{url}{'&' if '?' in url else '?'}debug=1",
+                f"{url}{'&' if '?' in url else '?'}internal=true",
+                f"{url}{'&' if '?' in url else '?'}bypass=1",
+            ]:
+                resp = _http_request("GET", param_url, {"User-Agent": "Mozilla/5.0"})
+                marker = "***" if resp["status"] == 200 else ""
+                param = param_url.split("?")[-1].split("&")[-1]
+                results.append(f"  ?{param:20s} → {resp['status']} {marker}")
+
+        elif technique == "header-mangle":
+            results.append("**Header Manipulation Test:**")
+            mangles = [
+                ("X-Original-URL", "/admin"),
+                ("X-Rewrite-URL", "/admin"),
+                ("X-Forwarded-For", "127.0.0.1"),
+                ("X-Forwarded-Host", "localhost"),
+                ("X-Custom-IP-Authorization", "127.0.0.1"),
+                ("X-Real-IP", "127.0.0.1"),
+                ("Referer", url.replace("://", "://admin.")),
+            ]
+            baseline = _http_request("GET", url, {"User-Agent": "Mozilla/5.0"})
+            for h, v in mangles:
+                resp = _http_request("GET", url, {h: v, "User-Agent": "Mozilla/5.0"})
+                changed = "CHANGED" if resp["status"] != baseline["status"] else ""
+                results.append(f"  {h}: {v} → {resp['status']} {changed}")
+
+        return [{"type": "text", "text": "\n".join(results)}]
 
     return [{"type": "text", "text": f"Unknown tool: {name}"}]
 
