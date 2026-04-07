@@ -2248,7 +2248,28 @@ _GET_TOOLS_META = {
     },
 }
 
-CORE_TOOLS = [t for t in _ALL_TOOLS if t["name"] in _CORE_TOOL_NAMES] + [_GET_TOOLS_META]
+# Build two tool sets:
+# - CORE_TOOLS: compact schemas for all tools (used by tools/list for constrained clients)
+# - _GET_TOOLS_META remains for deep-dive parameter docs via get_tools()
+def _compact_tool(tool: dict) -> dict:
+    """Create a compact version of a tool schema for tools/list."""
+    compact = {"name": tool["name"], "description": tool.get("description", "")[:120]}
+    schema = tool.get("inputSchema", {})
+    # Keep only required params in compact mode
+    if schema.get("properties"):
+        required = set(schema.get("required", []))
+        compact_props = {}
+        for k, v in schema["properties"].items():
+            if k in required:
+                compact_props[k] = {"type": v.get("type", "string"), "description": v.get("description", "")[:60]}
+                if v.get("enum"):
+                    compact_props[k]["enum"] = v["enum"]
+        compact["inputSchema"] = {"type": "object", "properties": compact_props, "required": list(required)}
+    else:
+        compact["inputSchema"] = {"type": "object", "properties": {}}
+    return compact
+
+CORE_TOOLS = [_compact_tool(t) for t in _ALL_TOOLS] + [_GET_TOOLS_META]
 
 RESOURCES = [
     {
