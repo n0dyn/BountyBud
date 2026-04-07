@@ -435,35 +435,43 @@ def _check_installed(binary: str) -> bool:
 
 
 def _get_toolbelt_status() -> str:
-    categories: dict[str, list[str]] = {}
-    for name, info in sorted(TOOLBELT.items()):
-        cat = info["cat"]
-        if cat not in categories:
-            categories[cat] = []
-        installed = "Y" if _check_installed(info["bin"]) else "-"
-        categories[cat].append(f"  [{installed}] {name:18s} {info['desc']}")
-
-    lines = ["# BountyBud Toolbelt\n"]
-    lines.append("[Y] = installed, [-] = not found on PATH\n")
-
+    """Compact toolbelt status — shows installed tools grouped by category."""
     cat_order = ["recon", "network", "vuln", "exploit", "cms", "osint", "cloud",
                  "auth", "proxy", "binary", "forensics", "util"]
     cat_names = {
-        "recon": "Reconnaissance", "network": "Network", "vuln": "Vulnerability Scanning",
-        "exploit": "Exploitation Frameworks", "cms": "CMS", "osint": "OSINT",
-        "cloud": "Cloud Security", "auth": "Auth & Cracking",
-        "proxy": "Proxy & Interception", "binary": "Binary / RE", "forensics": "Forensics",
+        "recon": "Recon", "network": "Network", "vuln": "Vuln Scan",
+        "exploit": "Exploit", "cms": "CMS", "osint": "OSINT",
+        "cloud": "Cloud", "auth": "Auth/Crack",
+        "proxy": "Proxy", "binary": "Binary", "forensics": "Forensics",
         "util": "Utility",
     }
 
-    for cat in cat_order:
-        if cat in categories:
-            lines.append(f"\n## {cat_names.get(cat, cat)}\n")
-            lines.extend(categories[cat])
+    installed_by_cat: dict[str, list[str]] = {}
+    missing_by_cat: dict[str, list[str]] = {}
+    total_installed = 0
 
-    installed = sum(1 for t in TOOLBELT.values() if _check_installed(t["bin"]))
-    lines.append(f"\n**{installed}/{len(TOOLBELT)} tools available**")
-    lines.append("\nUse `search_knowledge` for detailed usage and `execute_tool` to run.")
+    for name, info in sorted(TOOLBELT.items()):
+        cat = info["cat"]
+        if _check_installed(info["bin"]):
+            installed_by_cat.setdefault(cat, []).append(name)
+            total_installed += 1
+        else:
+            missing_by_cat.setdefault(cat, []).append(name)
+
+    lines = [f"**{total_installed}/{len(TOOLBELT)} tools installed**\n"]
+
+    for cat in cat_order:
+        installed = installed_by_cat.get(cat, [])
+        missing = missing_by_cat.get(cat, [])
+        if installed or missing:
+            inst_str = ", ".join(installed) if installed else "none"
+            line = f"**{cat_names.get(cat, cat)}:** {inst_str}"
+            if missing:
+                line += f" | missing: {', '.join(missing)}"
+            lines.append(line)
+
+    lines.append("\nRun tools with `execute_tool`. Use `search_knowledge` for technique details.")
+    lines.append("Load more tools: `get_tools('proxy')` for interception, `get_tools('hunting')` for findings/chains.")
     return "\n".join(lines)
 
 
@@ -1073,6 +1081,290 @@ def _bootstrap_recommendations(tech_stack: list[str], waf: str, target_type: str
     return "\n".join(lines)
 
 
+# ── Finding Intelligence — False Positive / True Positive Heuristics ──
+
+# Known false positive patterns per vuln type.
+# Each entry: (pattern_in_response, reason_its_FP, deduction_points)
+# Finding starts at 100 confidence. Each FP match deducts points.
+# Below 40 = likely false positive. Above 70 = likely real.
+FALSE_POSITIVE_PATTERNS = {
+    "xss": [
+        (r"content-security-policy.*script-src", "CSP blocks inline scripts — XSS likely mitigated even if reflected", 40),
+        (r"content-security-policy.*default-src\s+'none'", "Strict CSP (default-src 'none') — XSS extremely unlikely to execute", 50),
+        (r"x-xss-protection:\s*1;\s*mode=block", "X-XSS-Protection header may block reflected XSS in older browsers", 10),
+        (r"<!--.*(<script|onerror|onload).*-->", "Payload reflected inside HTML comment — not executable", 45),
+        (r"<input[^>]*value=['\"].*(<script|onerror)", "Payload in input value attribute — may be encoded on render", 15),
+        (r"\\u003c|\\u003e|&lt;|&gt;", "Payload is HTML/unicode encoded in response — not executable as-is", 35),
+        (r"%3c|%3e|%22", "Payload URL-encoded in response — browser won't interpret as HTML", 30),
+    ],
+    "sqli": [
+        (r"(custom|friendly|generic)\s*(error|page|message)", "Generic/custom error page — SQL error text may be hardcoded, not dynamic", 35),
+        (r"<title>.*(404|not found|error).*</title>", "SQL-like error on a 404/error page — likely static error template", 40),
+        (r"(example|sample|documentation|placeholder).*sql", "SQL keyword in docs/example content, not actual error", 45),
+        (r"no results|0 results|nothing found", "Empty results ≠ SQL injection — query may just have no matches", 30),
+    ],
+    "ssrf": [
+        (r"(timeout|timed out|connection refused)", "Target couldn't reach internal host — confirms filtering, not SSRF", 25),
+        (r"(invalid url|malformed|bad request).*4[0-9]{2}", "Input validation caught the SSRF attempt", 35),
+        (r"(localhost|127\.0\.0\.1|0\.0\.0\.0).*blocked", "SSRF protection is actively blocking internal IPs", 40),
+    ],
+    "idor": [
+        (r'"id":\s*\d+.*"id":\s*\d+', "Multiple IDs in response — may be a list/index endpoint, not IDOR", 15),
+        (r"(public|shared|published)", "Resource may be intentionally public/shared — not access control failure", 20),
+    ],
+    "lfi": [
+        (r"(open_basedir|allow_url_include\s*=\s*off)", "PHP restrictions active — LFI likely mitigated", 30),
+        (r"(no such file|file not found|cannot open)", "File doesn't exist — path traversal blocked or path wrong", 25),
+    ],
+    "open_redirect": [
+        (r"(warning|redirect).*leaving", "Interstitial warning page before redirect — intentional UX, not vuln", 40),
+        (r"(allowlist|whitelist|allowed_domains)", "Redirect uses domain allowlist — likely properly validated", 45),
+    ],
+    "info_disclosure": [
+        (r"(example\.com|test@test|john\.doe|jane@)", "Dummy/placeholder data, not real PII", 50),
+        (r"(documentation|api-docs|swagger)", "Info is in public API documentation — intentionally exposed", 40),
+    ],
+}
+
+# Evidence quality tiers — how strong is the proof?
+EVIDENCE_QUALITY = {
+    "xss": {
+        "definitive": [  # Auto-verified, report immediately
+            "alert fired in headless browser",
+            "javascript executed in DOM",
+            "cookie exfiltrated to external server",
+        ],
+        "strong": [  # Very likely real, verify in browser
+            "payload rendered unencoded in HTML body",
+            "payload in script context without encoding",
+            "event handler attribute injected and rendered",
+        ],
+        "weak": [  # Might be FP, needs more investigation
+            "payload reflected in response body",
+            "payload in HTML attribute value",
+            "payload in JSON response",
+        ],
+        "insufficient": [  # Almost certainly FP
+            "payload reflected but encoded",
+            "payload in HTML comment",
+            "payload in non-rendered context",
+        ],
+    },
+    "sqli": {
+        "definitive": [
+            "UNION SELECT returned extra data from DB",
+            "time-based blind confirmed with measurable delay",
+            "database version/name extracted",
+            "data exfiltrated from non-public table",
+        ],
+        "strong": [
+            "SQL error with table/column names",
+            "different response for true/false boolean conditions",
+            "error contains database-specific syntax",
+        ],
+        "weak": [
+            "generic SQL error message",
+            "response size difference with quotes",
+            "500 error on special characters",
+        ],
+        "insufficient": [
+            "error page mentions SQL",
+            "WAF block message on SQL keywords",
+            "generic 500 error",
+        ],
+    },
+    "ssrf": {
+        "definitive": [
+            "received callback on attacker-controlled server",
+            "internal service response returned to client",
+            "cloud metadata (169.254.169.254) content returned",
+        ],
+        "strong": [
+            "different response time for internal vs external IPs",
+            "error message reveals internal hostname/IP",
+            "DNS lookup to attacker domain confirmed",
+        ],
+        "weak": [
+            "different HTTP status for internal IPs",
+            "generic error on internal IP attempt",
+        ],
+        "insufficient": [
+            "same error for all inputs",
+            "SSRF protection message returned",
+        ],
+    },
+    "idor": {
+        "definitive": [
+            "accessed another user's private data with changed ID",
+            "modified another user's resource",
+            "deleted another user's resource",
+        ],
+        "strong": [
+            "different user's data returned with sequential ID",
+            "accessed resource outside own organization/tenant",
+        ],
+        "weak": [
+            "different response for different IDs",
+            "found valid IDs by enumeration",
+        ],
+        "insufficient": [
+            "resource is publicly accessible to all users",
+            "ID change returns same data",
+        ],
+    },
+}
+
+# Historical false positive tracking (persisted)
+FP_TRACKING_FILE = os.path.join(DATA_DIR, "false_positives.jsonl")
+
+
+def _load_fp_history() -> list[dict]:
+    if not os.path.exists(FP_TRACKING_FILE):
+        return []
+    entries = []
+    with open(FP_TRACKING_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    return entries
+
+
+def _record_fp(entry: dict):
+    entry["timestamp"] = datetime.datetime.now().isoformat()
+    with open(FP_TRACKING_FILE, "a") as f:
+        f.write(json.dumps(entry, default=str) + "\n")
+
+
+def _assess_finding_confidence(
+    vuln_type: str,
+    response_body: str,
+    response_headers: str,
+    evidence_description: str = "",
+    target: str = "",
+) -> dict:
+    """Multi-factor confidence assessment for a potential finding.
+
+    Returns:
+        {
+            "confidence": 0-100,
+            "level": "definitive" | "strong" | "weak" | "likely_fp",
+            "factors": [{"factor": str, "impact": int, "detail": str}],
+            "recommendation": str,
+            "evidence_quality": str,
+            "fp_patterns_matched": [str],
+        }
+    """
+    confidence = 75  # Start at 75, adjust up/down
+    factors = []
+    fp_matched = []
+    combined = (response_body + " " + response_headers).lower()
+
+    # ── Factor 1: False positive pattern matching ──
+    fp_patterns = FALSE_POSITIVE_PATTERNS.get(vuln_type, [])
+    for pattern, reason, deduction in fp_patterns:
+        if re.search(pattern, combined, re.IGNORECASE):
+            confidence -= deduction
+            fp_matched.append(reason)
+            factors.append({"factor": "fp_pattern", "impact": -deduction, "detail": reason})
+
+    # ── Factor 2: Evidence quality assessment ──
+    evidence_lower = evidence_description.lower()
+    quality_tiers = EVIDENCE_QUALITY.get(vuln_type, {})
+    evidence_quality = "unknown"
+
+    for tier in ["definitive", "strong", "weak", "insufficient"]:
+        examples = quality_tiers.get(tier, [])
+        for example in examples:
+            if any(word in evidence_lower for word in example.lower().split()[:3]):
+                evidence_quality = tier
+                break
+        if evidence_quality != "unknown":
+            break
+
+    quality_adjustments = {"definitive": +25, "strong": +15, "weak": -10, "insufficient": -30, "unknown": 0}
+    adj = quality_adjustments.get(evidence_quality, 0)
+    confidence += adj
+    if adj != 0:
+        factors.append({"factor": "evidence_quality", "impact": adj, "detail": f"Evidence quality: {evidence_quality}"})
+
+    # ── Factor 3: Security headers context ──
+    if vuln_type == "xss":
+        if "content-security-policy" not in combined:
+            confidence += 10
+            factors.append({"factor": "no_csp", "impact": +10, "detail": "No CSP header — XSS more likely exploitable"})
+        if "httponly" not in combined and "set-cookie" in combined:
+            confidence += 5
+            factors.append({"factor": "no_httponly", "impact": +5, "detail": "Cookies without HttpOnly — XSS can steal session"})
+
+    if vuln_type == "csrf":
+        if "samesite=strict" in combined or "samesite=lax" in combined:
+            confidence -= 25
+            factors.append({"factor": "samesite", "impact": -25, "detail": "SameSite cookie attribute mitigates CSRF"})
+
+    # ── Factor 4: Historical FP check ──
+    fp_history = _load_fp_history()
+    similar_fps = [
+        fp for fp in fp_history
+        if fp.get("vuln_type") == vuln_type
+        and fp.get("target") == target
+    ]
+    if similar_fps:
+        confidence -= 15
+        factors.append({
+            "factor": "historical_fp",
+            "impact": -15,
+            "detail": f"Similar finding was marked FP on this target {len(similar_fps)} time(s) before",
+        })
+
+    # Also check across all targets for same vuln_type pattern
+    similar_all = [fp for fp in fp_history if fp.get("vuln_type") == vuln_type]
+    if len(similar_all) >= 3:
+        confidence -= 10
+        factors.append({
+            "factor": "recurring_fp_type",
+            "impact": -10,
+            "detail": f"{vuln_type} has been a false positive {len(similar_all)} times across targets",
+        })
+
+    # ── Factor 5: Target context ──
+    ctx = _load_target(target) if target else {}
+    if ctx:
+        waf = ctx.get("waf", "")
+        if waf and waf.lower() != "none":
+            # WAFs can inject misleading content (block pages that look like errors)
+            confidence -= 5
+            factors.append({"factor": "waf_present", "impact": -5, "detail": f"WAF ({waf}) may produce misleading responses"})
+
+    # ── Clamp and classify ──
+    confidence = max(0, min(100, confidence))
+
+    if confidence >= 80:
+        level = "definitive"
+        recommendation = "HIGH CONFIDENCE. Verify reproduction is consistent, then report."
+    elif confidence >= 60:
+        level = "strong"
+        recommendation = "LIKELY REAL. Verify in browser/manually, ensure impact is clear, then report."
+    elif confidence >= 40:
+        level = "weak"
+        recommendation = "UNCERTAIN. Needs more investigation — try different payloads, check encoding, verify in browser."
+    else:
+        level = "likely_fp"
+        recommendation = "LIKELY FALSE POSITIVE. Review the FP factors below. Store as primitive if partially interesting."
+
+    return {
+        "confidence": confidence,
+        "level": level,
+        "factors": factors,
+        "recommendation": recommendation,
+        "evidence_quality": evidence_quality,
+        "fp_patterns_matched": fp_matched,
+    }
+
+
 # ── Headless Browser Verification ─────────────────────────────
 
 def _verify_xss_headless(url: str, expected_alert: str = "") -> dict:
@@ -1189,103 +1481,36 @@ CAPABILITIES = {
 }
 
 INSTRUCTIONS = (
-    "BountyBud v2 — Verification-driven bug bounty AI agent with 130+ doc knowledge base, "
-    "local tool execution, target profiling, finding verification, and primitive chaining.\n\n"
+    "BountyBud — AI bug bounty agent with 130+ doc KB, local tool execution, and self-learning.\n\n"
 
-    "═══ WORKFLOW — FOLLOW THIS ORDER ═══\n\n"
+    "FIRST: If resuming a hunt, call get_hunt_log(target) IMMEDIATELY to reload your state.\n\n"
 
-    "PHASE 0 — SETUP:\n"
-    "  1) get_toolbelt → see installed tools (call ONCE at session start)\n"
-    "  2) start_session → initialize a hunting session for the target\n"
-    "  3) set_target_context → fingerprint target BEFORE any active scanning\n"
-    "     Run: whatweb, httpx -tech-detect, wafw00f FIRST\n"
-    "     Store results with set_target_context so all future tool selection is informed\n\n"
+    "YOU ARE A HACKER, NOT A SCANNER OPERATOR.\n"
+    "Scanners find 5% of bugs. You find the other 95% by THINKING.\n"
+    "- Ask: 'What does this app assume? How do I break that assumption?'\n"
+    "- Ask: 'What happens if I change this ID? Skip this step? Replay as another user?'\n"
+    "- Ask: 'What would be BAD if an attacker could do this?'\n"
+    "- Scan found nothing? GOOD. That's where the REAL hunting starts.\n"
+    "- Every feature is an attack surface. Payments, invites, exports, settings, sharing.\n"
+    "- Don't spray tools. Pick an endpoint, understand it deeply, break it.\n"
+    "- Chain low-severity findings into high-impact exploits.\n"
+    "- search_knowledge for techniques, payloads, and methodology when you need depth.\n\n"
 
-    "PHASE 1 — INTEL (before touching the target):\n"
-    "  - Check changelog/release notes for recent features\n"
-    "  - Check HackerOne/Bugcrowd hacktivity for past disclosed bugs\n"
-    "  - Check scope changes in program policy\n"
-    "  - search_cves for the fingerprinted tech stack\n"
-    "  - Search BB knowledge: 'change-detection-monitoring'\n\n"
+    "WORKFLOW: Setup → Intel → Discovery → Hunt → Verify → Learn\n"
+    "- Setup: get_toolbelt, start_session, fingerprint (whatweb/httpx/wafw00f), set_target_context\n"
+    "- Intel: Changelogs, HackerOne hacktivity, search_cves. Hunt NEW code, not old.\n"
+    "- Discovery: Subdomain enum → probe → JS crawl. Small scope, 60-120s timeouts.\n"
+    "- Hunt: Understand the app. Test IDOR, auth bypass, business logic, race conditions.\n"
+    "  get_tools('proxy') for interception. get_tools('hunting') for primitives/chains.\n"
+    "- Verify: verify_finding scores confidence and detects false positives. POC required.\n"
+    "- Learn: record_outcome after every test. get_playbook ranks what works.\n\n"
 
-    "PHASE 2 — DISCOVERY (automated, light touch):\n"
-    "  - Subdomain enum → HTTP probe → tech fingerprint\n"
-    "  - JS crawl → endpoint extraction\n"
-    "  - Use get_target_context to CHECK what tech stack you found\n"
-    "  - ONLY run scanners relevant to the detected stack\n"
-    "  - Store interesting observations with store_primitive\n\n"
-
-    "PHASE 3 — HUNTING (manual, proxy-driven):\n"
-    "  - start_proxy → launch mitmproxy for HTTP/HTTPS interception\n"
-    "  - capture_requests → see all intercepted traffic\n"
-    "  - replay_request → modify and resend requests (change IDs for IDOR, swap cookies for auth bypass)\n"
-    "  - cors_test → test CORS misconfiguration (origin reflection = account takeover)\n"
-    "  - auth_bypass_test → automated auth bypass checks (no-auth, method-switch, header-mangle)\n"
-    "  - header_injection_test → test X-Forwarded-For, X-Original-URL, Host override\n"
-    "  - Test business logic: IDOR, auth bypass, workflow skip, price manipulation\n"
-    "  - Every interesting observation → store_primitive\n"
-    "  - Periodically: analyze_chains to find multi-primitive exploits\n\n"
-
-    "PHASE 4 — VERIFICATION (mandatory before reporting):\n"
-    "  - EVERY finding MUST go through verify_finding before reporting\n"
-    "  - verify_finding requires a reproducible curl/script + evidence\n"
-    "  - For XSS: headless browser verification available (fires real alert?)\n"
-    "  - NO finding is valid without POC. 'POC or GTFO.'\n\n"
-
-    "PHASE 5 — LEARN (after every test):\n"
-    "  - record_outcome for EVERY technique tested — success, fail, blocked, or partial\n"
-    "  - Include tech_stack, WAF, and what specifically worked/failed in details\n"
-    "  - If you bypassed a WAF, record the bypass_used (critical intelligence for future hunts)\n"
-    "  - This is how BountyBud gets SMARTER over time\n"
-    "  - At the START of each new hunt, call get_playbook with the target's tech/WAF\n"
-    "  - The playbook ranks techniques by historical success rate for similar targets\n\n"
-
-    "═══ CRITICAL RULES ═══\n\n"
-
-    "TOOL EXECUTION — SMALL SCOPE, SHORT TIMEOUT:\n"
-    "- NEVER broad-scope a root domain. Break into individual subdomains/batches of 5-10.\n"
-    "- Timeouts: recon 60-120s, vuln scan 120s, single-host scan 180s max.\n"
-    "- FILTER before processing: pipe through grep/awk/head.\n"
-    "- CHAIN small steps: discover → filter → scan filtered → analyze.\n"
-    "- BAD: gau --subs target.com | nuclei (will timeout)\n"
-    "- GOOD: subfinder -d target.com -silent | head -50 | httpx -silent > live.txt\n"
-    "        nuclei -u https://app.target.com -tags exposure,misconfig -timeout 5\n\n"
-
-    "SMART OUTPUT — BountyBud auto-analyzes tool output:\n"
-    "- WAF detection: if a WAF is detected, the output will include bypass advice.\n"
-    "- Negative signals: 403/401/429/timeouts get actionable advice appended.\n"
-    "- Positive signals: SQLi errors, stack traces, secrets, JWTs are flagged.\n"
-    "- READ the advisories in tool output. They tell you what to do next.\n\n"
-
-    "TARGET CONTEXT — TECH-AWARE HUNTING:\n"
-    "- After fingerprinting, call set_target_context with the tech stack.\n"
-    "- get_target_context returns the profile — use it to select relevant techniques.\n"
-    "- Don't test PHP vulns on a Node.js app. Don't try XXE on a JSON-only API.\n"
-    "- The target context persists across sessions for the same target.\n\n"
-
-    "PRIMITIVE CHAINING — FIND COMBOS:\n"
-    "- store_primitive for EVERY interesting observation, even if not exploitable alone.\n"
-    "- Examples: 'user IDs are sequential', 'endpoint reflects input', 'no CSRF token on /settings'\n"
-    "- analyze_chains reviews all primitives and suggests exploit chains.\n"
-    "- Real bounties come from chains: info disclosure + IDOR = account takeover.\n\n"
-
-    "HUNT LOG — SURVIVING CONTEXT LOSS:\n"
-    "- USE hunt_log FREQUENTLY to record progress, decisions, findings, and next steps.\n"
-    "- Log after EVERY phase, major finding, decision point, and when planning next steps.\n"
-    "- After context compression: call get_hunt_log FIRST to reconstruct your state.\n"
-    "- The hunt log is your external memory — what you don't log, you lose.\n"
-    "- Log TODOs explicitly so you can pick them up after context loss.\n"
-    "- Include specific details: URLs, endpoints, parameters, response codes, observations.\n"
-    "- The log also shows target context, primitive counts, and outstanding TODOs.\n\n"
-
-    "HUNTER MENTALITY:\n"
-    "- Automated scan found nothing? GOOD. Now hunt manually.\n"
-    "- Use start_proxy + capture_requests + replay_request to intercept and modify traffic.\n"
-    "- Break assumptions: change IDs (IDOR), skip steps (workflow bypass), modify prices.\n"
-    "- Use cors_test on every API endpoint. Use auth_bypass_test on every authenticated route.\n"
-    "- NEVER say 'target appears well-hardened'. Say 'switching to manual testing'.\n"
-    "- Bugs live in NEW code. Hunt what changed, not what's been scanned for years.\n"
-    "- Search BB: 'business-logic-hunting' for manual testing methodology.\n"
+    "PERSISTENCE: You WILL lose context. Protect yourself:\n"
+    "- hunt_log after every phase, finding, decision, and TODO.\n"
+    "- store_primitive for every interesting observation, even if not exploitable alone.\n"
+    "- After context loss: get_hunt_log shows TODOs, target context, primitive count, full history.\n"
+    "- The hunt log, primitives, findings, target context, and learning DB all persist to disk.\n"
+    "- get_tools(category) loads additional tools on demand: kb, proxy, hunting, learning, session.\n"
 )
 
 _ALL_TOOLS = [
@@ -1351,22 +1576,6 @@ _ALL_TOOLS = [
                 "type": {"type": "string", "description": "Filter by content type"},
             },
         },
-    },
-    {
-        "name": "get_related",
-        "description": "Find documents related to a given document by tag similarity.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "document_id": {"type": "string", "description": "Document ID"},
-            },
-            "required": ["document_id"],
-        },
-    },
-    {
-        "name": "get_stats",
-        "description": "Get KB stats: total documents, chunks, counts by category/type/difficulty.",
-        "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "search_cves",
@@ -1449,65 +1658,23 @@ _ALL_TOOLS = [
             "required": ["command"],
         },
     },
-    {
-        "name": "list_processes",
-        "description": "List running and recently completed tool processes.",
-        "inputSchema": {"type": "object", "properties": {}},
-    },
     # ── Target Context ──
     {
         "name": "set_target_context",
-        "description": (
-            "Store technology profile for a target. Call AFTER fingerprinting (whatweb, httpx, wafw00f). "
-            "This context persists across sessions and guides tool/technique selection. "
-            "You MUST fingerprint the target before running active scanners."
-        ),
+        "description": "Store target tech profile after fingerprinting. Persists across sessions. Guides tool selection and heuristics.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "target": {
-                    "type": "string",
-                    "description": "Target domain or URL (e.g., 'app.target.com')",
-                },
-                "technologies": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Detected technologies (e.g., ['React', 'Express', 'MongoDB', 'nginx'])",
-                },
-                "waf": {
-                    "type": "string",
-                    "description": "Detected WAF if any (e.g., 'Cloudflare', 'AWS WAF', 'none')",
-                },
-                "server": {
-                    "type": "string",
-                    "description": "Web server (e.g., 'nginx/1.25.3', 'Apache/2.4.58')",
-                },
-                "cms": {
-                    "type": "string",
-                    "description": "CMS if detected (e.g., 'WordPress 6.4', 'Drupal 10')",
-                },
-                "api_type": {
-                    "type": "string",
-                    "description": "API style (e.g., 'REST', 'GraphQL', 'SOAP', 'gRPC')",
-                },
-                "auth_type": {
-                    "type": "string",
-                    "description": "Auth mechanism (e.g., 'JWT', 'session cookies', 'OAuth2', 'API key')",
-                },
-                "notes": {
-                    "type": "string",
-                    "description": "Any additional observations about the target",
-                },
-                "scope": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "In-scope domains/IPs for this target",
-                },
-                "out_of_scope": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Explicitly out-of-scope assets",
-                },
+                "target": {"type": "string", "description": "Target domain"},
+                "technologies": {"type": "array", "items": {"type": "string"}, "description": "Tech stack list"},
+                "waf": {"type": "string", "description": "WAF name or 'none'"},
+                "server": {"type": "string", "description": "Web server"},
+                "cms": {"type": "string", "description": "CMS if detected"},
+                "api_type": {"type": "string", "description": "REST, GraphQL, SOAP, etc."},
+                "auth_type": {"type": "string", "description": "JWT, cookies, OAuth2, API key, etc."},
+                "notes": {"type": "string", "description": "Additional observations"},
+                "scope": {"type": "array", "items": {"type": "string"}, "description": "In-scope assets"},
+                "out_of_scope": {"type": "array", "items": {"type": "string"}, "description": "Out-of-scope assets"},
             },
             "required": ["target"],
         },
@@ -1572,20 +1739,6 @@ _ALL_TOOLS = [
                 },
             },
             "required": ["target", "primitive_type", "description"],
-        },
-    },
-    {
-        "name": "list_primitives",
-        "description": "List all stored primitives for a target. Review before analyze_chains.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "target": {
-                    "type": "string",
-                    "description": "Target domain",
-                },
-            },
-            "required": ["target"],
         },
     },
     {
@@ -1678,6 +1831,24 @@ _ALL_TOOLS = [
             "required": ["target"],
         },
     },
+    {
+        "name": "mark_false_positive",
+        "description": (
+            "Mark a finding as a false positive. Records WHY it was FP so the system learns — "
+            "future similar findings will receive lower confidence scores. Also records as a "
+            "failed learning outcome. Always explain the reason clearly."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target domain"},
+                "finding_id": {"type": "string", "description": "Finding ID to mark (from list_findings)"},
+                "vuln_type": {"type": "string", "description": "Vulnerability type of the FP"},
+                "reason": {"type": "string", "description": "Why this is a false positive (be specific — this trains the system)"},
+            },
+            "required": ["reason"],
+        },
+    },
     # ── Session Management ──
     {
         "name": "start_session",
@@ -1712,41 +1883,17 @@ _ALL_TOOLS = [
     # ── Hunt Log (context survival) ──
     {
         "name": "hunt_log",
-        "description": (
-            "Write to persistent hunt log. Survives context compression. "
-            "Log progress, findings, TODOs, and plans. Call get_hunt_log after context loss to resume."
-        ),
+        "description": "Write to persistent hunt log. Survives context loss. Log progress, findings, TODOs. Use get_hunt_log to resume.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "target": {"type": "string", "description": "Target domain"},
-                "type": {
-                    "type": "string",
-                    "description": "Entry type",
-                    "enum": ["status", "finding", "tested", "todo", "blocked", "plan", "note"],
-                },
-                "phase": {
-                    "type": "string",
-                    "description": "Current hunt phase for grouping",
-                    "enum": ["setup", "intel", "discovery", "hunting", "verification", "reporting"],
-                },
-                "message": {
-                    "type": "string",
-                    "description": "What happened, what you found, or what to do next. Be specific — include URLs, params, endpoints.",
-                },
-                "data": {
-                    "type": "object",
-                    "description": "Structured data to persist (e.g., {\"endpoint\": \"/api/users\", \"param\": \"id\", \"status\": 200})",
-                },
-                "severity": {
-                    "type": "string",
-                    "description": "For findings: severity level",
-                    "enum": ["info", "low", "medium", "high", "critical"],
-                },
-                "result": {
-                    "type": "string",
-                    "description": "For tested entries: outcome (e.g., 'not vulnerable', 'WAF blocked', 'needs further testing')",
-                },
+                "type": {"type": "string", "enum": ["status", "finding", "tested", "todo", "blocked", "plan", "note"]},
+                "phase": {"type": "string", "enum": ["setup", "intel", "discovery", "hunting", "verification", "reporting"]},
+                "message": {"type": "string", "description": "What happened or what to do next. Be specific."},
+                "data": {"type": "object", "description": "Optional structured data"},
+                "severity": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]},
+                "result": {"type": "string", "description": "For tested entries: outcome"},
             },
             "required": ["target", "type", "message"],
         },
@@ -1768,17 +1915,6 @@ _ALL_TOOLS = [
                     "description": "Number of recent entries to return (default 50, max 200)",
                     "default": 50,
                 },
-            },
-            "required": ["target"],
-        },
-    },
-    {
-        "name": "clear_hunt_log",
-        "description": "Clear the hunt log for a target. Use when starting a completely fresh hunt.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "target": {"type": "string", "description": "Target domain"},
             },
             "required": ["target"],
         },
@@ -1874,11 +2010,6 @@ _ALL_TOOLS = [
                 },
             },
         },
-    },
-    {
-        "name": "learning_stats",
-        "description": "Get overall learning statistics — total outcomes recorded, success rates by technique, most effective approaches.",
-        "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "export_training_data",
@@ -2050,23 +2181,46 @@ _CORE_TOOL_NAMES = {
 _TOOL_CATEGORIES = {
     "kb": {
         "description": "Knowledge base deep-dive tools",
-        "tools": {"get_document", "list_documents", "get_related", "get_stats", "search_cves", "get_cve"},
+        "when": "When you need detailed techniques, payloads, or methodology. Use search_knowledge first (core tool), then get_document for full docs.",
+        "tools": {"get_document", "list_documents", "search_cves", "get_cve"},
     },
     "proxy": {
-        "description": "Mitmproxy interception and replay tools",
+        "description": "HTTP interception, replay, and active testing",
+        "when": (
+            "Phase 3 (Hunting). After discovery, when you're manually testing the app. "
+            "Flow: start_proxy → browse target → capture_requests → pick interesting request → "
+            "replay_request with modified IDs/cookies/params. "
+            "Use cors_test on every API endpoint. Use auth_bypass_test on every authenticated endpoint. "
+            "Use header_injection_test when you suspect WAF bypass or internal routing."
+        ),
         "tools": {"start_proxy", "capture_requests", "replay_request", "cors_test", "header_injection_test", "auth_bypass_test"},
     },
     "hunting": {
-        "description": "Primitive storage, chain analysis, finding verification, web research",
-        "tools": {"store_primitive", "list_primitives", "analyze_chains", "verify_finding", "list_findings", "web_research"},
+        "description": "Observation tracking, chain analysis, finding verification",
+        "when": (
+            "Throughout the hunt. "
+            "store_primitive: call EVERY TIME you notice something interesting (even if not exploitable). "
+            "analyze_chains: call after storing 3+ primitives to find exploit combinations. "
+            "verify_finding: call BEFORE reporting ANY vulnerability — it scores confidence and catches false positives. "
+            "mark_false_positive: call when verify_finding says likely FP — teaches the system for next time. "
+            "web_research: call to fetch changelogs, HackerOne reports, robots.txt, API docs."
+        ),
+        "tools": {"store_primitive", "analyze_chains", "verify_finding", "list_findings", "mark_false_positive", "web_research"},
     },
     "learning": {
-        "description": "Self-learning engine — record outcomes, adaptive playbooks, training export",
-        "tools": {"record_outcome", "get_playbook", "learning_stats", "export_training_data"},
+        "description": "Self-learning engine",
+        "when": (
+            "record_outcome: call after EVERY technique you test — success, fail, blocked, or partial. "
+            "This is how BountyBud learns what works on which tech stacks. "
+            "get_playbook: call at the START of a new hunt to get ranked recommendations based on history. "
+            "export_training_data: call to export learning data for model fine-tuning."
+        ),
+        "tools": {"record_outcome", "get_playbook", "export_training_data"},
     },
     "session": {
-        "description": "Session management and process tracking",
-        "tools": {"session_status", "list_processes", "clear_hunt_log", "start_session"},
+        "description": "Session tracking",
+        "when": "session_status shows elapsed time, commands run, primitives stored, and findings count.",
+        "tools": {"session_status"},
     },
 }
 
@@ -2469,16 +2623,24 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             for cat_name, cat_info in _TOOL_CATEGORIES.items():
                 tool_names = sorted(cat_info["tools"])
                 lines.append(f"## `{cat_name}` — {cat_info['description']}")
-                lines.append(f"  Tools: {', '.join(tool_names)}\n")
+                lines.append(f"  Tools: {', '.join(tool_names)}")
+                if cat_info.get("when"):
+                    lines.append(f"  When: {cat_info['when']}")
+                lines.append("")
 
             lines.append("## `all` — Load every tool definition")
             return [{"type": "text", "text": "\n".join(lines)}]
 
         if category == "all":
-            # Return all tool schemas
-            import json as _json
-            tools_json = _json.dumps(_ALL_TOOLS, indent=2)
-            return [{"type": "text", "text": f"**All {len(_ALL_TOOLS)} tool definitions:**\n\n```json\n{tools_json}\n```"}]
+            # Return compact summary of all tools (not full JSON schemas)
+            lines = [f"**All {len(_ALL_TOOLS)} tools:**\n"]
+            for t in _ALL_TOOLS:
+                req = t.get("inputSchema", {}).get("required", [])
+                params = list(t.get("inputSchema", {}).get("properties", {}).keys())
+                req_str = ", ".join(req) if req else "none"
+                lines.append(f"- **{t['name']}**({req_str}) — {t.get('description', '')[:80]}")
+            lines.append("\nUse `get_tools(category)` for full parameter details.")
+            return [{"type": "text", "text": "\n".join(lines)}]
 
         cat_info = _TOOL_CATEGORIES.get(category)
         if not cat_info:
@@ -2491,7 +2653,9 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
         import json as _json
         lines = [f"# {category} tools — {cat_info['description']}\n"]
-        lines.append(f"**{len(cat_tools)} tools loaded.** You can now call these by name:\n")
+        if cat_info.get("when"):
+            lines.append(f"**When to use:** {cat_info['when']}\n")
+        lines.append(f"**{len(cat_tools)} tools available:**\n")
 
         for tool in cat_tools:
             lines.append(f"### `{tool['name']}`")
@@ -2563,6 +2727,13 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             parts.append("\n**━━━ BOUNTYBUD ANALYSIS ━━━**")
             for adv in advisories:
                 parts.append(adv)
+            # Nudge LLM toward the right extended tools based on what was found
+            has_positive = any("🔥" in a for a in advisories)
+            has_negative = any("⚠️" in a for a in advisories)
+            if has_positive:
+                parts.append("TIP: Use `store_primitive` to record this observation. Use `verify_finding` to confirm exploitability. (Load with `get_tools('hunting')`)")
+            if has_negative and not has_positive:
+                parts.append("TIP: Use `record_outcome` to log this blocked/failed attempt so future playbooks adapt. (Load with `get_tools('learning')`)")
             parts.append("**━━━━━━━━━━━━━━━━━━━━━━━━━**")
 
         # Log to active session
@@ -2654,6 +2825,8 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             for rec in recommendations:
                 text += f"  - {rec}\n"
 
+        text += "\n**Next:** `search_knowledge` for detailed techniques. `get_tools('proxy')` when ready to test. `get_tools('hunting')` to track findings."
+
         return [{"type": "text", "text": text}]
 
     elif name == "get_target_context":
@@ -2710,6 +2883,13 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         # Update session
         if _active_session:
             _active_session["primitives_count"] = _active_session.get("primitives_count", 0) + 1
+
+        # Auto-log to hunt log
+        _append_huntlog(target, {
+            "type": "note",
+            "phase": "hunting",
+            "message": f"Primitive [{primitive['type']}]: {primitive['description'][:120]}",
+        })
 
         text = f"**Primitive stored** [{primitive['type']}] for {target}.\n"
         text += f"Total primitives: {len(primitives)}. "
@@ -2776,19 +2956,21 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
         verification_results = []
         verified = False
+        response_body = ""
+        response_headers = ""
 
         # Attempt curl verification
         if curl_cmd:
             curl_result = _verify_curl(curl_cmd)
             verification_results.append({"method": "curl", "result": curl_result})
+            response_body = curl_result.get("stdout", "")
+            response_headers = curl_result.get("stderr", "")  # curl -v puts headers in stderr
 
-            # Check if expected evidence is in the response
-            if expected and curl_result.get("stdout"):
-                if re.search(re.escape(expected), curl_result["stdout"], re.IGNORECASE):
+            if expected and response_body:
+                if re.search(re.escape(expected), response_body, re.IGNORECASE):
                     verified = True
                     curl_result["evidence_found"] = True
             elif curl_result.get("verified"):
-                # Check for positive signals
                 if curl_result.get("advisories"):
                     for adv in curl_result["advisories"]:
                         if "CRITICAL" in adv or "POTENTIAL" in adv:
@@ -2807,13 +2989,47 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
                 "method": "none",
                 "result": {
                     "verified": False,
-                    "error": "NO REPRODUCTION METHOD PROVIDED. You MUST provide either reproduction_curl or reproduction_url. A finding without a POC is worthless.",
+                    "error": "NO REPRODUCTION METHOD PROVIDED. You MUST provide reproduction_curl or reproduction_url.",
                 },
             })
 
+        # ── Confidence Assessment (the intelligence layer) ──
+        assessment = _assess_finding_confidence(
+            vuln_type=vuln_type,
+            response_body=response_body,
+            response_headers=response_headers,
+            evidence_description=expected or description,
+            target=target,
+        )
+
+        # Headless XSS verification overrides confidence
+        if vuln_type == "xss" and any(
+            vr.get("result", {}).get("verified") for vr in verification_results
+            if vr.get("method") == "headless_browser"
+        ):
+            assessment["confidence"] = 95
+            assessment["level"] = "definitive"
+            assessment["recommendation"] = "XSS confirmed by headless browser. Report immediately."
+
+        # Determine final status
+        if verified and assessment["confidence"] >= 60:
+            status = "verified"
+        elif verified and assessment["confidence"] < 60:
+            status = "needs_review"  # Curl matched but FP signals present
+        elif assessment["confidence"] >= 80:
+            status = "high_confidence"
+        elif assessment["confidence"] >= 40:
+            status = "needs_investigation"
+        else:
+            status = "likely_false_positive"
+
         finding["verification"] = {
-            "status": "verified" if verified else "unverified",
+            "status": status,
             "results": verification_results,
+            "confidence": assessment["confidence"],
+            "confidence_level": assessment["level"],
+            "evidence_quality": assessment["evidence_quality"],
+            "fp_patterns_matched": assessment["fp_patterns_matched"],
             "verified_at": datetime.datetime.now().isoformat() if verified else None,
         }
 
@@ -2824,49 +3040,141 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
         # Update session
         if _active_session:
-            if verified:
+            if status in ("verified", "high_confidence"):
                 _active_session["verified_findings"] = _active_session.get("verified_findings", 0) + 1
             _active_session["total_findings"] = _active_session.get("total_findings", 0) + 1
 
-        # Build response
-        if verified:
-            text = f"**VERIFIED** — Finding confirmed exploitable.\n\n"
-        else:
-            text = f"**UNVERIFIED** — Could not confirm exploitation. Review results below.\n\n"
+        # ── Build response ──
+        conf = assessment["confidence"]
+        level = assessment["level"]
+        conf_bar = "#" * (conf // 5) + "-" * (20 - conf // 5)
 
-        text += f"**Finding:** {title}\n"
-        text += f"**Type:** {vuln_type} | **Severity:** {severity}\n"
-        text += f"**Target:** {target}\n\n"
+        text = f"**Finding Assessment: {title}**\n"
+        text += f"**Type:** {vuln_type} | **Severity:** {severity} | **Target:** {target}\n\n"
 
+        text += f"## Confidence: {conf}/100 [{level.upper()}]\n"
+        text += f"[{conf_bar}] {conf}%\n\n"
+        text += f"**Status:** {status.replace('_', ' ').upper()}\n"
+        text += f"**Evidence Quality:** {assessment['evidence_quality']}\n"
+        text += f"**Recommendation:** {assessment['recommendation']}\n\n"
+
+        # Show confidence factors
+        if assessment["factors"]:
+            text += "## Confidence Factors\n"
+            for factor in assessment["factors"]:
+                sign = "+" if factor["impact"] > 0 else ""
+                text += f"  [{sign}{factor['impact']:+d}] {factor['detail']}\n"
+            text += "\n"
+
+        # Show FP patterns matched
+        if assessment["fp_patterns_matched"]:
+            text += "## False Positive Indicators\n"
+            for fp in assessment["fp_patterns_matched"]:
+                text += f"  - {fp}\n"
+            text += "\n"
+
+        # Show verification results
         for vr in verification_results:
             method = vr.get("method", "unknown")
             result = vr.get("result", {})
-            text += f"**Verification [{method}]:**\n"
-            if result.get("verified"):
-                text += f"  Status: CONFIRMED\n"
+            text += f"## Verification [{method}]\n"
+            if result.get("verified") or result.get("evidence_found"):
+                text += f"  CONFIRMED"
                 if result.get("evidence"):
-                    text += f"  Evidence: {result['evidence'][:500]}\n"
+                    text += f": {result['evidence'][:300]}"
                 if result.get("alerts"):
-                    text += f"  Alerts fired: {result['alerts']}\n"
+                    text += f"\n  Alerts: {result['alerts']}"
             else:
-                text += f"  Status: NOT CONFIRMED\n"
+                text += f"  NOT CONFIRMED"
                 if result.get("error"):
-                    text += f"  Issue: {result['error']}\n"
-                if result.get("note"):
-                    text += f"  Note: {result['note']}\n"
-            if result.get("advisories"):
-                text += f"  Advisories:\n"
-                for adv in result["advisories"]:
-                    text += f"    {adv}\n"
-            text += "\n"
+                    text += f": {result['error'][:200]}"
+            text += "\n\n"
 
-        if not verified:
-            text += "**NEXT STEPS:** Refine your POC. Try:\n"
-            text += "  1. Different payload encoding\n"
-            text += "  2. Different injection point\n"
-            text += "  3. Check if the vulnerability requires authentication\n"
-            text += "  4. Verify in browser manually\n"
-            text += "  5. Use store_primitive if this is an interesting observation but not yet exploitable\n"
+        # Status-specific guidance
+        if status == "verified":
+            text += "**NEXT:** Write the report. Include reproduction steps, impact, and remediation advice.\n"
+        elif status == "high_confidence":
+            text += "**NEXT:** Manually verify in browser, then report if confirmed.\n"
+        elif status == "needs_review":
+            text += "**NEXT:** POC matched but FP signals detected. Verify manually — is the impact real?\n"
+        elif status == "needs_investigation":
+            text += "**NEXT:** More testing needed. Try different payloads, check encoding, test in browser.\n"
+        elif status == "likely_false_positive":
+            text += "**NEXT:** Likely FP. Use mark_false_positive to record, or investigate further if you disagree.\n"
+            text += "If partially interesting, use store_primitive instead.\n"
+
+        # ── Auto-record learning outcome ──
+        outcome_map = {
+            "verified": "success", "high_confidence": "success",
+            "needs_review": "partial", "needs_investigation": "partial",
+            "likely_false_positive": "fail",
+        }
+        ctx = _load_target(target) if target else {}
+        _record_learning({
+            "technique": f"verify_{vuln_type}",
+            "vuln_type": vuln_type,
+            "outcome": outcome_map.get(status, "partial"),
+            "target": target,
+            "details": f"{title} — confidence {conf}/100 ({level})",
+            "tech_stack": list(ctx.get("technologies", [])),
+            "waf": ctx.get("waf", ""),
+            "target_type": ctx.get("target_type", ""),
+        })
+
+        # ── Auto-log to hunt log ──
+        if target:
+            log_type = "finding" if status in ("verified", "high_confidence") else "tested"
+            _append_huntlog(target, {
+                "type": log_type,
+                "phase": "verification",
+                "message": f"[{status}] {vuln_type}: {title} (confidence: {conf}/100)",
+                "severity": severity,
+                "result": status,
+            })
+
+        return [{"type": "text", "text": text}]
+
+    elif name == "mark_false_positive":
+        target = arguments.get("target", "")
+        finding_id = arguments.get("finding_id", "")
+        vuln_type = arguments.get("vuln_type", "")
+        reason = arguments.get("reason", "")
+
+        if not reason:
+            return [{"type": "text", "text": "reason is required — explain why this is a false positive."}]
+
+        _record_fp({
+            "target": target,
+            "finding_id": finding_id,
+            "vuln_type": vuln_type,
+            "reason": reason,
+        })
+
+        # Update the finding if we can find it
+        if target and finding_id:
+            findings = _load_findings(target)
+            for f in findings:
+                if f.get("id") == finding_id:
+                    f["verification"]["status"] = "false_positive"
+                    f["verification"]["fp_reason"] = reason
+                    break
+            _save_findings(target, findings)
+
+        # Also record as a learning outcome
+        _record_learning({
+            "technique": f"verify_{vuln_type}",
+            "vuln_type": vuln_type,
+            "outcome": "fail",
+            "target": target,
+            "details": f"FALSE POSITIVE: {reason}",
+            "tech_stack": list(_load_target(target).get("technologies", [])) if target else [],
+            "waf": _load_target(target).get("waf", "") if target else "",
+        })
+
+        fp_count = len(_load_fp_history())
+        text = f"**Marked as false positive.** Reason: {reason}\n"
+        text += f"Recorded in learning DB and FP history ({fp_count} total FPs tracked).\n"
+        text += "Future findings of this type on this target will receive lower confidence scores."
 
         return [{"type": "text", "text": text}]
 
@@ -2926,20 +3234,39 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             text += f"**Program:** {arguments['program']}\n"
         if arguments.get("objective"):
             text += f"**Objective:** {arguments['objective']}\n"
-        text += f"\n**Existing data for this target:**\n"
-        text += f"  - Target context: {'loaded' if ctx else 'none — run fingerprinting first'}\n"
+        # Check for existing hunt log (resumable hunt)
+        hunt_entries = _read_huntlog(target, last_n=5)
+        if hunt_entries:
+            text += f"\n**RESUMING PREVIOUS HUNT** — {len(_read_huntlog(target, last_n=9999))} log entries found.\n"
+            text += "Call `get_hunt_log` to see full state, TODOs, and where you left off.\n"
+            # Show last plan/todo
+            last_actionable = [e for e in hunt_entries if e.get("type") in ("todo", "plan")]
+            if last_actionable:
+                text += f"Last action item: {last_actionable[-1].get('message', '')}\n"
+
+        text += f"\n**Target state:**\n"
+        text += f"  - Context: {'loaded' if ctx else 'not set — fingerprint first'}\n"
+        if ctx:
+            text += f"    Tech: {', '.join(ctx.get('technologies', []))}, WAF: {ctx.get('waf', 'unknown')}\n"
         text += f"  - Primitives: {len(primitives)} stored\n"
-        text += f"  - Past findings: {len(findings)} recorded\n"
-        text += f"\n**Recommended first steps:**\n"
+        text += f"  - Findings: {len(findings)} recorded\n"
 
         if not ctx:
-            text += "  1. Fingerprint: `whatweb <target>`, `httpx -u <target> -tech-detect`, `wafw00f <target>`\n"
-            text += "  2. Store results: `set_target_context`\n"
-            text += "  3. Gather intel: check changelogs, HackerOne hacktivity, scope changes\n"
-        else:
-            text += f"  1. Review target context: tech={', '.join(ctx.get('technologies', []))}, waf={ctx.get('waf', 'unknown')}\n"
-            text += "  2. Check for NEW changes since last hunt (changelog, new subdomains, JS changes)\n"
-            text += "  3. Review existing primitives with `list_primitives` and `analyze_chains`\n"
+            text += f"\n**First steps:**\n"
+            text += "  1. Fingerprint: whatweb, httpx -tech-detect, wafw00f\n"
+            text += "  2. set_target_context with results\n"
+            text += "  3. Intel: changelogs, hacktivity, scope changes\n"
+        elif not hunt_entries:
+            text += f"\n**First steps:**\n"
+            text += "  1. Check what's NEW since last hunt (changelog, new features, scope changes)\n"
+            text += "  2. search_cves for the tech stack\n"
+            text += "  3. Start hunting — think like an attacker, not a scanner\n"
+
+        learnings = _load_all_learnings()
+        if learnings:
+            text += f"\n**{len(learnings)} learning outcomes** available. Call get_playbook for adaptive strategy.\n"
+
+        text += "\nRemember: you're a hacker, not a scanner. Understand the app, break assumptions, chain findings."
 
         return [{"type": "text", "text": text}]
 
@@ -3482,15 +3809,19 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         if not url:
             return [{"type": "text", "text": "URL is required."}]
 
+        inferred_target = _active_session.get("target", "") if _active_session else ""
         resp = _http_request(method, url, headers, body)
+        resp_headers_str = "\n".join(f"{k}: {v}" for k, v in resp.get("headers", {}).items())
 
-        # Smart analysis of the response
-        advisories = _analyze_output(resp.get("body", ""), "")
+        advisories = _analyze_output(
+            resp.get("body", ""), resp_headers_str,
+            command=f"replay {method} {url}", target=inferred_target,
+        )
 
         parts = [
             f"**{method} {url}**\n",
             f"**Status:** {resp['status']}\n",
-            f"**Response Headers:**\n```\n" + "\n".join(f"{k}: {v}" for k, v in resp.get("headers", {}).items()) + "\n```\n",
+            f"**Response Headers:**\n```\n{resp_headers_str}\n```\n",
             f"**Body (first 3000 chars):**\n```\n{resp.get('body', '')}\n```",
         ]
 
@@ -3499,6 +3830,16 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             for adv in advisories:
                 parts.append(adv)
             parts.append("**━━━━━━━━━━━━━━━━━━━━━━━━━**")
+
+        # Track in session
+        if _active_session:
+            _active_session.setdefault("commands_run", []).append({
+                "command": f"replay {method} {url}"[:200],
+                "status": "completed",
+                "duration": 0,
+                "advisories": len(advisories),
+                "timestamp": datetime.datetime.now().isoformat(),
+            })
 
         return [{"type": "text", "text": "\n".join(parts)}]
 
@@ -3568,6 +3909,24 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         for f in findings:
             text += f"  - {f}\n"
 
+        # Session tracking
+        if _active_session:
+            _active_session.setdefault("commands_run", []).append({
+                "command": f"cors_test {url}"[:200],
+                "status": "completed", "duration": 0,
+                "advisories": len(findings),
+                "timestamp": datetime.datetime.now().isoformat(),
+            })
+
+        # Auto-log significant findings to hunt log
+        inferred_target = _active_session.get("target", "") if _active_session else ""
+        if any("CRITICAL" in f for f in findings) and inferred_target:
+            _append_huntlog(inferred_target, {
+                "type": "finding", "phase": "hunting",
+                "message": f"CORS misconfig on {url}: origin reflection with credentials",
+                "severity": "high",
+            })
+
         return [{"type": "text", "text": text}]
 
     elif name == "header_injection_test":
@@ -3603,12 +3962,31 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
         text += f"\n**Injected Response Body (first 1500 chars):**\n```\n{injected['body'][:1500]}\n```\n"
 
-        # Check for common indicators
-        advisories = _analyze_output(injected["body"], "")
+        # Check for common indicators — with full context
+        inferred_target = _active_session.get("target", "") if _active_session else ""
+        advisories = _analyze_output(
+            injected["body"], "", command=f"header_inject {header}:{value} {url}", target=inferred_target,
+        )
         if advisories:
             text += "\n**━━━ BOUNTYBUD ANALYSIS ━━━**\n"
             for adv in advisories:
                 text += adv + "\n"
+
+        # Session tracking
+        if _active_session:
+            _active_session.setdefault("commands_run", []).append({
+                "command": f"header_injection_test {header}:{value} {url}"[:200],
+                "status": "completed", "duration": 0,
+                "advisories": len(advisories),
+                "timestamp": datetime.datetime.now().isoformat(),
+            })
+            # Auto-log if behavior changed
+            if (status_changed or body_changed) and inferred_target:
+                _append_huntlog(inferred_target, {
+                    "type": "finding", "phase": "hunting",
+                    "message": f"Header {header}:{value} changes behavior on {url} (status: {baseline['status']}→{injected['status']})",
+                    "severity": "medium",
+                })
 
         return [{"type": "text", "text": text}]
 
@@ -3670,6 +4048,22 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
                 resp = _http_request("GET", url, {h: v, "User-Agent": "Mozilla/5.0"})
                 changed = "CHANGED" if resp["status"] != baseline["status"] else ""
                 results.append(f"  {h}: {v} → {resp['status']} {changed}")
+
+        # Session tracking + auto-log significant findings
+        if _active_session:
+            _active_session.setdefault("commands_run", []).append({
+                "command": f"auth_bypass_test {technique} {url}"[:200],
+                "status": "completed", "duration": 0,
+                "advisories": sum(1 for r in results if "***" in r or "200 OK" in r),
+                "timestamp": datetime.datetime.now().isoformat(),
+            })
+            inferred_target = _active_session.get("target", "")
+            if any("200 OK" in r or "***" in r or "CHANGED" in r for r in results) and inferred_target:
+                _append_huntlog(inferred_target, {
+                    "type": "finding", "phase": "hunting",
+                    "message": f"Auth bypass ({technique}) potential on {url}",
+                    "severity": "high",
+                })
 
         return [{"type": "text", "text": "\n".join(results)}]
 
