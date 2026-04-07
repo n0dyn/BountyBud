@@ -122,28 +122,194 @@ POSITIVE_SIGNAL_PATTERNS = {
 }
 
 
-def _analyze_output(stdout: str, stderr: str) -> list[str]:
-    """Analyze tool output for WAF signatures, errors, and interesting findings."""
+def _analyze_output(stdout: str, stderr: str, command: str = "", target: str = "") -> list[str]:
+    """Analyze tool output with full heuristic chain:
+    1. Signal detection (WAF, errors, interesting findings)
+    2. Context correlation (match against target profile)
+    3. Learning integration (check historical outcomes for similar signals)
+    4. Decision routing (recommend specific next action)
+    """
     advisories = []
     combined = (stdout + " " + stderr).lower()
+    raw = stdout + " " + stderr
 
-    # Check WAF signatures
+    # ── Stage 1: Signal Detection ──
+    detected_waf = None
     for pattern, (waf_name, advice) in WAF_SIGNATURES.items():
         if re.search(pattern, combined, re.IGNORECASE):
+            detected_waf = waf_name
             advisories.append(f"⚠️ WAF DETECTED [{waf_name}]: {advice}")
-            break  # Only report first WAF match
+            break
 
-    # Check negative signals
+    negative_hits = []
     for pattern, advice in NEGATIVE_SIGNAL_PATTERNS.items():
         if re.search(pattern, combined, re.IGNORECASE):
+            negative_hits.append(pattern)
             advisories.append(f"⚠️ {advice}")
 
-    # Check positive signals (interesting findings)
+    positive_hits = []
     for pattern, note in POSITIVE_SIGNAL_PATTERNS.items():
-        if re.search(pattern, stdout + " " + stderr, re.IGNORECASE):
+        if re.search(pattern, raw, re.IGNORECASE):
+            positive_hits.append(pattern)
             advisories.append(f"🔥 {note}")
 
+    # ── Stage 2: Context Correlation ──
+    # If we have a target context, correlate findings against known tech stack
+    ctx = _load_target(target) if target else {}
+    if ctx:
+        known_waf = ctx.get("waf", "")
+        techs = [t.lower() for t in ctx.get("technologies", [])]
+
+        # Auto-update target context if we detected a new WAF
+        if detected_waf and not known_waf:
+            ctx["waf"] = detected_waf
+            _save_target(target, ctx)
+            advisories.append(f"TARGET CONTEXT UPDATED: WAF set to {detected_waf}")
+
+        # Tech-aware false positive filtering
+        if positive_hits:
+            # Don't flag PHP-specific patterns on non-PHP stacks
+            if "phpinfo" in str(positive_hits) and not any(t in techs for t in ["php", "wordpress", "laravel"]):
+                advisories = [a for a in advisories if "phpinfo" not in a]
+                advisories.append("NOTE: phpinfo pattern matched but target is not PHP — likely false positive.")
+
+    # ── Stage 3: Learning Integration ──
+    # Check if we have historical data about this technique+context combo
+    if command and target:
+        all_learnings = _load_all_learnings()
+        if all_learnings:
+            # Extract tool name from command
+            cmd_tool = command.split()[0].split("/")[-1] if command else ""
+
+            # Find outcomes for same tool + same WAF
+            relevant = [
+                e for e in all_learnings
+                if e.get("technique", "").startswith(cmd_tool)
+                and (not detected_waf or e.get("waf", "").lower() == detected_waf.lower())
+            ]
+
+            if relevant:
+                successes = sum(1 for e in relevant if e.get("outcome") == "success")
+                blocked = sum(1 for e in relevant if e.get("outcome") == "blocked")
+                total = len(relevant)
+
+                if blocked > successes and total >= 3:
+                    advisories.append(
+                        f"LEARNING: {cmd_tool} has been blocked {blocked}/{total} times "
+                        f"in similar contexts. Consider switching technique."
+                    )
+                    # Suggest bypasses that worked before
+                    bypasses = [e.get("bypass_used") for e in relevant if e.get("bypass_used") and e.get("outcome") == "success"]
+                    if bypasses:
+                        advisories.append(f"KNOWN BYPASSES: {', '.join(set(bypasses))}")
+                elif successes > 0:
+                    best = [e.get("details") for e in relevant if e.get("outcome") == "success" and e.get("details")]
+                    if best:
+                        advisories.append(f"LEARNING: {cmd_tool} succeeded before in similar context: {best[0][:100]}")
+
+    # ── Stage 4: Decision Routing ──
+    if positive_hits and not negative_hits:
+        # Found something interesting, no blockers
+        advisories.append("NEXT: Verify this finding. Use verify_finding with a reproduction curl command.")
+        advisories.append("NEXT: Store as primitive with store_primitive if not directly exploitable.")
+    elif detected_waf and negative_hits:
+        # Blocked by WAF
+        advisories.append("DECISION: WAF is blocking. Three options:")
+        advisories.append("  1. Try encoding bypass (double URL encode, unicode, chunked transfer)")
+        advisories.append("  2. Hunt origin IP to bypass WAF entirely (use censys/shodan)")
+        advisories.append("  3. Switch to business logic testing (WAF can't block logical flaws)")
+    elif negative_hits and not positive_hits:
+        # Something failed but not WAF-related
+        if any("rate limit" in h for h in negative_hits):
+            advisories.append("DECISION: Rate limited. Slow down and target different endpoints.")
+        elif any("403" in h or "401" in h for h in negative_hits):
+            advisories.append("DECISION: Auth/access blocked. Try: auth_bypass_test, or get valid session first.")
+    elif not advisories:
+        # Clean output, nothing detected
+        # Check if the output is empty or minimal (tool might have failed silently)
+        if len(stdout.strip()) < 10 and len(stderr.strip()) < 10:
+            advisories.append("NOTE: Very little output. Tool may have failed silently. Check command syntax.")
+
     return advisories
+
+
+# ── Pre-execution Heuristics ──────────────────────────────────
+
+def _pre_execution_check(command: str, target: str = "") -> str | None:
+    """Run heuristic checks BEFORE executing a command.
+    Returns advisory string if there's a concern, None if clear to proceed."""
+    cmd_parts = command.split()
+    if not cmd_parts:
+        return None
+
+    cmd_tool = cmd_parts[0].split("/")[-1]
+
+    # Check target context for tech-aware filtering
+    ctx = _load_target(target) if target else {}
+    techs = [t.lower() for t in ctx.get("technologies", [])]
+    waf = ctx.get("waf", "").lower()
+
+    advisories = []
+
+    # ── Scope check ──
+    if ctx.get("out_of_scope"):
+        for oos in ctx["out_of_scope"]:
+            if oos.lower() in command.lower():
+                return f"BLOCKED: '{oos}' is OUT OF SCOPE for this target. Remove it from your command."
+
+    # ── Tech-stack mismatch detection ──
+    if techs:
+        # PHP tools on non-PHP targets
+        if cmd_tool in ("wpscan", "droopescan", "joomscan") and not any(t in techs for t in ["php", "wordpress", "drupal", "joomla"]):
+            advisories.append(f"MISMATCH: {cmd_tool} is a CMS scanner but target stack is {', '.join(ctx.get('technologies', []))}. This is likely a waste of time.")
+
+        # NoSQL tools on SQL targets
+        if cmd_tool == "nosqlmap" and any(t in techs for t in ["mysql", "postgresql", "mssql"]):
+            advisories.append(f"MISMATCH: nosqlmap targets NoSQL but this target uses {', '.join(t for t in techs if t in ('mysql', 'postgresql', 'mssql'))}. Use sqlmap instead.")
+
+        # SQL tools on NoSQL targets
+        if cmd_tool in ("sqlmap", "ghauri") and any(t in techs for t in ["mongodb", "dynamodb", "couchdb"]):
+            advisories.append(f"MISMATCH: {cmd_tool} targets SQL but this target uses NoSQL ({', '.join(t for t in techs if t in ('mongodb', 'dynamodb', 'couchdb'))}). Use nosqlmap instead.")
+
+    # ── WAF-aware scanning ──
+    if waf and waf != "none":
+        # Broad scans against WAF-protected targets are usually pointless
+        if cmd_tool == "nuclei" and "-tags" not in command and "-t " not in command:
+            advisories.append(f"WARNING: Running nuclei without -tags against WAF-protected target ({waf}). Most templates will be blocked. Use -tags to target specific vuln classes.")
+
+        if cmd_tool in ("sqlmap", "ghauri") and "--tamper" not in command:
+            advisories.append(f"WARNING: Running {cmd_tool} against {waf} without --tamper. Payloads will likely be blocked. Add --tamper=between,randomcase,space2comment or try manual testing.")
+
+        if cmd_tool == "dalfox" and "--waf-evasion" not in command.lower():
+            advisories.append(f"WARNING: Running dalfox against {waf} without evasion. Consider manual XSS testing or encoding payloads.")
+
+    # ── Scope explosion detection ──
+    if cmd_tool in ("gau", "waybackurls", "katana", "gospider") and "--subs" in command:
+        advisories.append("SCOPE WARNING: Using --subs will crawl ALL subdomains. This will likely timeout or produce too much output. Remove --subs and target specific domains.")
+
+    if cmd_tool == "nuclei" and "-l " in command:
+        # Check if the list might be too big
+        advisories.append("TIP: If the target list is large, use -rl (rate limit) and -tags to narrow scope.")
+
+    # ── Historical failure check ──
+    if target:
+        all_learnings = _load_all_learnings()
+        if all_learnings:
+            same_tool = [e for e in all_learnings if e.get("technique", "").startswith(cmd_tool) and e.get("target") == target]
+            if same_tool:
+                last = sorted(same_tool, key=lambda e: e.get("timestamp", ""))[-1]
+                if last.get("outcome") == "blocked":
+                    advisories.append(
+                        f"HISTORY: {cmd_tool} was blocked on this exact target last time"
+                        f" ({last.get('timestamp', '')[:10]}). "
+                        f"Consider a different approach or add bypass technique."
+                    )
+                elif last.get("outcome") == "success":
+                    advisories.append(
+                        f"HISTORY: {cmd_tool} succeeded on this target before: {last.get('details', '')[:80]}"
+                    )
+
+    return "\n".join(advisories) if advisories else None
 
 
 # Complete toolbelt — every security tool BountyBud knows about
@@ -2357,9 +2523,21 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         timeout = min(int(arguments.get("timeout", 300)), 3600)
         workdir = arguments.get("workdir")
 
+        # Infer target from command or active session
+        inferred_target = ""
+        if _active_session:
+            inferred_target = _active_session.get("target", "")
+
+        # ── Pre-execution heuristics ──
+        pre_check = _pre_execution_check(command, inferred_target)
+
+        parts = []
+        if pre_check:
+            parts.append(f"**━━━ PRE-EXECUTION CHECK ━━━**\n{pre_check}\n**━━━━━━━━━━━━━━━━━━━━━━━━━**\n")
+
         result = _run_command(command, timeout=timeout, workdir=workdir)
 
-        parts = [f"**Command:** `{command}`"]
+        parts.append(f"**Command:** `{command}`")
         parts.append(f"**Status:** {result['status']} | **Exit code:** {result['exit_code']} | **Duration:** {result['duration']}s")
 
         if result["stdout"]:
@@ -2376,8 +2554,11 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         if not result["stdout"] and not result["stderr"]:
             parts.append("\n(no output)")
 
-        # Smart output analysis
-        advisories = _analyze_output(result.get("stdout", ""), result.get("stderr", ""))
+        # ── Post-execution heuristics (with context) ──
+        advisories = _analyze_output(
+            result.get("stdout", ""), result.get("stderr", ""),
+            command=command, target=inferred_target,
+        )
         if advisories:
             parts.append("\n**━━━ BOUNTYBUD ANALYSIS ━━━**")
             for adv in advisories:
