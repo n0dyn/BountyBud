@@ -1122,7 +1122,7 @@ INSTRUCTIONS = (
     "- Search BB: 'business-logic-hunting' for manual testing methodology.\n"
 )
 
-TOOLS = [
+_ALL_TOOLS = [
     {
         "name": "search_knowledge",
         "description": (
@@ -1547,18 +1547,8 @@ TOOLS = [
     {
         "name": "hunt_log",
         "description": (
-            "Write an entry to the persistent hunt log for a target. USE THIS FREQUENTLY to record "
-            "your progress, decisions, findings, and next steps. The hunt log survives context "
-            "compression — after context loss, call get_hunt_log to reconstruct your state.\n\n"
-            "WHEN TO LOG:\n"
-            "- After completing each phase or major step\n"
-            "- When you find something interesting (even if not exploitable)\n"
-            "- When you decide what to test next (type=plan)\n"
-            "- When something is blocked or fails (type=blocked)\n"
-            "- When you mark something as tested with its result (type=tested)\n"
-            "- When you have TODOs to pick up later (type=todo)\n\n"
-            "Log DETAILS — your future self (or a new context window) needs to understand "
-            "exactly where you left off and what to do next."
+            "Write to persistent hunt log. Survives context compression. "
+            "Log progress, findings, TODOs, and plans. Call get_hunt_log after context loss to resume."
         ),
         "inputSchema": {
             "type": "object",
@@ -1877,6 +1867,68 @@ TOOLS = [
         },
     },
 ]
+
+# ── Lazy Tool Loading ─────────────────────────────────────────
+# Core tools are always returned on tools/list. Extended tools load on demand
+# via get_tools(category). This keeps the initial handshake small (~5KB)
+# so any LLM client works regardless of context window or timeout settings.
+
+# Which tools are always visible
+_CORE_TOOL_NAMES = {
+    "search_knowledge", "execute_tool", "get_toolbelt",
+    "set_target_context", "get_target_context",
+    "hunt_log", "get_hunt_log", "start_session",
+}
+
+# Categorize extended tools for on-demand loading
+_TOOL_CATEGORIES = {
+    "kb": {
+        "description": "Knowledge base deep-dive tools",
+        "tools": {"get_document", "list_documents", "get_related", "get_stats", "search_cves", "get_cve"},
+    },
+    "proxy": {
+        "description": "Mitmproxy interception and replay tools",
+        "tools": {"start_proxy", "capture_requests", "replay_request", "cors_test", "header_injection_test", "auth_bypass_test"},
+    },
+    "hunting": {
+        "description": "Primitive storage, chain analysis, finding verification, web research",
+        "tools": {"store_primitive", "list_primitives", "analyze_chains", "verify_finding", "list_findings", "web_research"},
+    },
+    "learning": {
+        "description": "Self-learning engine — record outcomes, adaptive playbooks, training export",
+        "tools": {"record_outcome", "get_playbook", "learning_stats", "export_training_data"},
+    },
+    "session": {
+        "description": "Session management and process tracking",
+        "tools": {"session_status", "list_processes", "clear_hunt_log", "start_session"},
+    },
+}
+
+# Build lookup: tool name → full tool definition
+_TOOL_BY_NAME = {t["name"]: t for t in _ALL_TOOLS}
+
+# Build the core tools list that's returned on tools/list
+_GET_TOOLS_META = {
+    "name": "get_tools",
+    "description": (
+        "Load additional tools by category. BountyBud has 33 tools — only core tools are loaded initially. "
+        "Call get_tools() with no args to see all categories. "
+        "Call get_tools(category='proxy') to load proxy/interception tools. "
+        "Categories: kb, proxy, hunting, learning, session."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "category": {
+                "type": "string",
+                "description": "Tool category to load. Omit to see all categories.",
+                "enum": ["kb", "proxy", "hunting", "learning", "session", "all"],
+            },
+        },
+    },
+}
+
+CORE_TOOLS = [t for t in _ALL_TOOLS if t["name"] in _CORE_TOOL_NAMES] + [_GET_TOOLS_META]
 
 RESOURCES = [
     {
@@ -2238,6 +2290,65 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
     elif name == "get_toolbelt":
         text = _get_toolbelt_status()
         return [{"type": "text", "text": text}]
+
+    elif name == "get_tools":
+        category = arguments.get("category", "")
+
+        if not category:
+            # List all categories with tool counts
+            lines = ["# BountyBud Tool Categories\n"]
+            lines.append(f"**{len(_ALL_TOOLS)} total tools** — {len(_CORE_TOOL_NAMES)} core (always loaded) + {len(_ALL_TOOLS) - len(_CORE_TOOL_NAMES)} extended\n")
+            lines.append("Call `get_tools(category='...')` to load a category's tools.\n")
+
+            for cat_name, cat_info in _TOOL_CATEGORIES.items():
+                tool_names = sorted(cat_info["tools"])
+                lines.append(f"## `{cat_name}` — {cat_info['description']}")
+                lines.append(f"  Tools: {', '.join(tool_names)}\n")
+
+            lines.append("## `all` — Load every tool definition")
+            return [{"type": "text", "text": "\n".join(lines)}]
+
+        if category == "all":
+            # Return all tool schemas
+            import json as _json
+            tools_json = _json.dumps(_ALL_TOOLS, indent=2)
+            return [{"type": "text", "text": f"**All {len(_ALL_TOOLS)} tool definitions:**\n\n```json\n{tools_json}\n```"}]
+
+        cat_info = _TOOL_CATEGORIES.get(category)
+        if not cat_info:
+            return [{"type": "text", "text": f"Unknown category '{category}'. Valid: {', '.join(_TOOL_CATEGORIES.keys())}, all"}]
+
+        # Return the full tool definitions for this category
+        cat_tools = [_TOOL_BY_NAME[name] for name in sorted(cat_info["tools"]) if name in _TOOL_BY_NAME]
+        if not cat_tools:
+            return [{"type": "text", "text": f"No tools found in category '{category}'."}]
+
+        import json as _json
+        lines = [f"# {category} tools — {cat_info['description']}\n"]
+        lines.append(f"**{len(cat_tools)} tools loaded.** You can now call these by name:\n")
+
+        for tool in cat_tools:
+            lines.append(f"### `{tool['name']}`")
+            lines.append(f"{tool.get('description', '')}\n")
+
+            # Show parameters
+            schema = tool.get("inputSchema", {})
+            props = schema.get("properties", {})
+            required = schema.get("required", [])
+            if props:
+                lines.append("**Parameters:**")
+                for param_name, param_info in props.items():
+                    req_mark = " (required)" if param_name in required else ""
+                    param_type = param_info.get("type", "string")
+                    param_desc = param_info.get("description", "")
+                    enum_vals = param_info.get("enum")
+                    line = f"  - `{param_name}` ({param_type}){req_mark}: {param_desc}"
+                    if enum_vals:
+                        line += f" — options: {', '.join(str(v) for v in enum_vals)}"
+                    lines.append(line)
+            lines.append("")
+
+        return [{"type": "text", "text": "\n".join(lines)}]
 
     elif name == "execute_tool":
         command = arguments.get("command", "").strip()
@@ -3420,7 +3531,7 @@ def _handle_message(msg: dict) -> dict | None:
         return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
 
     elif method == "tools/list":
-        return {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": TOOLS}}
+        return {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": CORE_TOOLS}}
 
     elif method == "tools/call":
         tool_name = params.get("name", "")
