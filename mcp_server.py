@@ -1919,6 +1919,28 @@ _ALL_TOOLS = [
             "required": ["target"],
         },
     },
+    {
+        "name": "run_autonomous_hunt",
+        "description": (
+            "Kicks off the 5-model Autonomous Orchestration Engine (The Archivist -> Researcher -> Brain -> Hand -> Strategist). "
+            "This tool utilizes your 4x GPU + 256GB RAM hardware rig to ingest logs, identify hot zones, reason through vulnerabilities, "
+            "and verify them with a final 'Strategist' check. Use this for deep, end-to-end vulnerability discovery."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "Target domain to hunt on (e.g., 'target.corp')",
+                },
+                "log_file": {
+                    "type": "string",
+                    "description": "Optional: Path to a specific log file to ingest. Defaults to active proxy logs.",
+                },
+            },
+            "required": ["target"],
+        },
+    },
     # ── Learning Engine ──
     {
         "name": "record_outcome",
@@ -4010,6 +4032,59 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
                 })
 
         return [{"type": "text", "text": text}]
+
+    elif name == "run_autonomous_hunt":
+        target = arguments.get("target", "")
+        log_file = arguments.get("log_file", "")
+
+        if not target:
+            return [{"type": "text", "text": "Target domain is required."}]
+
+        try:
+            from orchestrator import BountyBudPipeline
+            pipeline = BountyBudPipeline(target)
+
+            # Fetch logs
+            raw_logs = ""
+            if log_file and os.path.exists(log_file):
+                with open(log_file, 'r') as f:
+                    raw_logs = f.read(10_000_000)
+            else:
+                # Fallback to mitmproxy logs if they exist
+                mitm_log = os.path.expanduser("~/.bountybud/proxy_logs.json")
+                if os.path.exists(mitm_log):
+                    with open(mitm_log, 'r') as f:
+                        raw_logs = f.read(10_000_000)
+                else:
+                    return [{"type": "text", "text": "No traffic logs found. Please browse the target with mitmproxy first or provide a log_file."}]
+
+            # Run the autonomous pipeline
+            findings = pipeline.run_autonomous_funnel(raw_logs)
+
+            if not findings:
+                return [{"type": "text", "text": "Autonomous pipeline completed. No vulnerabilities confirmed by the Strategist."}]
+
+            lines = [f"**🔥 {len(findings)} VULNERABILITIES CONFIRMED BY THE STRATEGIST 🔥**\n"]
+            for f in findings:
+                hyp = f["hypothesis"]
+                ass = f["assessment"]
+                lines.append(f"### Finding in Zone {f['zone']}")
+                lines.append(f"**Hypothesis:** {hyp.get('hypothesis')}")
+                lines.append(f"**Confidence:** {ass.get('confidence') * 100:.1f}%")
+                lines.append(f"**Reasoning:** {ass.get('reasoning')}")
+                lines.append(f"**False Positive Check:** {ass.get('false_positive_check')}")
+                lines.append("---")
+
+            # Log success to hunt log
+            _append_huntlog(target, {
+                "type": "status", "phase": "verification",
+                "message": f"Autonomous pipeline completed. Found {len(findings)} confirmed vulnerabilities.",
+            })
+
+            return [{"type": "text", "text": "\n".join(lines)}]
+
+        except Exception as e:
+            return [{"type": "text", "text": f"Error running autonomous pipeline: {e}"}]
 
     elif name == "auth_bypass_test":
         url = arguments.get("url", "")
