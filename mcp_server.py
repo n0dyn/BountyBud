@@ -63,6 +63,138 @@ os.makedirs(os.path.join(DATA_DIR, "huntlogs"), exist_ok=True)
 # Learning database — single JSONL file that accumulates across all targets
 LEARNING_DB = os.path.join(DATA_DIR, "learning.jsonl")
 
+# ── KB Query Expansion ────────────────────────────────────────
+# Security synonym map: maps common search terms to related KB terms.
+# This bridges the gap between what hunters type and what docs contain.
+# Each key is a trigger pattern; value is a list of additional search terms.
+_SECURITY_SYNONYMS = {
+    # Intent → technique mappings
+    "steal cookie": ["xss", "session hijack", "cookie theft"],
+    "cookie theft": ["xss", "session hijack", "cookie stealing"],
+    "session hijack": ["xss", "cookie", "session fixation"],
+    "bypass login": ["auth bypass", "authentication bypass", "default credentials"],
+    "bypass auth": ["authentication bypass", "auth bypass", "session", "jwt"],
+    "privilege escalation": ["privesc", "vertical privilege", "horizontal privilege"],
+    "privesc": ["privilege escalation", "linux privesc", "windows privesc"],
+    "remote code execution": ["rce", "command injection", "deserialization"],
+    "rce": ["remote code execution", "command injection", "deserialization", "file upload"],
+    "data exfiltration": ["data leak", "information disclosure", "exfil"],
+    "steal data": ["data exfiltration", "information disclosure", "sqli"],
+    "password": ["credential", "brute force", "default credentials", "auth bypass"],
+    "credential": ["password", "api key", "secret", "token", "auth"],
+    "redirect": ["open redirect", "url redirect", "ssrf"],
+    "file inclusion": ["lfi", "rfi", "path traversal", "file read"],
+    "lfi": ["local file inclusion", "path traversal", "file read", "directory traversal"],
+    "upload": ["file upload", "unrestricted upload", "webshell"],
+    "injection": ["sqli", "command injection", "ssti", "xss", "nosql injection"],
+    "template injection": ["ssti", "server-side template injection", "jinja2", "twig"],
+    "ssti": ["template injection", "server-side template injection", "jinja2"],
+    "race condition": ["race", "toctou", "concurrent", "parallel requests"],
+    "idor": ["insecure direct object reference", "bola", "broken object level authorization", "access control"],
+    "bola": ["idor", "broken object level authorization", "access control"],
+    "ssrf": ["server-side request forgery", "internal service", "metadata endpoint"],
+    "cors": ["cross-origin", "origin reflection", "cors misconfiguration"],
+    "csrf": ["cross-site request forgery", "state-changing", "anti-csrf"],
+    "xxe": ["xml external entity", "xml injection", "dtd"],
+    "smuggling": ["http request smuggling", "cl-te", "te-cl", "desync"],
+    "cache poisoning": ["web cache", "cache key", "cache deception"],
+    "prototype pollution": ["__proto__", "constructor pollution", "javascript prototype"],
+    "subdomain takeover": ["dangling cname", "unclaimed subdomain"],
+    "oauth": ["oauth bypass", "jwt", "saml", "token", "authorization code"],
+    "jwt": ["json web token", "jwt bypass", "none algorithm", "key confusion"],
+    "api": ["api security", "rest api", "graphql", "api endpoint"],
+    "graphql": ["graphql introspection", "batching attack", "nested query"],
+    "websocket": ["websocket attack", "ws hijack", "cross-site websocket"],
+    "mass assignment": ["parameter binding", "auto-bind", "object injection"],
+    "waf bypass": ["waf evasion", "encoding bypass", "filter bypass", "obfuscation"],
+    "cloud": ["cloud misconfiguration", "s3 bucket", "azure blob", "metadata"],
+    "deserialization": ["insecure deserialization", "pickle", "ysoserial", "unserialize"],
+    "crlf": ["crlf injection", "header injection", "http response splitting"],
+    "business logic": ["logic flaw", "workflow bypass", "price manipulation", "race condition"],
+}
+
+# Tech stack → relevant KB categories/tags for context-aware boosting
+_TECH_KB_MAPPING = {
+    "php": ["php", "lfi", "file-upload", "deserialization", "type-juggling"],
+    "wordpress": ["wordpress", "wpscan", "php", "cms", "plugin"],
+    "laravel": ["php", "laravel", "deserialization", "ssti", "mass-assignment"],
+    "drupal": ["php", "drupal", "cms", "deserialization"],
+    "node": ["javascript", "prototype-pollution", "ssrf", "xss", "npm"],
+    "express": ["javascript", "express", "ssrf", "prototype-pollution"],
+    "next": ["javascript", "next", "ssrf", "ssr", "react"],
+    "react": ["javascript", "react", "dom-xss", "client-side"],
+    "angular": ["javascript", "angular", "dom-xss", "csp", "template-injection"],
+    "vue": ["javascript", "vue", "dom-xss", "client-side"],
+    "python": ["python", "ssti", "pickle", "deserialization", "ssrf"],
+    "django": ["python", "django", "ssti", "csrf", "mass-assignment"],
+    "flask": ["python", "flask", "ssti", "jinja2", "debug"],
+    "fastapi": ["python", "fastapi", "api", "ssrf"],
+    "java": ["java", "deserialization", "jndi", "spring", "el-injection"],
+    "spring": ["java", "spring", "actuator", "deserialization", "el-injection"],
+    "tomcat": ["java", "tomcat", "manager", "deserialization"],
+    "ruby": ["ruby", "rails", "ssti", "erb", "deserialization", "mass-assignment"],
+    "rails": ["ruby", "rails", "mass-assignment", "ssti", "csrf"],
+    "graphql": ["graphql", "introspection", "batching", "authorization"],
+    "mongodb": ["nosql", "nosql-injection", "mongodb"],
+    "mysql": ["sql", "sqli", "mysql"],
+    "postgresql": ["sql", "sqli", "postgresql"],
+    "nginx": ["nginx", "path-traversal", "alias-traversal", "off-by-slash"],
+    "apache": ["apache", "htaccess", "mod-rewrite", "path-traversal"],
+    "cloudflare": ["waf", "waf-bypass", "cloudflare", "origin-ip"],
+    "aws": ["cloud", "aws", "s3", "metadata", "ssrf"],
+    "azure": ["cloud", "azure", "blob", "metadata"],
+    "gcp": ["cloud", "gcp", "metadata", "ssrf"],
+    "docker": ["container", "docker", "escape", "mount"],
+    "kubernetes": ["container", "kubernetes", "rbac", "service-account"],
+}
+
+
+def _expand_query(query: str) -> list[str]:
+    """Expand a search query with security synonyms.
+    Returns list of additional search terms to try."""
+    query_lower = query.lower().strip()
+    expansions = set()
+
+    for trigger, synonyms in _SECURITY_SYNONYMS.items():
+        if trigger in query_lower or query_lower in trigger:
+            expansions.update(synonyms)
+
+    # Also check individual words
+    words = query_lower.split()
+    for word in words:
+        for trigger, synonyms in _SECURITY_SYNONYMS.items():
+            if word == trigger or (len(word) > 3 and word in trigger):
+                expansions.update(synonyms)
+
+    # Remove terms already in the original query
+    expansions -= set(words)
+    return list(expansions)[:8]  # Cap at 8 expansion terms
+
+
+def _tech_boost_tags(target: str) -> list[str]:
+    """Get KB tags relevant to a target's tech stack for result boosting."""
+    if not target:
+        return []
+    ctx = _load_target(target)
+    if not ctx:
+        return []
+
+    boost_tags = set()
+    techs = [t.lower() for t in ctx.get("technologies", [])]
+    waf = ctx.get("waf", "").lower()
+
+    for tech in techs:
+        for key, tags in _TECH_KB_MAPPING.items():
+            if key in tech or tech in key:
+                boost_tags.update(tags)
+
+    if waf:
+        for key, tags in _TECH_KB_MAPPING.items():
+            if key in waf:
+                boost_tags.update(tags)
+
+    return list(boost_tags)
+
 # ── Local Tool Execution ───────────────────────────────────────
 
 # Track running/completed processes
@@ -2558,28 +2690,151 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         query = arguments.get("query", "")
         if not query:
             return [{"type": "text", "text": "A search query is required."}]
+
+        limit = min(int(arguments.get("limit", 10)), 50)
         params = {
             "q": query,
             "category": arguments.get("category"),
             "type": arguments.get("type"),
-            "limit": str(min(int(arguments.get("limit", 10)), 50)),
+            "limit": str(limit),
         }
-        # If we have target context, add tech-aware hints
+
+        # ── Primary search ──
         resp = _api_get("/search", params)
         results = resp.get("data", {}).get("results", [])
-        if not results:
-            return [{"type": "text", "text": f"No results for '{query}'."}]
 
-        lines = [f"Found {resp['data'].get('total', len(results))} results for '{query}':\n"]
-        for r in results:
+        # ── Query expansion: if few results, expand with synonyms ──
+        expansions_used = []
+        if len(results) < 3:
+            expanded_terms = _expand_query(query)
+            if expanded_terms:
+                # Try expanded queries and merge unique results
+                seen_ids = {r.get("chunk_id") for r in results}
+                for term in expanded_terms[:4]:  # Limit expansion queries
+                    exp_params = dict(params)
+                    exp_params["q"] = term
+                    exp_params["limit"] = "5"
+                    try:
+                        exp_resp = _api_get("/search", exp_params)
+                        for r in exp_resp.get("data", {}).get("results", []):
+                            cid = r.get("chunk_id")
+                            if cid and cid not in seen_ids:
+                                r["_expanded"] = True  # Mark as expansion result
+                                results.append(r)
+                                seen_ids.add(cid)
+                                expansions_used.append(term)
+                    except Exception:
+                        pass
+                expansions_used = list(set(expansions_used))
+
+        # ── Fallback: OR query if AND returned nothing ──
+        if not results and " " in query:
+            words = query.strip().split()
+            for word in words:
+                if len(word) > 2:  # Skip tiny words
+                    try:
+                        or_params = dict(params)
+                        or_params["q"] = word
+                        or_params["limit"] = "5"
+                        or_resp = _api_get("/search", or_params)
+                        for r in or_resp.get("data", {}).get("results", []):
+                            r["_partial"] = True
+                            results.append(r)
+                    except Exception:
+                        pass
+            # Deduplicate
+            seen_ids = set()
+            deduped = []
+            for r in results:
+                cid = r.get("chunk_id")
+                if cid not in seen_ids:
+                    deduped.append(r)
+                    seen_ids.add(cid)
+            results = deduped
+
+        if not results:
+            return [{"type": "text", "text": f"No results for '{query}'. Try broader terms or `list_documents` to browse by category."}]
+
+        # ── Context-aware reranking ──
+        # Detect target from active session or arguments
+        target = ""
+        if _active_session:
+            target = _active_session.get("target", "")
+
+        boost_tags = _tech_boost_tags(target) if target else []
+        if boost_tags:
+            # Score boost: results matching target tech stack rank higher
+            for r in results:
+                r_tags = set(t.lower() for t in r.get("metadata", {}).get("tags", []))
+                r_cat = r.get("metadata", {}).get("category", "").lower()
+                r_subcat = r.get("metadata", {}).get("subcategory", "").lower()
+                boost = sum(1 for bt in boost_tags if bt in r_tags or bt in r_cat or bt in r_subcat)
+                # Store original score, apply boost
+                orig_score = r.get("relevance_score", 0)
+                r["_boosted"] = boost > 0
+                r["relevance_score"] = orig_score + (boost * 0.5)
+
+            # Re-sort by boosted relevance (higher is better after boost)
+            results.sort(key=lambda r: r.get("relevance_score", 0), reverse=True)
+
+        # ── Format results ──
+        total = resp.get("data", {}).get("total", len(results))
+        header = f"Found {total} results for '{query}'"
+        if expansions_used:
+            header += f" (also searched: {', '.join(expansions_used[:3])})"
+        if boost_tags and target:
+            header += f" [ranked for {target}]"
+        header += ":\n"
+        lines = [header]
+
+        for r in results[:limit]:
             tags = ", ".join(r.get("metadata", {}).get("tags", [])[:4])
+            prefix = ""
+            if r.get("_boosted"):
+                prefix = "⚡ "  # Tech-relevant marker
+            elif r.get("_expanded"):
+                prefix = "↗ "  # Expansion result marker
+            elif r.get("_partial"):
+                prefix = "~ "  # Partial match marker
+
             lines.append(
-                f"### {r.get('title', '')} — {r.get('section', '')}\n"
+                f"### {prefix}{r.get('title', '')} — {r.get('section', '')}\n"
                 f"**Type:** {r.get('metadata', {}).get('type', '')} | "
                 f"**Category:** {r.get('metadata', {}).get('category', '')} | "
                 f"**Tags:** {tags}\n\n"
                 f"{r.get('content', '')}\n\n---\n"
             )
+
+        # ── Hunt-state-informed suggestions ──
+        suggestions = []
+        if target:
+            ctx = _load_target(target)
+            techs = [t.lower() for t in ctx.get("technologies", [])]
+            waf = ctx.get("waf", "").lower()
+
+            # Suggest related docs based on query + tech stack
+            query_lower = query.lower()
+            if "xss" in query_lower and any(t in techs for t in ["react", "angular", "vue"]):
+                suggestions.append("TIP: JS framework detected — check `get_document('xss-advanced-techniques')` for framework-specific bypass")
+            if "sqli" in query_lower and any(t in techs for t in ["mongodb", "nosql"]):
+                suggestions.append("TIP: NoSQL DB detected — also try `search_knowledge('nosql injection')` for MongoDB-specific payloads")
+            if waf and "bypass" not in query_lower:
+                suggestions.append(f"TIP: {waf} WAF active — add 'bypass' or 'evasion' to your search for WAF-aware payloads")
+            if "api" in query_lower and any(t in techs for t in ["graphql"]):
+                suggestions.append("TIP: GraphQL detected — try `get_document('graphql-grpc')` for introspection and batching attacks")
+
+            # Check if primitives exist that relate to this search
+            primitives_dir = os.path.join(DATA_DIR, "primitives")
+            target_slug = re.sub(r'[^\w.-]', '_', target)
+            prim_files = [f for f in os.listdir(primitives_dir) if f.startswith(target_slug)] if os.path.isdir(primitives_dir) else []
+            if prim_files and len(prim_files) >= 2:
+                suggestions.append(f"NOTE: You have {len(prim_files)} stored primitives for {target}. Run `analyze_chains` to check for exploit chains.")
+
+        if suggestions:
+            lines.append("\n**━━━ HUNT INTELLIGENCE ━━━**")
+            for s in suggestions:
+                lines.append(f"  {s}")
+
         return [{"type": "text", "text": "\n".join(lines)}]
 
     elif name == "get_document":
@@ -2867,6 +3122,21 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             text += f"\n**Tech-Specific Recommendations:**\n"
             for rec in recommendations:
                 text += f"  - {rec}\n"
+
+        # Auto-suggest relevant KB searches for the tech stack
+        kb_searches = []
+        for tech in techs:
+            tech_l = tech.lower()
+            if tech_l in _TECH_KB_MAPPING:
+                kb_searches.extend(_TECH_KB_MAPPING[tech_l][:2])
+        if waf:
+            kb_searches.append("waf bypass")
+        kb_searches = list(dict.fromkeys(kb_searches))[:5]  # Dedupe, cap at 5
+
+        if kb_searches:
+            text += f"\n**Suggested KB searches for this stack:**\n"
+            for ks in kb_searches:
+                text += f"  - `search_knowledge('{ks}')`\n"
 
         text += "\n**Next:** `search_knowledge` for detailed techniques. `get_tools('proxy')` when ready to test. `get_tools('hunting')` to track findings."
 

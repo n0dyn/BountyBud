@@ -34,8 +34,12 @@ def search_chunks(
             safe_words = [w.replace('"', '""') for w in words if w]
             if len(safe_words) == 1:
                 fts_query = f'"{safe_words[0]}"'
-            else:
+            elif len(safe_words) <= 3:
+                # Short queries: use AND for precision
                 fts_query = ' AND '.join(f'"{w}"' for w in safe_words)
+            else:
+                # Longer queries: use OR to avoid zero results, BM25 handles ranking
+                fts_query = ' OR '.join(f'"{w}"' for w in safe_words)
             params.append(fts_query)
 
         if doc_type:
