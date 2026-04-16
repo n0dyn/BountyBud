@@ -1,38 +1,24 @@
 ---
-id: "race-conditions"
-title: "Race Conditions & TOCTOU Masterclass (2026)"
+id: "race-condition-logic"
+title: "Race Conditions & State Manipulation"
 type: "technique"
 category: "web-application"
-subcategory: "race-conditions"
-tags: ["race-condition", "toctou", "turbo-intruder", "parallel-requests", "state-desync", "deep-dig"]
-platforms: ["linux", "macos", "windows"]
-related: ["business-logic-flaws"]
+subcategory: "business-logic"
+tags: ["race-condition", "turbo-intruder", "concurrency"]
 difficulty: "advanced"
-updated: "2026-03-30"
+updated: "2026-04-16"
 ---
 
-# Race Conditions & TOCTOU Masterclass (Turbo Intruder 2026)
+## Overview
+Race conditions occur when a system's behavior depends on the sequence or timing of uncontrollable events. In web apps, this usually involves concurrent requests manipulating the same data.
 
-## Introduction
-Race conditions and Time-of-Check-Time-of-Use (TOCTOU) flaws pay $15k–$100k+ because they beat every WAF and auth control.
+## Attack Vectors
+1. **Redeem Limit Bypass:** Redeeming a single-use coupon multiple times in the same millisecond.
+2. **Double Withdrawal:** Withdrawing funds twice before the balance is updated.
+3. **Multi-Factor Bypass:** Entering many OTP guesses simultaneously to beat a rate-limiter.
 
-## Core Patterns
-- Duplicate actions (coupon, transfer, signup)
-- Limit bypass via parallel requests
-- State desync (inventory, balance, approval)
+## Verification
+Use **Burp Suite Turbo Intruder** with a single-packet attack (HTTP/2) to ensure all requests arrive at the server at the exact same time.
 
 ## Deep Dig Prompts
-```
-Analyze this multi-step flow [paste requests/steps]: 
-Map the exact state machine. Identify every TOCTOU window and suggest Turbo Intruder race scripts (10 concurrent threads, 500ms delay variations) to force invalid states.
-```
-
-## Tools & Scripts
-- Burp Turbo Intruder (built-in race templates)
-- Custom Python with asyncio + httpx
-- 2 accounts + different proxies
-
-## Proven 2026 Wins
-- Parallel premium feature activation
-- Negative balance creation
-- Token reuse across sessions
+- "Identify stateful operations in this app (withdrawals, redemptions, voting). Suggest a race condition test for the /redeem endpoint."

