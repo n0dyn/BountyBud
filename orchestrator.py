@@ -3,6 +3,7 @@ import json
 import logging
 import time
 import requests
+import random
 from typing import List, Dict, Any, Optional
 
 # Setup Logging to both Console and File
@@ -24,6 +25,15 @@ logger = logging.getLogger("BountyBudOrchestrator")
 logger.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
+
+def get_random_user_agent():
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1"
+    ]
+    return random.choice(user_agents)
 
 class ModelRouter:
     """
@@ -64,23 +74,22 @@ class ModelRouter:
 
         logger.info(f"[{role.upper()}] Routing to {model} at {url} (Limit: {max_tokens}k)")
 
-        # In a real setup, this would be a requests.post call to the vLLM/ktransformers API
-        # payload = {
-        #     "model": model,
-        #     "messages": [
-        #         {"role": "system", "content": system_prompt},
-        #         {"role": "user", "content": prompt}
-        #     ],
-        #     "max_tokens": 4096, # Response length
-        #     "temperature": 0.1
-        # }
-        
         # MOCK LOGIC for testing the pipeline flow
         if os.getenv("MOCK_PIPELINE", "true") == "true":
             return self._mock_response(role)
             
         try:
-            response = requests.post(f"{url}/chat/completions", json=payload, timeout=300)
+            headers = {"User-Agent": get_random_user_agent()}
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 4096,
+                "temperature": 0.1
+            }
+            response = requests.post(f"{url}/chat/completions", json=payload, headers=headers, timeout=300)
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
             logger.error(f"Error calling {role}: {e}")
@@ -102,7 +111,12 @@ class ModelRouter:
         elif role == "hand":
             return json.dumps({"poc_command": "curl -s 'http://target/api/v1/download?file=../../etc/passwd'"})
         elif role == "strategist":
-            return json.dumps({"is_real": True, "confidence": 0.98, "reasoning": "Output contains valid /etc/passwd structure. Not a honeypot."})
+            return json.dumps({
+                "is_real": True, 
+                "confidence": 0.98, 
+                "reasoning": "Output contains valid /etc/passwd structure. Not a honeypot.",
+                "false_positive_check": "Passed. Valid Unix passwd file format detected."
+            })
         return "{}"
 
 class BountyBudPipeline:
@@ -110,23 +124,57 @@ class BountyBudPipeline:
     The Context Funnel Orchestration Engine.
     Implements the Wide Lens (Archivist) -> Microscope (Brain) workflow.
     """
-    def __init__(self, target: str):
+    def __init__(self, target: str, profile: str = "STEALTH"):
         self.target = target
+        self.profile = profile.upper()
         self.router = ModelRouter()
         self.state = {
             "target": target,
+            "profile": self.profile,
             "hot_zones": [],
             "findings": []
         }
+        
+        # Configure pacing based on profile
+        if self.profile == "STEALTH":
+            self.min_delay = 5.0
+            self.max_delay = 10.0
+        elif self.profile == "CONSERVATIVE":
+            self.min_delay = 1.0
+            self.max_delay = 3.0
+        else: # AGGRESSIVE (Default/Previous)
+            self.min_delay = 0.0
+            self.max_delay = 0.5
+
+    def apply_pacing(self):
+        """Apply jittered delay to stay under the radar."""
+        delay = random.uniform(self.min_delay, self.max_delay)
+        if delay > 0:
+            logger.info(f"Stealth Mode: Waiting {delay:.2f}s before next request...")
+            time.sleep(delay)
+
+    def check_rate_limits(self, response_headers: Dict[str, str]):
+        """Monitor X-RateLimit headers and pause if necessary."""
+        # Normalize headers to lowercase
+        headers = {k.lower(): v for k, v in response_headers.items()}
+        remaining = int(headers.get('x-ratelimit-remaining', 100))
+        
+        if remaining < 10:
+            reset_time = int(headers.get('x-ratelimit-reset', 60))
+            logger.warning(f"RATE LIMIT NEAR: {remaining} left. Cooling down for {reset_time}s...")
+            time.sleep(reset_time + 1)
 
     def run_discovery(self, depth: int = 3):
         """Step 0: The Scout - Use Katana to automatically generate traffic logs."""
         logger.info(f"=== STEP 0: THE SCOUT (Discovery) ===")
-        logger.info(f"Running automated crawl on {self.target} to generate logs...")
+        logger.info(f"Running automated crawl on {self.target} in {self.profile} mode...")
         
         # In a real setup, this would execute the actual tool via the MCP server
         # For example: katana -u https://target -d 3 -proxy http://localhost:8080
         cmd = f"katana -u {self.target} -d {depth} -jc -kf -proxy http://localhost:8080"
+        if self.profile == "STEALTH":
+            cmd += " -rd 5000" # 5s delay in katana
+        
         logger.info(f"Executing: {cmd}")
         
         # Simulate crawl time
@@ -147,16 +195,16 @@ class BountyBudPipeline:
             return "Knowledge Base offline. Proceeding with base model knowledge."
 
     def run_autonomous_funnel(self, raw_logs: Optional[str] = None):
-        logger.info(f"--- STARTING CONTEXT FUNNEL FOR {self.target} ---")
+        logger.info(f"--- STARTING {self.profile} CONTEXT FUNNEL FOR {self.target} ---")
         
         # If no logs provided, run discovery first
         if not raw_logs or len(raw_logs) < 100:
             self.run_discovery()
-            raw_logs = self.fetch_traffic_logs()
+            raw_logs = "MOCK LOG DATA" # Placeholder
         
         # STEP 1: THE ARCHIVIST (The Wide Lens)
-        # Goal: Swallow the 1GB log and find the "Hot Zones"
         logger.info("Step 1: Archivist filtering logs (10M Context)...")
+        self.apply_pacing()
         archivist_prompt = f"Identify the 5-6 'hot zones' in these logs where vulnerabilities are likely. Logs: {raw_logs[:2000]}..."
         archivist_resp = self.router.call_model("archivist", archivist_prompt)
         self.state["hot_zones"] = json.loads(archivist_resp).get("hot_zones", [])
@@ -164,16 +212,16 @@ class BountyBudPipeline:
 
         # STEP 2: THE RESEARCHER (API Mapping)
         logger.info("Step 2: Researcher mapping tech stack and endpoints...")
+        self.apply_pacing()
         research_resp = self.router.call_model("researcher", f"Map endpoints for target {self.target}")
         tech_context = json.loads(research_resp)
 
         # STEP 3 & 4: THE BRAIN & THE HAND (The Microscope)
-        # Goal: Process each Hot Zone individually with 32k window
         for zone in self.state["hot_zones"]:
             logger.info(f"--- Processing Hot Zone {zone['id']} ---")
             
             # THE BRAIN: Deep reasoning on the small snippet
-            # INJECT KNOWLEDGE HERE
+            self.apply_pacing()
             kb_context = self.query_kb(zone['snippet'])
             brain_prompt = f"Analyze this specific hot zone snippet for a root cause. USE THIS EXPERT CONTEXT: {kb_context}. Snippet: {zone['snippet']}. Context: {tech_context}"
             brain_resp = self.router.call_model("brain", brain_prompt)
@@ -181,6 +229,7 @@ class BountyBudPipeline:
             logger.info(f"Brain Hypothesis: {hypothesis.get('hypothesis')}")
 
             # THE HAND: Generate and run PoC
+            self.apply_pacing()
             hand_prompt = f"Generate a PoC command for this hypothesis: {hypothesis}"
             hand_resp = self.router.call_model("hand", hand_prompt)
             poc = json.loads(hand_resp)
@@ -189,7 +238,7 @@ class BountyBudPipeline:
             poc_result = f"root:x:0:0:root:/root:/bin/bash (Result of {poc.get('poc_command')})"
             
             # STEP 5: THE STRATEGIST (The Final Judge)
-            # Goal: High-RAM model kills false positives
+            self.apply_pacing()
             strat_prompt = f"Verify if this PoC result is a real vulnerability or a honeypot. PoC: {poc.get('poc_command')}, Result: {poc_result}"
             strat_resp = self.router.call_model("strategist", strat_prompt)
             assessment = json.loads(strat_resp)
@@ -201,6 +250,9 @@ class BountyBudPipeline:
                     "hypothesis": hypothesis,
                     "assessment": assessment
                 })
+
+        logger.info(f"--- PIPELINE COMPLETE: {len(self.state['findings'])} Verified Findings ---")
+        return self.state["findings"]
 
         logger.info(f"--- PIPELINE COMPLETE: {len(self.state['findings'])} Verified Findings ---")
         return self.state["findings"]

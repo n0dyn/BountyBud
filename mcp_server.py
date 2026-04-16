@@ -2069,6 +2069,12 @@ _ALL_TOOLS = [
                     "type": "string",
                     "description": "Optional: Path to a specific log file to ingest. Defaults to active proxy logs.",
                 },
+                "profile": {
+                    "type": "string",
+                    "description": "Hunting profile: STEALTH (5-10s delay), CONSERVATIVE (1-3s delay), or AGGRESSIVE (0s delay). Defaults to STEALTH.",
+                    "enum": ["STEALTH", "CONSERVATIVE", "AGGRESSIVE"],
+                    "default": "STEALTH",
+                },
             },
             "required": ["target"],
         },
@@ -4306,13 +4312,14 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
     elif name == "run_autonomous_hunt":
         target = arguments.get("target", "")
         log_file = arguments.get("log_file", "")
+        profile = arguments.get("profile", "STEALTH")
 
         if not target:
             return [{"type": "text", "text": "Target domain is required."}]
 
         try:
             from orchestrator import BountyBudPipeline
-            pipeline = BountyBudPipeline(target)
+            pipeline = BountyBudPipeline(target, profile=profile)
 
             # Fetch logs
             raw_logs = ""
