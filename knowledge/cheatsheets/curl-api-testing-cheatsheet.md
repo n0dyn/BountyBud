@@ -341,3 +341,34 @@ cat urls.txt | parallel -j 10 'curl -s -o /dev/null -w "%{http_code} {}\n" {}'
 - Use `--retry 3` for flaky endpoints
 - `--connect-timeout 5` prevents hanging on unresponsive hosts
 - Save full sessions with `-c` (cookies) and `-b` (use cookies)
+
+---
+
+## Advanced Auditing Syntax (2026)
+
+### 1. Hydration Mining (Next.js / Nuxt)
+Extract the unauthenticated application state from the HTML source.
+```bash
+curl -s [URL] | grep -oP '(?<=<script id="__NEXT_DATA__" type="application/json">).*?(?=</script>)' | jq .
+```
+
+### 2. Differentiator Probing (SPA vs API)
+Check if different sub-paths return the same byte count (indicates frontend masking).
+```bash
+for p in /api/v1 /auth /config /unauth; do curl -s -o /dev/null -w "%{size_download} %{http_code}\n" "https://target.com$p"; done
+```
+
+### 3. JS Byte-Offset Extraction
+Extract a specific logic block from a massive minified bundle.
+```bash
+# Find the byte offset of a function
+OFFSET=$(grep -b -o "functionName" file.js | head -n 1 | cut -d: -f1)
+# Read 2000 characters starting from that offset
+tail -c +$((OFFSET+1)) file.js | head -c 2000
+```
+
+### 4. Infrastructure Header Reflection
+Test if proxy headers are reflected in cookie domains or redirects.
+```bash
+curl -s -I -H "X-Forwarded-Host: attacker.com" "https://target.com/" | grep -iE "Set-Cookie|Location"
+```

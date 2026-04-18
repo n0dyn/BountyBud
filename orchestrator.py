@@ -72,6 +72,17 @@ class ModelRouter:
         model = self.models.get(role)
         max_tokens = self.context_limits.get(role, 4096)
 
+        # Default 2026-Aware System Prompts
+        if not system_prompt:
+            if role == "archivist":
+                system_prompt = "You are the Archivist (Llama 4 Scout). Your goal is PATTERN MATCHING. Identify 'Hot Zones' in logs: hydration blocks (__NEXT_DATA__), PostMessage listeners without origin checks, reflected proxy headers, and unauth API indicators (405/401). Output JSON ONLY."
+            elif role == "brain":
+                system_prompt = "You are the Brain (Foundation-sec-8B-R). You are a vulnerability scientist. Analyze logic flows from Source to Sink. Look for origin validation short-circuits and cookie domain scoping flaws. Use <think> tags for deep reasoning."
+            elif role == "hand":
+                system_prompt = "You are the Hand (RedSage-8B). You generate WEAPONIZED exploit PoCs. Focus on Host header injection into Set-Cookie, PostMessage hijacking, and hydration mining. Output executable curl/python only."
+            elif role == "strategist":
+                system_prompt = "You are the Strategist (DeepSeek-R1). You are the Devil's Advocate. Your goal is to KILL false positives. Prove why this finding is just a CSP block or a frontend mask. Be cynical."
+
         logger.info(f"[{role.upper()}] Routing to {model} at {url} (Limit: {max_tokens}k)")
 
         # MOCK LOGIC for testing the pipeline flow
@@ -194,13 +205,33 @@ class BountyBudPipeline:
             logger.error(f"KB Query failed: {e}")
             return "Knowledge Base offline. Proceeding with base model knowledge."
 
+    def run_target_profiling(self):
+        """Step 0.5: Profiling - Differentiator Probing & Hydration Mining."""
+        logger.info(f"=== STEP 0.5: TARGET PROFILING ===")
+        
+        # 1. Hydration Mining (__NEXT_DATA__)
+        logger.info(f"Mining hydration state for {self.target}...")
+        # In real setup: curl -s URL | grep -oP '(?<=<script id="__NEXT_DATA__" type="application/json">).*?(?=</script>)'
+        self.state["hydration_data"] = {"baseUrl": "/api/v1", "leaked_preview_token": "None (Mock)"}
+        
+        # 2. Differentiator Probing (SPA vs Real API)
+        logger.info(f"Probing differentiators (Content-Length / Type)...")
+        # In real setup: for p in paths; do curl ...; done
+        self.state["is_spa"] = True
+        self.state["api_indicators"] = ["405 Method Not Allowed on /auth", "401 Unauthorized on /config"]
+        
+        logger.info("Profiling complete.")
+
     def run_autonomous_funnel(self, raw_logs: Optional[str] = None):
         logger.info(f"--- STARTING {self.profile} CONTEXT FUNNEL FOR {self.target} ---")
         
         # If no logs provided, run discovery first
         if not raw_logs or len(raw_logs) < 100:
             self.run_discovery()
-            raw_logs = "MOCK LOG DATA" # Placeholder
+            raw_logs = "MOCK LOG DATA" 
+            
+        # Perform profiling to sharpen the funnel
+        self.run_target_profiling()
         
         # STEP 1: THE ARCHIVIST (The Wide Lens)
         logger.info("Step 1: Archivist filtering logs (10M Context)...")

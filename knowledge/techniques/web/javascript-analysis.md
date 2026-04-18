@@ -24,9 +24,16 @@ Client-side bundles are the #1 source of hidden endpoints, secrets, and logic fl
 ## Analysis Techniques
 1. Beautify & chunk large files  
 2. Secret & comment grep: `api_key|secret|token|aws_access|stripe|debug|admin|staging|TODO|FIXME`  
-3. Endpoint mapping: every `fetch`, `axios`, `WebSocket`  
-4. Vulnerability hunting: DOM sinks (innerHTML, eval) + controllable sources → DOM-XSS / prototype pollution  
-5. Feature flags & client-side auth checks
+3. **Hydration Mining:** Scan HTML source for hydration blocks (e.g., `<script id="__NEXT_DATA__" type="application/json">`). These contain:
+   - Initial application state
+   - Environment variables (leaked `PREVIEW` or `PREVIEW_ACCESS` tokens)
+   - Internal `baseUrl` or backend API routing logic.
+4. **Static Logic Tracing:** Trace data from a dangerous `Source` (like `postMessage` or `localStorage`) to a `Sink` (like `eval()` or `innerHTML`).
+   - Use byte-offsets to find handler logic in minified files.
+   - Look for origin validation short-circuits.
+5. Endpoint mapping: every `fetch`, `axios`, `WebSocket`  
+6. Vulnerability hunting: DOM sinks (innerHTML, eval) + controllable sources → DOM-XSS / prototype pollution  
+7. Feature flags & client-side auth checks
 
 ## Deep Dig Prompts
 ```

