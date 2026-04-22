@@ -72,18 +72,35 @@ class ModelRouter:
         model = self.models.get(role)
         max_tokens = self.context_limits.get(role, 4096)
 
-        # Default 2026-Aware System Prompts
+        # Default 2026-Aware System Prompts with Intent Guidance
         if not system_prompt:
             if role == "archivist":
-                system_prompt = "You are the Archivist (Llama 4 Scout). Your goal is PATTERN MATCHING. Identify 'Hot Zones' in logs: hydration blocks (__NEXT_DATA__), PostMessage listeners without origin checks, reflected proxy headers, and unauth API indicators (405/401). Output JSON ONLY."
+                system_prompt = (
+                    "You are the Archivist (Llama 4 Scout). Your goal is PATTERN MATCHING for 2026-era vulnerabilities. "
+                    "You are looking for 'Hot Zones' where logic fails. Focus on: hydration blocks, PostMessage short-circuits, "
+                    "and 405/401 API differentials. Your rationale is to filter massive data into high-signal snippets for the Brain."
+                )
             elif role == "brain":
-                system_prompt = "You are the Brain (Foundation-sec-8B-R). You are a vulnerability scientist. Analyze logic flows from Source to Sink. Look for origin validation short-circuits and cookie domain scoping flaws. Use <think> tags for deep reasoning."
+                system_prompt = (
+                    "You are the Brain (Foundation-sec-8B-R), a specialized Vulnerability Scientist. "
+                    "Your intent is to find the ROOT CAUSE. Do not guess; reason through the logic flow from input source to sensitive sink. "
+                    "Use your 32k window to think step-by-step (<think> tags). Your reasoning will guide the Hand's exploit code."
+                )
             elif role == "hand":
-                system_prompt = "You are the Hand (RedSage-8B). You generate WEAPONIZED exploit PoCs. Focus on Host header injection into Set-Cookie, PostMessage hijacking, and hydration mining. Output executable curl/python only."
+                system_prompt = (
+                    "You are the Hand (RedSage-8B), an Expert Exploit Writer. "
+                    "Your intent is to prove the Brain's hypothesis with a functional PoC. "
+                    "You generate MINIMAL, high-impact curl or python code. Your reason for existence is to confirm impact."
+                )
             elif role == "strategist":
-                system_prompt = "You are the Strategist (DeepSeek-R1). You are the Devil's Advocate. Your goal is to KILL false positives. Prove why this finding is just a CSP block or a frontend mask. Be cynical."
+                system_prompt = (
+                    "You are the Strategist (DeepSeek-R1), the ultimate Devil's Advocate. "
+                    "Your intent is to ELIMINATE false positives. You are cynical and skeptical. "
+                    "If the PoC result looks even slightly like a WAF block, a generic error, or a honeypot, you must kill the finding. "
+                    "Provide a detailed justification for why the finding is REAL or FAKE."
+                )
 
-        logger.info(f"[{role.upper()}] Routing to {model} at {url} (Limit: {max_tokens}k)")
+        logger.info(f"[{role.upper()}] Routing to {model} (Intent: Finding {role} result)")
 
         # MOCK LOGIC for testing the pipeline flow
         if os.getenv("MOCK_PIPELINE", "true") == "true":
