@@ -95,9 +95,10 @@ class ModelRouter:
             elif role == "strategist":
                 system_prompt = (
                     "You are the Strategist (DeepSeek-R1), the ultimate Devil's Advocate. "
-                    "Your intent is to ELIMINATE false positives. You are cynical and skeptical. "
+                    "Your intent is to ELIMINATE false positives. You are cynical, skeptical, and prioritize TRUTH above all else. "
                     "If the PoC result looks even slightly like a WAF block, a generic error, or a honeypot, you must kill the finding. "
-                    "Provide a detailed justification for why the finding is REAL or FAKE."
+                    "Do not hallucinate impact; if you cannot prove a business risk, it is not a finding. "
+                    "Provide a detailed, step-by-step evidence trace for your final verdict."
                 )
 
         logger.info(f"[{role.upper()}] Routing to {model} (Intent: Finding {role} result)")
@@ -115,9 +116,10 @@ class ModelRouter:
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": 4096,
-                "temperature": 0.1
+                "temperature": 0.1 # Minimal temperature for maximum accuracy
             }
-            response = requests.post(f"{url}/chat/completions", json=payload, headers=headers, timeout=300)
+            # 15 Minute Timeout (900s) for deep reasoning models
+            response = requests.post(f"{url}/chat/completions", json=payload, headers=headers, timeout=900)
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
             logger.error(f"Error calling {role}: {e}")
