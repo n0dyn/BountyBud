@@ -41,6 +41,11 @@ Every finding must satisfy the **Evidence Chain**:
 - **The Noise:** Unauth `DELETE` request returning `200 OK`.
 - **The Truth:** If the resource is still there and un-modified, the API gateway is just mocking the response. **Ignore it.**
 
+### 5. Third-Party vs. Core Source Code (Scope Traps)
+- **The Noise:** Finding a 0-day in a generic 3rd-party library used by the target.
+- **The Truth:** Unless the company explicitly lists the repository as a `SOURCE_CODE` asset in their scope, vulnerabilities in 3rd-party vendor code are out-of-scope for the target program.
+- **The Exception:** If the target manages the project (e.g., Spotify and Backstage), and the repo is in-scope, local static analysis findings are valid even if not currently exploitable on the live production URL.
+
 ---
 
 ## Anti-Hallucination Guidelines

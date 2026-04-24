@@ -607,7 +607,7 @@ def _get_toolbelt_status() -> str:
     return "\n".join(lines)
 
 
-def _run_command(command: str, timeout: int = 300, workdir: str | None = None) -> dict:
+def _run_command(command: str, timeout: int = 300, workdir: str | None = None, background: bool = False) -> dict:
     """Execute a shell command locally with smart output analysis."""
     global _proc_counter
     with _proc_lock:
@@ -635,10 +635,21 @@ def _run_command(command: str, timeout: int = 300, workdir: str | None = None) -
         )
         _processes[proc_id]["pid"] = proc.pid
 
+        if background:
+            return {
+                "id": proc_id,
+                "status": "background",
+                "message": f"Command started in background. Use check_proc {proc_id} to see progress.",
+                "duration": 0,
+            }
+
         try:
             stdout, stderr = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            if sys.platform != "win32":
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            else:
+                proc.kill()
             stdout, stderr = proc.communicate(timeout=5)
             _processes[proc_id]["status"] = "timeout"
             return {
@@ -659,10 +670,16 @@ def _run_command(command: str, timeout: int = 300, workdir: str | None = None) -
             "status": "completed",
             "duration": round(time.time() - _processes[proc_id]["started"], 1),
         }
-
     except Exception as e:
         _processes[proc_id]["status"] = "error"
-        return {"id": proc_id, "exit_code": -1, "stdout": "", "stderr": str(e), "status": "error", "duration": 0}
+        return {
+            "id": proc_id,
+            "exit_code": -1,
+            "stdout": "",
+            "stderr": str(e),
+            "status": "error",
+            "duration": round(time.time() - _processes[proc_id]["started"], 1),
+        }
 
 
 # ── Target Context Management ─────────────────────────────────
@@ -1779,8 +1796,13 @@ _ALL_TOOLS = [
                 },
                 "timeout": {
                     "type": "integer",
-                    "description": "Max seconds (default 300, max 3600). Keep short for recon (60-120s).",
-                    "default": 300,
+                    "description": "Max seconds (default 1800, max 3600). Long-running tools like amass or feroxbuster should use high timeouts.",
+                    "default": 1800,
+                },
+                "background": {
+                    "type": "boolean",
+                    "description": "If true, starts the command in the background and returns a proc_id. Useful for extremely long-running scans.",
+                    "default": False,
                 },
                 "workdir": {
                     "type": "string",
@@ -2988,7 +3010,8 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         command = arguments.get("command", "").strip()
         if not command:
             return [{"type": "text", "text": "A command is required."}]
-        timeout = min(int(arguments.get("timeout", 300)), 3600)
+        timeout = min(int(arguments.get("timeout", 1800)), 3600)
+        background = arguments.get("background", False)
         workdir = arguments.get("workdir")
 
         # Infer target from command or active session
@@ -3003,7 +3026,7 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         if pre_check:
             parts.append(f"**━━━ PRE-EXECUTION CHECK ━━━**\n{pre_check}\n**━━━━━━━━━━━━━━━━━━━━━━━━━**\n")
 
-        result = _run_command(command, timeout=timeout, workdir=workdir)
+        result = _run_command(command, timeout=timeout, workdir=workdir, background=background)
 
         parts.append(f"**Command:** `{command}`")
         parts.append(f"**Status:** {result['status']} | **Exit code:** {result['exit_code']} | **Duration:** {result['duration']}s")
@@ -3279,6 +3302,16 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         response_headers = ""
 
         # Attempt curl verification
+        # ── Resilient Parsing Fallback ──
+        if not curl_cmd and description:
+            # Look for curl commands in description if not explicitly provided
+            curl_match = re.search(r'(curl\s+-X\s+[A-Z]+\s+["\'].*?["\'])', description, re.IGNORECASE | re.DOTALL)
+            if not curl_match:
+                curl_match = re.search(r'reproduction_curl:\s*(.*)', description, re.IGNORECASE)
+            
+            if curl_match:
+                curl_cmd = curl_match.group(1).strip()
+
         if curl_cmd:
             curl_result = _verify_curl(curl_cmd)
             verification_results.append({"method": "curl", "result": curl_result})

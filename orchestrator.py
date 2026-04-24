@@ -84,6 +84,7 @@ class ModelRouter:
                 system_prompt = (
                     "You are the Brain (Foundation-sec-8B-R), a specialized Vulnerability Scientist. "
                     "Your intent is to find the ROOT CAUSE. Do not guess; reason through the logic flow from input source to sensitive sink. "
+                    "CHAIN PERSISTENCE: Stick to one high-fidelity lead until it is proven or disproven. Do not context-switch. "
                     "Use your 32k window to think step-by-step (<think> tags). Your reasoning will guide the Hand's exploit code."
                 )
             elif role == "hand":
@@ -111,23 +112,36 @@ class ModelRouter:
         if os.getenv("MOCK_PIPELINE", "true") == "true":
             return self._mock_response(role)
             
-        try:
-            headers = {"User-Agent": get_random_user_agent()}
-            payload = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_tokens": 4096,
-                "temperature": 0.1 # Minimal temperature for maximum accuracy
-            }
-            # 15 Minute Timeout (900s) for deep reasoning models
-            response = requests.post(f"{url}/chat/completions", json=payload, headers=headers, timeout=900)
-            return response.json()['choices'][0]['message']['content']
-        except Exception as e:
-            logger.error(f"Error calling {role}: {e}")
-            return "{}"
+        # ── Robust Retry Logic ──
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                headers = {"User-Agent": get_random_user_agent()}
+                payload = {
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "max_tokens": 4096,
+                    "temperature": 0.1 # Minimal temperature for maximum accuracy
+                }
+                # 15 Minute Timeout (900s) for deep reasoning models
+                response = requests.post(f"{url}/chat/completions", json=payload, headers=headers, timeout=900)
+                response.raise_for_status()
+                return response.json()['choices'][0]['message']['content']
+            except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5
+                    logger.warning(f"Model call failed ({e}). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Error calling {role} after {max_retries} attempts: {e}")
+                    return "{}"
+            except Exception as e:
+                logger.error(f"Unexpected error calling {role}: {e}")
+                return "{}"
+        return "{}"
 
     def _mock_response(self, role: str) -> str:
         """Deterministic mock responses for testing the Context Funnel."""
