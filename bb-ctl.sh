@@ -13,7 +13,7 @@ else
 fi
 
 REMOTE="${WORKHORSE_SSH_USER}@${WORKHORSE_IP}"
-REMOTE_PATH="~/dev/n0deHunt3r"
+REMOTE_PATH="~/dev/BountyBud"
 
 case "$1" in
     sync)
