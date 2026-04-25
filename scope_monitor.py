@@ -37,30 +37,53 @@ class ScopeMonitor:
             logger.error(f"Failed to save scope state: {e}")
 
     def fetch_h1_scope(self, handle: str) -> List[str]:
-        """Fetch structured scopes from HackerOne Researcher API."""
+        """Fetch structured scopes from HackerOne using 2026 GraphQL API."""
         if not self.h1_token:
             logger.warning("H1_TOKEN not set. Skipping H1 fetch.")
             return []
 
-        # Note: This uses the public researcher API which requires Basic Auth (handle:token)
-        url = f"https://api.hackerone.com/v1/researcher/programs/{handle}"
+        # 2026 Method: Use the main GraphQL endpoint with H1-Token
+        url = "https://hackerone.com/graphql"
+        
+        # Token might be formatted as 'identifier:secret' from previous attempts,
+        # extract just the secret part for the H1-Token header.
+        secret = self.h1_token.split(':')[-1] if ':' in self.h1_token else self.h1_token
+        
+        headers = {
+            "H1-Token": secret,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        # Query for structured scopes
+        query = """
+        query GetProgramScope($handle: String!) {
+          team(handle: $handle) {
+            structured_scopes(first: 100, archived: false) {
+              nodes {
+                asset_identifier
+                eligible_for_bounty
+                instruction
+              }
+            }
+          }
+        }
+        """
+        
         try:
-            # We assume h1_token is in format 'username:token' or just token
-            auth = tuple(self.h1_token.split(':')) if ':' in self.h1_token else (handle, self.h1_token)
-            resp = requests.get(url, auth=auth, timeout=30)
+            resp = requests.post(url, headers=headers, json={"query": query, "variables": {"handle": handle}}, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             
-            # Extract in-scope assets
-            scopes = data.get("relationships", {}).get("structured_scopes", {}).get("data", [])
+            nodes = data.get("data", {}).get("team", {}).get("structured_scopes", {}).get("nodes", [])
             in_scope = []
-            for s in scopes:
-                attr = s.get("attributes", {})
-                if attr.get("eligible_for_bounty") and attr.get("instruction") != "out-of-scope":
-                    in_scope.append(attr.get("asset_identifier"))
+            for node in nodes:
+                if node.get("eligible_for_bounty") and node.get("instruction") != "out-of-scope":
+                    in_scope.append(node.get("asset_identifier"))
+            
             return list(filter(None, in_scope))
         except Exception as e:
-            logger.error(f"Failed to fetch H1 scope for {handle}: {e}")
+            logger.error(f"Failed to fetch H1 GraphQL scope for {handle}: {e}")
             return []
 
     def fetch_bugcrowd_scope(self, code: str) -> List[str]:
@@ -96,36 +119,43 @@ class ScopeMonitor:
             return []
 
     def fetch_h1_guidelines(self, handle: str) -> Dict[str, Any]:
-        """Fetch program brief, bounty table, and exclusions from H1."""
+        """Fetch program brief, bounty table, and exclusions from H1 using GraphQL."""
         if not self.h1_token: return {}
         
-        # 2026 H1 Endpoints for Guidelines
-        base_url = f"https://api.hackerone.com/v1/researcher/programs/{handle}"
-        auth = tuple(self.h1_token.split(':')) if ':' in self.h1_token else (handle, self.h1_token)
+        url = "https://hackerone.com/graphql"
+        secret = self.h1_token.split(':')[-1] if ':' in self.h1_token else self.h1_token
+        headers = {
+            "H1-Token": secret,
+            "Content-Type": "application/json"
+        }
         
-        guidelines = {}
+        # 2026 Query for full program details
+        query = """
+        query GetGuidelines($handle: String!) {
+          team(handle: $handle) {
+            policy
+            submission_instructions
+            bounty_table {
+              nodes {
+                severity
+                bounty_amount
+              }
+            }
+          }
+        }
+        """
         try:
-            # 1. Main Brief
-            resp = requests.get(base_url, auth=auth, timeout=20)
+            resp = requests.post(url, headers=headers, json={"query": query, "variables": {"handle": handle}}, timeout=20)
             if resp.status_code == 200:
-                data = resp.json()
-                attr = data.get("attributes", {})
-                guidelines["policy"] = attr.get("policy", "")
-                guidelines["submission_instructions"] = attr.get("submission_instructions", "")
-            
-            # 2. Exclusions (New for 2026)
-            excl_resp = requests.get(f"{base_url}/scope_exclusions", auth=auth, timeout=10)
-            if excl_resp.status_code == 200:
-                guidelines["exclusions"] = [e.get("attributes", {}).get("description") for e in excl_resp.json().get("data", [])]
-
-            # 3. Bounty Table (New for 2026)
-            bounty_resp = requests.get(f"{base_url}/bounty_table", auth=auth, timeout=10)
-            if bounty_resp.status_code == 200:
-                guidelines["bounty_table"] = bounty_resp.json().get("data", [])
-
-            return guidelines
+                data = resp.json().get("data", {}).get("team", {})
+                return {
+                    "policy": data.get("policy", ""),
+                    "submission_instructions": data.get("submission_instructions", ""),
+                    "bounty_table": data.get("bounty_table", {}).get("nodes", [])
+                }
+            return {}
         except Exception as e:
-            logger.error(f"Failed to fetch H1 guidelines for {handle}: {e}")
+            logger.error(f"Failed to fetch H1 GraphQL guidelines for {handle}: {e}")
             return {}
 
     def fetch_bc_guidelines(self, code: str) -> Dict[str, Any]:
