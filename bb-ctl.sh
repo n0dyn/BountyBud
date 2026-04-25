@@ -13,7 +13,7 @@ else
 fi
 
 REMOTE="${WORKHORSE_SSH_USER}@${WORKHORSE_IP}"
-REMOTE_PATH="~/dev/BountyBud"
+REMOTE_PATH="~/dev/n0deHunt3r"
 
 case "$1" in
     sync)
@@ -38,7 +38,7 @@ case "$1" in
 
     status)
         echo "📊 Workhorse Status ($WORKHORSE_IP):"
-        ssh "$REMOTE" "echo '--- AI Model Ports ---'; ss -tulpn | grep -E '800[0-4]'; echo '--- API Worker ---'; ss -tulpn | grep :5000"
+        ssh "$REMOTE" "echo '--- AI Model Ports ---'; ss -tulpn | grep -E '880[0-4]'; echo '--- API Worker ---'; ss -tulpn | grep :5000"
         ;;
 
     logs)

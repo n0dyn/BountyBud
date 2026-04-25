@@ -41,13 +41,13 @@ class ModelRouter:
     Routes between vLLM (GPUs) and ktransformers (System RAM).
     """
     def __init__(self):
-        # Configuration for the Hardware Map
+        # Configuration for the Hardware Map (Updated for Workhorse reality)
         self.endpoints = {
-            "archivist":  os.getenv("URL_ARCHIVIST",  "http://localhost:8001/v1"), # System RAM (ktransformers)
-            "strategist": os.getenv("URL_STRATEGIST", "http://localhost:8001/v1"), # System RAM (ktransformers)
-            "researcher": os.getenv("URL_RESEARCHER", "http://localhost:8000/v1"), # GPU 0 & 1 (vLLM)
-            "brain":      os.getenv("URL_BRAIN",      "http://localhost:8002/v1"), # GPU 2 (vLLM)
-            "hand":       os.getenv("URL_HAND",       "http://localhost:8003/v1"), # GPU 3 (vLLM)
+            "archivist":  os.getenv("URL_ARCHIVIST",  "http://localhost:8801/v1"), # System RAM
+            "strategist": os.getenv("URL_STRATEGIST", "http://localhost:8804/v1"), # System RAM
+            "researcher": os.getenv("URL_RESEARCHER", "http://localhost:8800/v1"), # GPU 0 & 1
+            "brain":      os.getenv("URL_BRAIN",      "http://localhost:8802/v1"), # GPU 2
+            "hand":       os.getenv("URL_HAND",       "http://localhost:8803/v1"), # GPU 3
         }
         
         self.models = {
