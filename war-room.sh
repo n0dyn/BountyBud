@@ -1,55 +1,60 @@
 #!/bin/bash
 
 # ==============================================================================
-# BountyBud War Room Dashboard - 4x GPU / 256GB RAM Real-Time Monitor
+# 🛰️ BOUNTYBUD MISSION CONTROL v2.0 - ELITE EDITION
 # ==============================================================================
 
 # Load environment
 if [ -f .env ]; then
-    export $(cat .env | xargs)
+    export $(cat .env | grep -v '^#' | xargs)
 else
-    echo "Error: .env file not found."
+    echo "❌ Error: .env file not found."
     exit 1
 fi
 
 REMOTE="${WORKHORSE_SSH_USER}@${WORKHORSE_IP}"
 SESSION="BountyBud_WarRoom"
 
-# Check if tmux is installed
-if ! command -v tmux &> /dev/null; then
-    echo "tmux not found. Please install: sudo apt install tmux"
-    exit 1
-fi
+# --- Visual Setup ---
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Create new tmux session, detached
+# Kill existing session if it exists
+tmux kill-session -t $SESSION 2>/dev/null
+
+# --- Mission Control Initialization ---
+echo -e "${BLUE}🛰️ Initializing BountyBud Mission Control...${NC}"
+
+# Create session and hide the status bar for a clean look
 tmux new-session -d -s $SESSION
+tmux set-option -t $SESSION status-style "bg=colour235,fg=colour136"
+tmux set-option -t $SESSION status-left-length 30
+tmux set-option -t $SESSION status-left "#[fg=green]Target: #[fg=white]${TARGET:-ACTIVE_HUNT} "
+tmux set-option -t $SESSION status-right "#[fg=blue]%H:%M:%S #[fg=white]%d-%b-%y"
 
-# Pane 1 (Top Left): Remote Orchestrator Logs
-tmux send-keys -t $SESSION "ssh $REMOTE 'tail -f ~/.bountybud/orchestrator.log'" C-m
+# --- Pane 1: THE ORCHESTRATOR (Main Logic) ---
+# Large left pane for model reasoning
+tmux rename-window -t $SESSION:0 'MISSION_LOG'
+tmux send-keys -t $SESSION:0 "echo -e '${GREEN}LOG: Streaming logic from Workhorse...${NC}'; ssh $REMOTE 'tail -f ~/.bountybud/orchestrator.log'" C-m
 
-# Split vertically
-tmux split-window -h -t $SESSION
+# --- Pane 2: THE HARDWARE (GPU/RAM) ---
+# Split right side for hardware monitoring
+tmux split-window -h -p 40 -t $SESSION:0
+tmux send-keys -t $SESSION:0.1 "ssh -t $REMOTE 'nvtop || btop'" C-m
 
-# Pane 2 (Top Right): Remote Mitmproxy (requires SSH Tunneling)
-# We tunnel the remote port 8081 (web UI) to local port 8081
-tmux send-keys -t $SESSION "ssh -L 8081:localhost:8081 $REMOTE 'mitmweb --mode regular --no-web-open-browser'" C-m
+# --- Pane 3: THE TRAFFIC (Mitmproxy) ---
+# Split bottom-right for live HTTP traffic
+tmux select-pane -t $SESSION:0.1
+tmux split-window -v -p 50 -t $SESSION:0.1
+tmux send-keys -t $SESSION:0.2 "ssh -L 8081:localhost:8081 $REMOTE 'mitmweb --mode regular --no-web-open-browser'" C-m
 
-# Split Pane 1 horizontally
-tmux select-pane -t 0
-tmux split-window -v -t $SESSION
+# --- Pane 4: THE NETWORK (Ports) ---
+# Split bottom-left for a small port-sentry
+tmux select-pane -t $SESSION:0.0
+tmux split-window -v -p 20 -t $SESSION:0.0
+tmux send-keys -t $SESSION:0.3 "echo -e '${BLUE}PORT SENTRY: Monitoring 8800-8804...${NC}'; ssh $REMOTE 'watch -n 1 \"ss -tulpn | grep -E 880\[0-4\]\"'" C-m
 
-# Pane 3 (Bottom Left): Remote Hardware Resources
-tmux send-keys -t $SESSION "ssh -t $REMOTE 'nvtop'" C-m
-
-# Split Pane 2 horizontally
-tmux select-pane -t 2
-tmux split-window -v -t $SESSION
-
-# Pane 4 (Bottom Right): Remote Port Monitoring
-tmux send-keys -t $SESSION "ssh $REMOTE 'echo --- Monitoring Model Ports ---; watch -n 1 \"ss -tulpn | grep -E 880\[0-4\]\"'" C-m
-
-# Select the top-left pane as default
-tmux select-pane -t 0
-
-# Attach to session
+# Final polish: Focus on the log
+tmux select-pane -t $SESSION:0.0
 tmux attach-session -t $SESSION
