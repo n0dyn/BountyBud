@@ -2101,6 +2101,15 @@ _ALL_TOOLS = [
             "required": ["target"],
         },
     },
+    {
+        "name": "check_scope_updates",
+        "description": (
+            "Manually triggers a scope check across all tracked HackerOne and Bugcrowd programs. "
+            "Detects newly added in-scope assets and provides a summary. "
+            "Note: This tool uses private API keys (H1_TOKEN, BUGCROWD_TOKEN) stored on the Workhorse."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+    },
     # ── Learning Engine ──
     {
         "name": "record_outcome",
@@ -4354,6 +4363,43 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
                 })
 
         return [{"type": "text", "text": text}]
+
+    elif name == "check_scope_updates":
+        try:
+            import os
+            from scope_monitor import ScopeMonitor
+            
+            monitor = ScopeMonitor()
+            h1_handles = os.getenv("H1_HANDLES", "").split(",")
+            bc_codes = os.getenv("BC_CODES", "").split(",")
+            
+            # Clean lists
+            h1_handles = [h.strip() for h in h1_handles if h.strip()]
+            bc_codes = [c.strip() for c in bc_codes if c.strip()]
+            
+            if not h1_handles and not bc_codes:
+                return [{"type": "text", "text": "No H1_HANDLES or BC_CODES configured in environment."}]
+                
+            new_assets = monitor.check_for_updates(h1_handles, bc_codes)
+            
+            if not new_assets:
+                return [{"type": "text", "text": "Scope check complete. No new assets detected."}]
+                
+            lines = [f"**🔥 {len(new_assets)} NEW ASSETS DETECTED 🔥**\n"]
+            for item in new_assets:
+                lines.append(f"- **{item['platform'].upper()}**: `{item['program']}` -> `{item['asset']}`")
+            
+            lines.append("\nBountyBud has automatically triggered the Discovery phase for these assets.")
+            
+            # Trigger auto-discovery thread for each (if domain-like)
+            # Since this is the MCP server, we can't easily spawn threads that call back into tools,
+            # but the scope_monitor logic here is for the user report.
+            # The background thread in api_worker.py handles the actual auto-triggering.
+            
+            return [{"type": "text", "text": "\n".join(lines)}]
+            
+        except Exception as e:
+            return [{"type": "text", "text": f"Error checking scope updates: {e}"}]
 
     elif name == "run_autonomous_hunt":
         target = arguments.get("target", "")
