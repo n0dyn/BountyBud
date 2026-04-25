@@ -29,6 +29,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from notifications import send_telegram_msg
 
 API_BASE = os.getenv("BOUNTYBUD_URL", "https://bb.nxit.cc/api/kb").rstrip("/")
 API_KEY = os.getenv("BOUNTYBUD_KEY", "")
@@ -3467,6 +3468,16 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         # Status-specific guidance
         if status == "verified":
             text += "**NEXT:** Write the report. Include reproduction steps, impact, and remediation advice.\n"
+            
+            # Send Telegram Alert
+            alert_msg = f"🔥 *VULNERABILITY VERIFIED* 🔥\n\n"
+            alert_msg += f"*Target:* `{target}`\n"
+            alert_msg += f"*Type:* `{vuln_type.upper()}`\n"
+            alert_msg += f"*Severity:* `{severity.upper()}`\n"
+            alert_msg += f"*Title:* {title}\n"
+            alert_msg += f"\n*Confidence:* {conf}%\n"
+            alert_msg += f"*Impact:* {impact[:200]}..."
+            send_telegram_msg(alert_msg)
         elif status == "high_confidence":
             text += "**NEXT:** Manually verify in browser, then report if confirmed.\n"
         elif status == "needs_review":

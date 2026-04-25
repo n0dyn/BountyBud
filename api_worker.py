@@ -5,6 +5,7 @@ import time
 import logging
 from orchestrator import BountyBudPipeline
 from scope_monitor import ScopeMonitor
+from notifications import send_telegram_msg
 
 app = Flask(__name__)
 logger = logging.getLogger("BountyBudAPIWorker")
@@ -36,6 +37,14 @@ def scope_poller():
             new_assets = monitor.check_for_updates(h1_handles, bc_codes)
             if new_assets:
                 logger.info(f"Poller detected {len(new_assets)} new assets! Triggering discovery.")
+                
+                # Send Telegram Alert
+                msg = f"🔥 *BountyBud: {len(new_assets)} NEW ASSETS DETECTED* 🔥\n\n"
+                for item in new_assets:
+                    msg += f"- *{item['platform'].upper()}*: `{item['program']}` -> `{item['asset']}`\n"
+                msg += "\n🚀 Auto-discovery has been triggered."
+                send_telegram_msg(msg)
+
                 for item in new_assets:
                     asset = item["asset"]
                     # Skip non-domain assets (like mobile apps) for auto-discovery
