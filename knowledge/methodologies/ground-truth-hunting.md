@@ -46,6 +46,10 @@ Every finding must satisfy the **Evidence Chain**:
 - **The Truth:** Unless the company explicitly lists the repository as a `SOURCE_CODE` asset in their scope, vulnerabilities in 3rd-party vendor code are out-of-scope for the target program.
 - **The Exception:** If the target manages the project (e.g., Spotify and Backstage), and the repo is in-scope, local static analysis findings are valid even if not currently exploitable on the live production URL.
 
+### 6. The "Long Tail" Logic (Guidance Update)
+- **The Noise:** Hunting for bugs in heavily tested, well-known components (e.g., Backstage TechDocs). This is a high-collision area full of duplicates.
+- **The Truth:** Prioritize **Obscure Integrations** and the "Long Tail." Focus on core components that are boring, complex, and less "famous" (e.g., `@backstage/plugin-events-node` or `@backstage/plugin-signals-node`). These are exactly where Critical RCEs sit unreported for years.
+
 ---
 
 ## Anti-Hallucination Guidelines

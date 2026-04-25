@@ -3363,6 +3363,16 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             assessment["level"] = "definitive"
             assessment["recommendation"] = "XSS confirmed by headless browser. Report immediately."
 
+        # ── Signal Guard Validation (Staleness & Collision Check) ──
+        signal_guard_warning = ""
+        desc_lower = description.lower() + " " + title.lower()
+        if re.search(r'cve-\d{4}-\d{4,}', desc_lower) or any(k in desc_lower for k in ["bypass", "techdocs", "backstage/plugin"]):
+            assessment["confidence"] = max(0, assessment["confidence"] - 15)
+            signal_guard_warning = "⚠️ SIGNAL GUARD: This is a high-collision area or targets a known CVE/bypass. Verify if this logic is already being discussed in public PRs before submitting."
+            if "fp_patterns_matched" not in assessment:
+                assessment["fp_patterns_matched"] = []
+            assessment["fp_patterns_matched"].append("Signal Guard: High-Collision Area")
+
         # Determine final status
         if verified and assessment["confidence"] >= 60:
             status = "verified"
@@ -3424,6 +3434,9 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             for fp in assessment["fp_patterns_matched"]:
                 text += f"  - {fp}\n"
             text += "\n"
+
+        if signal_guard_warning:
+            text += f"{signal_guard_warning}\n\n"
 
         # Show verification results
         for vr in verification_results:
