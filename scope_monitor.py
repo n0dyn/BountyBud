@@ -95,15 +95,80 @@ class ScopeMonitor:
             logger.error(f"Failed to fetch Bugcrowd scope for {code}: {e}")
             return []
 
+    def fetch_h1_guidelines(self, handle: str) -> Dict[str, Any]:
+        """Fetch program brief, bounty table, and exclusions from H1."""
+        if not self.h1_token: return {}
+        
+        # 2026 H1 Endpoints for Guidelines
+        base_url = f"https://api.hackerone.com/v1/researcher/programs/{handle}"
+        auth = tuple(self.h1_token.split(':')) if ':' in self.h1_token else (handle, self.h1_token)
+        
+        guidelines = {}
+        try:
+            # 1. Main Brief
+            resp = requests.get(base_url, auth=auth, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                attr = data.get("attributes", {})
+                guidelines["policy"] = attr.get("policy", "")
+                guidelines["submission_instructions"] = attr.get("submission_instructions", "")
+            
+            # 2. Exclusions (New for 2026)
+            excl_resp = requests.get(f"{base_url}/scope_exclusions", auth=auth, timeout=10)
+            if excl_resp.status_code == 200:
+                guidelines["exclusions"] = [e.get("attributes", {}).get("description") for e in excl_resp.json().get("data", [])]
+
+            # 3. Bounty Table (New for 2026)
+            bounty_resp = requests.get(f"{base_url}/bounty_table", auth=auth, timeout=10)
+            if bounty_resp.status_code == 200:
+                guidelines["bounty_table"] = bounty_resp.json().get("data", [])
+
+            return guidelines
+        except Exception as e:
+            logger.error(f"Failed to fetch H1 guidelines for {handle}: {e}")
+            return {}
+
+    def fetch_bc_guidelines(self, code: str) -> Dict[str, Any]:
+        """Fetch program brief and reward ranges from Bugcrowd."""
+        if not self.bugcrowd_token: return {}
+
+        url = f"https://api.bugcrowd.com/programs/{code}"
+        headers = {
+            "Accept": "application/vnd.bugcrowd.v4+json",
+            "Authorization": f"Token {self.bugcrowd_token}",
+            "Bugcrowd-Version": "v1.1.2"
+        }
+        try:
+            resp = requests.get(url, headers=headers, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json().get("program", {})
+                return {
+                    "policy": data.get("policy_brief", ""),
+                    "reward_ranges": data.get("reward_ranges", {}),
+                    "out_of_scope_desc": data.get("out_of_scope_description", "")
+                }
+            return {}
+        except Exception as e:
+            logger.error(f"Failed to fetch Bugcrowd guidelines for {code}: {e}")
+            return {}
+
     def check_for_updates(self, h1_handles: List[str] = [], bc_codes: List[str] = []) -> List[Dict[str, Any]]:
         """
         Poll all programs and return a list of newly added assets.
+        Also updates local cache of guidelines and rules of engagement.
         """
         new_assets = []
         
+        # Initialize state keys if missing
+        if "guidelines" not in self.state:
+            self.state["guidelines"] = {}
+
         # Poll HackerOne
         for handle in h1_handles:
             current_scope = self.fetch_h1_scope(handle)
+            # Always fetch guidelines to keep rules up-to-date
+            self.state["guidelines"][f"h1:{handle}"] = self.fetch_h1_guidelines(handle)
+            
             if not current_scope: continue
             
             old_scope = self.state["programs"].get(f"h1:{handle}", [])
@@ -119,6 +184,9 @@ class ScopeMonitor:
         # Poll Bugcrowd
         for code in bc_codes:
             current_scope = self.fetch_bugcrowd_scope(code)
+            # Always fetch guidelines
+            self.state["guidelines"][f"bc:{code}"] = self.fetch_bc_guidelines(code)
+
             if not current_scope: continue
             
             old_scope = self.state["programs"].get(f"bc:{code}", [])
