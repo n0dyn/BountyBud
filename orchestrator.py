@@ -74,24 +74,31 @@ class ModelRouter:
 
         # Default 2026-Aware System Prompts with Intent Guidance
         if not system_prompt:
+            # Load dynamic program context if available
+            program_rules = getattr(self, 'state', {}).get("program_rules", {})
+            rules_str = f"\nRULES OF ENGAGEMENT:\n{program_rules.get('policy', '')[:500]}\nEXCLUSIONS: {program_rules.get('exclusions', [])}" if program_rules else ""
+
             if role == "archivist":
                 system_prompt = (
                     "You are the Archivist (Llama 4 Scout). Your goal is PATTERN MATCHING for 2026-era vulnerabilities. "
                     "You are looking for 'Hot Zones' where logic fails. Focus on: hydration blocks, PostMessage short-circuits, "
-                    "and 405/401 API differentials. Your rationale is to filter massive data into high-signal snippets for the Brain."
+                    "and 405/401 API differentials. Your rationale is to filter massive data into high-signal snippets for the Brain. "
+                    f"{rules_str}"
                 )
             elif role == "brain":
                 system_prompt = (
                     "You are the Brain (Foundation-sec-8B-R), a specialized Vulnerability Scientist. "
                     "Your intent is to find the ROOT CAUSE. Do not guess; reason through the logic flow from input source to sensitive sink. "
                     "CHAIN PERSISTENCE: Stick to one high-fidelity lead until it is proven or disproven. Do not context-switch. "
-                    "Use your 32k window to think step-by-step (<think> tags). Your reasoning will guide the Hand's exploit code."
+                    "Use your 32k window to think step-by-step (<think> tags). Your reasoning will guide the Hand's exploit code. "
+                    f"{rules_str}"
                 )
             elif role == "hand":
                 system_prompt = (
                     "You are the Hand (RedSage-8B), an Expert Exploit Writer. "
                     "Your intent is to prove the Brain's hypothesis with a functional PoC. "
-                    "You generate MINIMAL, high-impact curl or python code. Your reason for existence is to confirm impact."
+                    "You generate MINIMAL, high-impact curl or python code. Your reason for existence is to confirm impact. "
+                    f"{rules_str}"
                 )
             elif role == "strategist":
                 system_prompt = (
@@ -103,7 +110,8 @@ class ModelRouter:
                     "3. Empty Sandbox XSS (executing on isolated CDN/User-content domains), "
                     "4. No-Op Broken Access Control (200 OK with no state change), "
                     "5. Low-Impact Assets (non-core blogs without RCE potential). "
-                    "Cynically prove why a finding is FAKE or LOW-IMPACT. If you verify it, provide a step-by-step evidence trace of financial or data-loss damage."
+                    "Cynically prove why a finding is FAKE or LOW-IMPACT. If you verify it, provide a step-by-step evidence trace of financial or data-loss damage. "
+                    f"{rules_str}"
                 )
 
         logger.info(f"[{role.upper()}] Routing to {model} (Intent: Finding {role} result)")
@@ -259,8 +267,31 @@ class BountyBudPipeline:
         
         logger.info("Profiling complete.")
 
+    def load_program_context(self) -> Dict[str, Any]:
+        """Load the latest guidelines and scope for this target's program."""
+        scope_file = os.path.expanduser("~/.bountybud/scopes.json")
+        if os.path.exists(scope_file):
+            try:
+                with open(scope_file, 'r') as f:
+                    data = json.load(f)
+                    # Find the program this target belongs to
+                    for key, guidelines in data.get("guidelines", {}).items():
+                        # Simple match: if target is in the program handle
+                        if guidelines.get("handle") in self.target or any(self.target in s for s in data.get("programs", {}).get(key, [])):
+                            return guidelines
+            except Exception as e:
+                logger.error(f"Failed to load program context: {e}")
+        return {}
+
     def run_autonomous_funnel(self, raw_logs: Optional[str] = None):
         logger.info(f"--- STARTING {self.profile} CONTEXT FUNNEL FOR {self.target} ---")
+        
+        # Load the legal guidelines and bounty rules
+        program_context = self.load_program_context()
+        if program_context:
+            logger.info(f"Program guidelines loaded. Enforcing {len(program_context.get('bounty_table', []))} bounty rules.")
+            # Inject guidelines into the router's base prompts
+            self.state["program_rules"] = program_context
         
         # If no logs provided, run discovery first
         if not raw_logs or len(raw_logs) < 100:
