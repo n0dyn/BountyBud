@@ -64,27 +64,32 @@ class ScopeMonitor:
             return []
 
     def fetch_bugcrowd_scope(self, code: str) -> List[str]:
-        """Fetch targets from Bugcrowd API."""
+        """Fetch targets from Bugcrowd API using 2026 Semantic Versioning."""
         if not self.bugcrowd_token:
             logger.warning("BUGCROWD_TOKEN not set. Skipping Bugcrowd fetch.")
             return []
 
-        url = f"https://api.bugcrowd.com/programs/{code}"
+        # 2026 Bugcrowd API uses SemVer and target_groups for granular control
+        url = f"https://api.bugcrowd.com/programs/{code}/target_groups"
         headers = {
             "Accept": "application/vnd.bugcrowd.v4+json",
-            "Authorization": f"Token {self.bugcrowd_token}"
+            "Authorization": f"Token {self.bugcrowd_token}",
+            "Bugcrowd-Version": "v1.1.2" # April 2026 Stable Release
         }
         try:
             resp = requests.get(url, headers=headers, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             
-            # Extract in-scope targets
-            targets = data.get("program", {}).get("targets", [])
+            # 2026 Structure: Target Groups -> Targets
             in_scope = []
-            for t in targets:
-                if t.get("in_scope"):
-                    in_scope.append(t.get("name"))
+            target_groups = data.get("target_groups", [])
+            for group in target_groups:
+                # Only pull from in-scope groups
+                if group.get("in_scope"):
+                    targets = group.get("targets", [])
+                    for t in targets:
+                        in_scope.append(t.get("name"))
             return list(filter(None, in_scope))
         except Exception as e:
             logger.error(f"Failed to fetch Bugcrowd scope for {code}: {e}")
