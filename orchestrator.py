@@ -306,84 +306,89 @@ class BountyBudPipeline:
             return ""
 
     def run_autonomous_funnel(self, raw_logs: Optional[str] = None):
-        logger.info(f"--- STARTING {self.profile} CONTEXT FUNNEL FOR {self.target} ---")
+        logger.info(f"--- STARTING RECURSIVE {self.profile} HUNT FOR {self.target} ---")
         
-        # Load the legal guidelines and bounty rules
+        # 1. Initial Setup
         program_context = self.load_program_context()
         if program_context:
-            logger.info(f"Program guidelines loaded. Enforcing {len(program_context.get('bounty_table', []))} bounty rules.")
-            # Inject guidelines into the router's base prompts
             self.state["program_rules"] = program_context
         
-        # If no logs provided, run discovery first
         if not raw_logs or len(raw_logs) < 100:
             self.run_discovery()
-            raw_logs = "MOCK LOG DATA" 
+            raw_logs = "MOCK LOG DATA (Initial Scout)" 
             
-        # Perform profiling to sharpen the funnel
         self.run_target_profiling()
         
-        # STEP 1: THE ARCHIVIST (The Wide Lens)
-        logger.info("Step 1: Archivist filtering logs (10M Context)...")
-        self.apply_pacing()
-        archivist_prompt = f"Identify the 5-6 'hot zones' in these logs where vulnerabilities are likely. Logs: {raw_logs[:2000]}..."
-        archivist_resp = self.router.call_model("archivist", archivist_prompt)
-        self.state["hot_zones"] = json.loads(archivist_resp).get("hot_zones", [])
-        logger.info(f"Archivist identified {len(self.state['hot_zones'])} hot zones.")
+        # 2. THE RECURSIVE LOOP
+        # We use a queue-based system so the AI can "Pivot" to new areas found during recon
+        target_queue = [{"type": "initial", "data": raw_logs}]
+        processed_nodes = set()
 
-        # STEP 2: THE RESEARCHER (API Mapping)
-        logger.info("Step 2: Researcher mapping tech stack and endpoints...")
-        self.apply_pacing()
-        
-        # Inject lessons learned to sharpen the reconnaissance
-        lessons = self.get_lessons_learned(self.state.get("api_indicators", []))
-        research_prompt = (
-            f"Map endpoints for target {self.target}. "
-            f"HISTORICAL LESSONS LEARNED:\n{lessons}\n"
-            "Use this history to avoid failed tools and prioritize successful bypasses."
-        )
-        research_resp = self.router.call_model("researcher", research_prompt)
-        tech_context = json.loads(research_resp)
+        while target_queue:
+            current_task = target_queue.pop(0)
+            logger.info(f"Current Queue Size: {len(target_queue)} | Processing task type: {current_task['type']}")
 
-        # STEP 3 & 4: THE BRAIN & THE HAND (The Microscope)
-        for zone in self.state["hot_zones"]:
-            logger.info(f"--- Processing Hot Zone {zone['id']} ---")
-            
-            # THE BRAIN: Deep reasoning on the small snippet
+            # STEP 1: THE ARCHIVIST (Filtering)
             self.apply_pacing()
-            kb_context = self.query_kb(zone['snippet'])
-            brain_prompt = f"Analyze this specific hot zone snippet for a root cause. USE THIS EXPERT CONTEXT: {kb_context}. Snippet: {zone['snippet']}. Context: {tech_context}"
-            brain_resp = self.router.call_model("brain", brain_prompt)
-            hypothesis = json.loads(brain_resp)
-            logger.info(f"Brain Hypothesis: {hypothesis.get('hypothesis')}")
-
-            # THE HAND: Generate and run PoC
-            self.apply_pacing()
-            hand_prompt = f"Generate a PoC command for this hypothesis: {hypothesis}"
-            hand_resp = self.router.call_model("hand", hand_prompt)
-            poc = json.loads(hand_resp)
+            arch_prompt = f"Identify 5-6 'hot zones' in this context: {current_task['data'][:2000]}..."
+            arch_resp = self.router.call_model("archivist", arch_prompt)
+            new_zones = json.loads(arch_resp).get("hot_zones", [])
             
-            # Simulate Execution
-            poc_result = f"root:x:0:0:root:/root:/bin/bash (Result of {poc.get('poc_command')})"
-            
-            # STEP 5: THE STRATEGIST (The Final Judge)
-            self.apply_pacing()
-            strat_prompt = f"Verify if this PoC result is a real vulnerability or a honeypot. PoC: {poc.get('poc_command')}, Result: {poc_result}"
-            strat_resp = self.router.call_model("strategist", strat_prompt)
-            assessment = json.loads(strat_resp)
-            
-            if assessment.get("is_real"):
-                logger.info("🔥 REAL VULNERABILITY CONFIRMED 🔥")
-                self.state["findings"].append({
-                    "zone": zone['id'],
-                    "hypothesis": hypothesis,
-                    "assessment": assessment
-                })
+            for zone in new_zones:
+                if zone['snippet'] in processed_nodes: continue
+                processed_nodes.add(zone['snippet'])
 
-        logger.info(f"--- PIPELINE COMPLETE: {len(self.state['findings'])} Verified Findings ---")
-        return self.state["findings"]
+                # STEP 2: THE RESEARCHER (Mapping & Pivoting)
+                self.apply_pacing()
+                # Researcher can find NEW targets/subdomains and add them to the queue
+                res_prompt = f"Map tech for {zone['snippet']}. If you find hidden subdomains or API paths, list them as 'pivots'."
+                res_resp = self.router.call_model("researcher", res_prompt)
+                tech_context = json.loads(res_resp)
+                
+                # PIVOT LOGIC: If the researcher found something new, add it to the queue!
+                pivots = tech_context.get("pivots", [])
+                for p in pivots:
+                    logger.info(f"🌀 PIVOT DETECTED: Adding new target {p} to the hunt queue.")
+                    target_queue.append({"type": "pivot", "data": f"Discovery on {p}"})
 
-        logger.info(f"--- PIPELINE COMPLETE: {len(self.state['findings'])} Verified Findings ---")
+                # STEP 3 & 4: THE BRAIN & HAND (Iterative Exploitation)
+                # We loop here up to 3 times to try different bypasses
+                for attempt in range(3):
+                    logger.info(f"--- [Attempt {attempt+1}/3] Exploiting {zone['id']} ---")
+                    self.apply_pacing()
+                    
+                    kb_context = self.query_kb(zone['snippet'])
+                    history = self.get_lessons_learned([zone['snippet']])
+                    
+                    brain_prompt = f"Find root cause for {zone['snippet']}. KB: {kb_context}. HISTORY: {history}. Context: {tech_context}"
+                    if attempt > 0:
+                        brain_prompt += f"\nPREVIOUS POC FAILED. Try a different bypass/vector."
+                        
+                    brain_resp = self.router.call_model("brain", brain_prompt)
+                    hypothesis = json.loads(brain_resp)
+                    
+                    # THE HAND (Action)
+                    self.apply_pacing()
+                    hand_resp = self.router.call_model("hand", f"Write PoC for: {hypothesis}")
+                    poc = json.loads(hand_resp)
+                    
+                    # EXECUTION & FEEDBACK
+                    poc_result = f"Simulation Result for {poc.get('poc_command')}" # In real: call _run_command
+                    
+                    # STEP 5: THE STRATEGIST (Verification)
+                    strat_resp = self.router.call_model("strategist", f"Verify: {poc_result}")
+                    assessment = json.loads(strat_resp)
+                    
+                    if assessment.get("is_real"):
+                        logger.info("🔥 REAL VULNERABILITY CONFIRMED 🔥")
+                        self.state["findings"].append({"zone": zone['id'], "hypothesis": hypothesis, "assessment": assessment})
+                        break # Success! No need to iterate further on this node.
+                    else:
+                        logger.warning(f"Attempt {attempt+1} failed. Strategist rejected the hit.")
+                        # Outcome is recorded so the next attempt (iteration) knows what failed
+                        # record_outcome(technique=poc.get('poc_command'), outcome='fail')
+
+        logger.info(f"--- HUNT COMPLETE: {len(self.state['findings'])} Verified Findings ---")
         return self.state["findings"]
 
 if __name__ == "__main__":
