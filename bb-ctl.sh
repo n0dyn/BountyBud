@@ -20,13 +20,17 @@ case "$1" in
         echo "🔄 Syncing code to Workhorse ($REMOTE)..."
         rsync -avz --exclude 'venv' --exclude '.git' --exclude '.env' --exclude '__pycache__' ./ "$REMOTE:$REMOTE_PATH"
         
-        echo "🧠 Syncing Learning Database..."
-        # 1. Pull from remote first (to get Workhorse experience)
-        rsync -avz "$REMOTE:~/.bountybud/learning.jsonl" ~/.bountybud/learning.jsonl 2>/dev/null
-        # 2. Push merged local data back to remote
-        rsync -avz ~/.bountybud/learning.jsonl "$REMOTE:~/.bountybud/learning.jsonl" 2>/dev/null
+        echo "🧠 Syncing Collective Intelligence (Memory & History)..."
+        # Bidirectional sync for all intelligence files
+        FILES=("learning.jsonl" "primitives.jsonl" "scopes.json")
+        for file in "${FILES[@]}"; do
+            # 1. Pull from remote (Workhorse experience)
+            rsync -avz "$REMOTE:~/.bountybud/$file" ~/.bountybud/ 2>/dev/null
+            # 2. Push merged local data back to remote
+            rsync -avz ~/.bountybud/$file "$REMOTE:~/.bountybud/" 2>/dev/null
+        done
         
-        echo "✅ Full Sync complete (Logic + Memory)."
+        echo "✅ Full Sync complete (Logic + Swarm Memory)."
         ;;
     
     start)

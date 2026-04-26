@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🛰️ BOUNTYBUD MISSION CONTROL v2.0 - ELITE EDITION
+# 🚀 BOUNTYBUD MISSION CONTROL v3.0 - THE DEFINITIVE EDITION
 # ==============================================================================
 
 # Load environment
@@ -15,46 +15,37 @@ fi
 REMOTE="${WORKHORSE_SSH_USER}@${WORKHORSE_IP}"
 SESSION="BountyBud_WarRoom"
 
-# --- Visual Setup ---
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Kill existing session if it exists
+# Kill existing session
 tmux kill-session -t $SESSION 2>/dev/null
 
-# --- Mission Control Initialization ---
-echo -e "${BLUE}🛰️ Initializing BountyBud Mission Control...${NC}"
-
-# Create session and hide the status bar for a clean look
+# --- Global Tmux Config (The "Elite" Feel) ---
 tmux new-session -d -s $SESSION
-tmux set-option -t $SESSION status-style "bg=colour235,fg=colour136"
-tmux set-option -t $SESSION status-left-length 30
-tmux set-option -t $SESSION status-left "#[fg=green]Target: #[fg=white]${TARGET:-ACTIVE_HUNT} "
-tmux set-option -t $SESSION status-right "#[fg=blue]%H:%M:%S #[fg=white]%d-%b-%y"
+tmux set -g mouse on               # ALLOW SCROLLING WITH MOUSE WHEEL
+tmux set -g pane-border-style fg=colour238
+tmux set -g pane-active-border-style fg=colour39 # Cyan active border
+tmux set -g status-style bg=default
+tmux set -g status-left-length 50
+tmux set -g status-left "#[fg=cyan,bold]🛰️  MISSION CONTROL #[fg=white]| #[fg=green,bold]Target: ${TARGET:-uber.com} "
+tmux set -g status-right "#[fg=white]%H:%M:%S #[fg=cyan,bold]v3.0"
 
-# --- Pane 1: THE ORCHESTRATOR (Main Logic) ---
-# Large left pane for model reasoning
+# --- Pane 1: THE ORCHESTRATOR (Scrollable Logs) ---
 tmux rename-window -t $SESSION:0 'MISSION_LOG'
-tmux send-keys -t $SESSION:0 "echo -e '${GREEN}LOG: Streaming logic from Workhorse...${NC}'; ssh $REMOTE 'tail -f ~/.bountybud/orchestrator.log'" C-m
+tmux send-keys -t $SESSION:0 "echo -e '\033[1;34m[SENTRY] Connecting to Workhorse Logic Stream...\033[0m'; ssh $REMOTE 'tail -f ~/.bountybud/orchestrator.log'" C-m
 
-# --- Pane 2: THE HARDWARE (GPU/RAM) ---
-# Split right side for hardware monitoring
+# --- Pane 2: THE HARDWARE (Remote Resource Pulse) ---
 tmux split-window -h -p 40 -t $SESSION:0
-tmux send-keys -t $SESSION:0.1 "ssh -t $REMOTE 'nvtop || btop'" C-m
+tmux send-keys -t $SESSION:0.1 "echo -e '\033[1;34m[SENTRY] Connecting to GPU/RAM Pulse...\033[0m'; ssh -t $REMOTE 'nvtop || btop'" C-m
 
-# --- Pane 3: THE TRAFFIC (Mitmproxy) ---
-# Split bottom-right for live HTTP traffic
+# --- Pane 3: THE TRAFFIC (Live Tunnel) ---
 tmux select-pane -t $SESSION:0.1
 tmux split-window -v -p 50 -t $SESSION:0.1
-tmux send-keys -t $SESSION:0.2 "ssh -L 8081:localhost:8081 $REMOTE 'mitmweb --mode regular --no-web-open-browser'" C-m
+tmux send-keys -t $SESSION:0.2 "echo -e '\033[1;34m[SENTRY] Opening Auto-Healing Tunnel to Mitmproxy (Localhost:8081)...\033[0m'; while true; do ssh -L 8081:localhost:8081 $REMOTE '~/dev/BountyBud/venv/bin/mitmweb --mode regular@9999 --no-web-open-browser'; sleep 2; done" C-m
 
-# --- Pane 4: THE NETWORK (Ports) ---
-# Split bottom-left for a small port-sentry
+# --- Pane 4: THE NETWORK (Port Health) ---
 tmux select-pane -t $SESSION:0.0
 tmux split-window -v -p 20 -t $SESSION:0.0
-tmux send-keys -t $SESSION:0.3 "echo -e '${BLUE}PORT SENTRY: Monitoring 8800-8804...${NC}'; ssh $REMOTE 'watch -n 1 \"ss -tulpn | grep -E 880\[0-4\]\"'" C-m
+tmux send-keys -t $SESSION:0.3 "ssh $REMOTE 'watch -n 1 \"echo [PORT STATUS]; ss -tulpn | grep -E 880\\\[0-4\\\]\"'" C-m
 
-# Final polish: Focus on the log
+# Focus the log and attach
 tmux select-pane -t $SESSION:0.0
 tmux attach-session -t $SESSION

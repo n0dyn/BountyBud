@@ -4413,6 +4413,7 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             return [{"type": "text", "text": f"Error checking scope updates: {e}"}]
 
     elif name == "run_autonomous_hunt":
+        import os  # Explicit local import to fix scope issue
         target = arguments.get("target", "")
         log_file = arguments.get("log_file", "")
         profile = arguments.get("profile", "STEALTH")

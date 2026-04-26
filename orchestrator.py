@@ -305,6 +305,40 @@ class BountyBudPipeline:
             logger.error(f"Failed to read learning DB: {e}")
             return ""
 
+    def store_primitive(self, p_type: str, description: str):
+        """Store an interesting technical observation for later exploit chaining."""
+        primitive_file = os.path.expanduser("~/.bountybud/primitives.jsonl")
+        entry = {
+            "target": self.target,
+            "type": p_type,
+            "description": description,
+            "timestamp": time.ctime()
+        }
+        logger.info(f"💎 PRIMITIVE STORED: {p_type} - {description[:50]}...")
+        try:
+            with open(primitive_file, 'a') as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to store primitive: {e}")
+
+    def get_all_primitives(self) -> str:
+        """Retrieve all technical clues found on this target so far."""
+        primitive_file = os.path.expanduser("~/.bountybud/primitives.jsonl")
+        if not os.path.exists(primitive_file):
+            return "No primitives found yet."
+            
+        target_primitives = []
+        try:
+            with open(primitive_file, 'r') as f:
+                for line in f:
+                    entry = json.loads(line)
+                    if entry.get("target") == self.target:
+                        target_primitives.append(f"- [{entry['type']}] {entry['description']}")
+            return "\n".join(target_primitives)
+        except Exception as e:
+            logger.error(f"Failed to read primitives: {e}")
+            return ""
+
     def run_autonomous_funnel(self, raw_logs: Optional[str] = None):
         logger.info(f"--- STARTING RECURSIVE {self.profile} HUNT FOR {self.target} ---")
         
@@ -359,8 +393,16 @@ class BountyBudPipeline:
                     
                     kb_context = self.query_kb(zone['snippet'])
                     history = self.get_lessons_learned([zone['snippet']])
+                    collective_clues = self.get_all_primitives()
                     
-                    brain_prompt = f"Find root cause for {zone['snippet']}. KB: {kb_context}. HISTORY: {history}. Context: {tech_context}"
+                    brain_prompt = (
+                        f"Find root cause for {zone['snippet']}.\n"
+                        f"KB TECHNIQUES: {kb_context}\n"
+                        f"PAST LESSONS: {history}\n"
+                        f"COLLECTIVE CLUES FOUND ON TARGET: {collective_clues}\n"
+                        f"Context: {tech_context}\n"
+                        "Can you chain these collective clues together into a high-impact exploit?"
+                    )
                     if attempt > 0:
                         brain_prompt += f"\nPREVIOUS POC FAILED. Try a different bypass/vector."
                         
