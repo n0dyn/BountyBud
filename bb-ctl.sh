@@ -19,7 +19,14 @@ case "$1" in
     sync)
         echo "🔄 Syncing code to Workhorse ($REMOTE)..."
         rsync -avz --exclude 'venv' --exclude '.git' --exclude '.env' --exclude '__pycache__' ./ "$REMOTE:$REMOTE_PATH"
-        echo "✅ Sync complete."
+        
+        echo "🧠 Syncing Learning Database..."
+        # 1. Pull from remote first (to get Workhorse experience)
+        rsync -avz "$REMOTE:~/.bountybud/learning.jsonl" ~/.bountybud/learning.jsonl 2>/dev/null
+        # 2. Push merged local data back to remote
+        rsync -avz ~/.bountybud/learning.jsonl "$REMOTE:~/.bountybud/learning.jsonl" 2>/dev/null
+        
+        echo "✅ Full Sync complete (Logic + Memory)."
         ;;
     
     start)

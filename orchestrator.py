@@ -283,6 +283,28 @@ class BountyBudPipeline:
                 logger.error(f"Failed to load program context: {e}")
         return {}
 
+    def get_lessons_learned(self, indicators: List[str]) -> str:
+        """Query the local learning.jsonl to find what has worked/failed on similar indicators."""
+        learning_file = os.path.expanduser("~/.bountybud/learning.jsonl")
+        if not os.path.exists(learning_file):
+            return "No previous lessons learned for this target profile."
+            
+        lessons = []
+        try:
+            with open(learning_file, 'r') as f:
+                for line in f:
+                    entry = json.loads(line)
+                    # Match by technical indicators or vulnerability type
+                    if any(ind.lower() in str(entry).lower() for ind in indicators):
+                        outcome = entry.get("outcome")
+                        tech = entry.get("technique")
+                        lessons.append(f"- {tech}: {outcome.upper()}")
+            
+            return "\n".join(lessons[-10:]) if lessons else "No specific history matches."
+        except Exception as e:
+            logger.error(f"Failed to read learning DB: {e}")
+            return ""
+
     def run_autonomous_funnel(self, raw_logs: Optional[str] = None):
         logger.info(f"--- STARTING {self.profile} CONTEXT FUNNEL FOR {self.target} ---")
         
@@ -312,7 +334,15 @@ class BountyBudPipeline:
         # STEP 2: THE RESEARCHER (API Mapping)
         logger.info("Step 2: Researcher mapping tech stack and endpoints...")
         self.apply_pacing()
-        research_resp = self.router.call_model("researcher", f"Map endpoints for target {self.target}")
+        
+        # Inject lessons learned to sharpen the reconnaissance
+        lessons = self.get_lessons_learned(self.state.get("api_indicators", []))
+        research_prompt = (
+            f"Map endpoints for target {self.target}. "
+            f"HISTORICAL LESSONS LEARNED:\n{lessons}\n"
+            "Use this history to avoid failed tools and prioritize successful bypasses."
+        )
+        research_resp = self.router.call_model("researcher", research_prompt)
         tech_context = json.loads(research_resp)
 
         # STEP 3 & 4: THE BRAIN & THE HAND (The Microscope)
