@@ -2103,6 +2103,31 @@ _ALL_TOOLS = [
         },
     },
     {
+        "name": "get_swarm_status",
+        "description": (
+            "Returns the real-time status of all active and completed hunts on the Workhorse rig. "
+            "Use this to monitor the progress of background autonomous tasks."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "call_local_worker",
+        "description": (
+            "Delegates a specific sub-task to one of the specialized local models on the 4-GPU rig. "
+            "Roles: 'archivist' (10M context pattern matching), 'researcher' (API mapping), "
+            "'brain' (vulnerability reasoning), 'hand' (exploit writing), 'strategist' (truth check)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "role": {"type": "string", "enum": ["archivist", "researcher", "brain", "hand", "strategist"]},
+                "prompt": {"type": "string", "description": "The specific task or snippet for the model to process."},
+                "system_prompt": {"type": "string", "description": "Optional: Override the default persona for this task."}
+            },
+            "required": ["role", "prompt"],
+        },
+    },
+    {
         "name": "check_scope_updates",
         "description": (
             "Manually triggers a scope check across all tracked HackerOne and Bugcrowd programs. "
@@ -4374,6 +4399,51 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
                 })
 
         return [{"type": "text", "text": text}]
+
+    elif name == "get_swarm_status":
+        try:
+            workhorse_ip = os.getenv("WORKHORSE_IP", "127.0.0.1")
+            api_url = f"http://{workhorse_ip}:5000/status"
+            
+            logger.info(f"Querying Swarm Status from {api_url}...")
+            resp = requests.get(api_url, timeout=10)
+            data = resp.json()
+            
+            text = f"🛡️ **BountyBud Workhorse Swarm Status ($workhorse_ip)**\n"
+            text += f"Active Tasks: {data.get('active_tasks_count')} | Swarm Capacity: {data.get('swarm_size')}\n\n"
+            
+            tasks = data.get("tasks", {})
+            if not tasks:
+                text += "The swarm is currently idle. No active hunts found."
+            else:
+                for tid, tinfo in tasks.items():
+                    text += f"- `{tinfo['target']}`: **{tinfo['status']}** (Profile: {tinfo['profile']} | Started: {tinfo['start_time']})\n"
+            
+            return [{"type": "text", "text": text}]
+        except Exception as e:
+            return [{"type": "text", "text": f"Error querying swarm status: {e}"}]
+
+    elif name == "call_local_worker":
+        role = arguments.get("role")
+        prompt = arguments.get("prompt")
+        sys_prompt = arguments.get("system_prompt", "")
+
+        try:
+            from orchestrator import ModelRouter
+            # Ensure the router knows we are hitting a remote machine
+            router = ModelRouter()
+            
+            # Dynamically overwrite localhost with the Workhorse IP from environment
+            workhorse_ip = os.getenv("WORKHORSE_IP", "127.0.0.1")
+            for key in router.endpoints:
+                router.endpoints[key] = router.endpoints[key].replace("localhost", workhorse_ip)
+
+            logger.info(f"Delegating {role} reasoning to remote Workhorse at {workhorse_ip}...")
+            result = router.call_model(role, prompt, system_prompt=sys_prompt)
+            
+            return [{"type": "text", "text": result}] # Return raw for the calling agent to consume
+        except Exception as e:
+            return [{"type": "text", "text": f"Error delegating to remote worker: {e}"}]
 
     elif name == "check_scope_updates":
         try:
