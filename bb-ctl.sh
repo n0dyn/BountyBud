@@ -52,9 +52,17 @@ case "$1" in
         ssh "$REMOTE" "echo '--- AI Model Ports ---'; ss -tulpn | grep -E '880[0-4]'; echo '--- API Worker ---'; ss -tulpn | grep :5000"
         ;;
 
-    logs)
-        echo "📜 Tailing Orchestrator Logs from Workhorse..."
-        ssh "$REMOTE" "tail -f ~/.bountybud/orchestrator.log"
+    agent)
+        TARGET=$2
+        if [ -z "$TARGET" ]; then echo "Usage: ./bb-ctl.sh agent <target.com>"; exit 1; fi
+        echo "🚀 Launching SOVEREIGN ARCHITECT on Workhorse ($TARGET)..."
+        ssh "$REMOTE" "cd $REMOTE_PATH && tmux new-session -d -s BB_AGENT './venv/bin/python3 bb_agent.py $TARGET'"
+        echo "✅ Agent is hunting. Use './bb-ctl.sh logs-agent' to watch the reasoning."
+        ;;
+
+    logs-agent)
+        echo "🧠 Tailing Sovereign Architect Reasoning..."
+        ssh "$REMOTE" "tmux capture-pane -pt BB_AGENT"
         ;;
 
     *)

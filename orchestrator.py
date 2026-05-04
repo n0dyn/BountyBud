@@ -6,6 +6,16 @@ import requests
 import random
 from typing import List, Dict, Any, Optional
 
+# Load .env from BountyBud directory
+_env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_env_file):
+    with open(_env_file) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _, _v = _line.partition("=")
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 # Setup Logging to both Console and File
 DATA_DIR = os.path.expanduser("~/.bountybud")
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -51,20 +61,20 @@ class ModelRouter:
         }
         
         self.models = {
-            "archivist":  "llama-4-scout-109b",
-            "strategist": "deepseek-r1-671b",
-            "researcher": "qwen-3.5-32b",
-            "brain":      "foundation-sec-8b-r",
-            "hand":       "redsage-8b"
+            "archivist":  "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+            "strategist": "DeepSeek-R1-Distill-Llama-70B-Q4_K_M.gguf",
+            "researcher": "/home/n0dyn/dev/models/n0dehunt3r/researcher-a3b",
+            "brain":      "/home/n0dyn/dev/models/n0dehunt3r/brain",
+            "hand":       "/home/n0dyn/dev/models/n0dehunt3r/hand",
         }
 
-        # Strict Context Limits for VRAM/RAM Stability
+        # Context limits matching actual running config
         self.context_limits = {
-            "archivist":  10_000_000, # 10M (System RAM)
-            "strategist": 128_000,    # 128k (System RAM)
-            "researcher": 64_000,     # 64k (GPU 0/1)
-            "brain":      32_000,     # 32k (GPU 2 - Room for Thinking Tokens)
-            "hand":       32_000      # 32k (GPU 3 - Room for Thinking Tokens)
+            "archivist":  64_000,  # llama.cpp, 64k ctx
+            "strategist": 32_000,  # llama.cpp, 32k ctx
+            "researcher": 64_000,  # vLLM GPU 0+1, 64k ctx
+            "brain":      16_000,  # vLLM GPU 2, 16k ctx (FP8)
+            "hand":       16_000,  # vLLM GPU 3, 16k ctx (FP8)
         }
 
     def call_model(self, role: str, prompt: str, system_prompt: str = "") -> str:

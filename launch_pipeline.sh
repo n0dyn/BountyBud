@@ -17,6 +17,7 @@ echo "--- Initializing BountyBud AI Infrastructure ---"
 echo "[1/5] Launching Researcher (Qwen 3.5 32B) on GPU 0,1..."
 CUDA_VISIBLE_DEVICES=0,1 python3 -m vllm.entrypoints.openai.api_server \
     --model Qwen/Qwen2.5-32B-Instruct-AWQ \
+    --served-model-name qwen-3.5-32b \
     --tensor-parallel-size 2 \
     --port 8000 \
     --gpu-memory-utilization 0.90 \

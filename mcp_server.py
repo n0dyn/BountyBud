@@ -18,6 +18,7 @@ Environment variables:
 import datetime
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -30,6 +31,18 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from notifications import send_telegram_msg
+
+logger = logging.getLogger("BountyBudMCP")
+
+# Load .env from BountyBud directory
+_env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_env_file):
+    with open(_env_file) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _, _v = _line.partition("=")
+                os.environ.setdefault(_k.strip(), _v.strip())
 
 API_BASE = os.getenv("BOUNTYBUD_URL", "https://bb.nxit.cc/api/kb").rstrip("/")
 API_KEY = os.getenv("BOUNTYBUD_KEY", "")
@@ -4405,7 +4418,7 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             workhorse_ip = os.getenv("WORKHORSE_IP", "127.0.0.1")
             api_url = f"http://{workhorse_ip}:5000/status"
             
-            logger.info(f"Querying Swarm Status from {api_url}...")
+            print(f"[BountyBud] Querying Swarm Status from {api_url}...", file=sys.stderr)
             resp = requests.get(api_url, timeout=10)
             data = resp.json()
             
@@ -4447,7 +4460,6 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
     elif name == "check_scope_updates":
         try:
-            import os
             from scope_monitor import ScopeMonitor
             
             monitor = ScopeMonitor()
@@ -4483,7 +4495,6 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             return [{"type": "text", "text": f"Error checking scope updates: {e}"}]
 
     elif name == "run_autonomous_hunt":
-        import os  # Explicit local import to fix scope issue
         target = arguments.get("target", "")
         log_file = arguments.get("log_file", "")
         profile = arguments.get("profile", "STEALTH")
