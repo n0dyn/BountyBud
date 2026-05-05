@@ -12,6 +12,8 @@ taxonomy:
         - parameter-discovery
         - javascript-analysis
         - sensitive-data-discovery
+        - asn-enumeration
+        - cloud-asset-enumeration
 
     web-application:
       name: Web Application Testing
@@ -27,6 +29,10 @@ taxonomy:
         - file-upload
         - template-injection
         - cors
+        - cors-advanced
+        - pdf-xss
+        - svg-abuse
+        - idor-advanced
         - lfi
         - rfi
         - authentication
@@ -35,6 +41,10 @@ taxonomy:
         - business-logic
         - race-conditions
         - command-injection
+        - business-logic-advanced
+        - webauthn-passkey
+        - http3-quic
+        - llm-assisted
 
     network:
       name: Network Penetration Testing
@@ -111,6 +121,19 @@ taxonomy:
         - wordpress
         - drupal
         - joomla
+
+    web3:
+      name: Web3 & Smart Contract Security
+      subcategories:
+        - smart-contract
+        - reentrancy
+        - flash-loan
+        - proxy-upgrade
+        - defi-business-logic
+        - oracle-manipulation
+        - access-control
+        - arithmetic
+
 
   types:
     - tool

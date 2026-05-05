@@ -11,11 +11,11 @@ Generate ready-to-use commands for 49+ security tools across 15 categories — s
 Context-aware XSS payload generation with encoding options (URL, HTML, Unicode, hex), filter bypass techniques, and a blind XSS callback listener that logs execution details.
 
 ### Knowledge Base (RAG-Ready)
-87 structured documents with 397 pre-chunked sections covering:
+110+ structured documents with 550+ pre-chunked sections covering:
 
 | Category | Topics |
 |----------|--------|
-| **Web Application** | XSS, SQLi, SSRF, IDOR/BOLA, SSTI, race conditions, business logic, auth bypass |
+| **Web Application** | XSS (incl. PDF/SVG), SQLi, SSRF, IDOR 10-patterns, SSTI (Thymeleaf), race conditions, advanced business logic (price/workflow/coupon/race), auth bypass (incl. WebAuthn/Passkey), advanced CORS 2026, CRLF, WAF bypasses, CSP bypasses, open redirect chains, HTTP/3 & QUIC attacks |
 | **Network** | Port scanning methodology, service exploitation, wireless attacks |
 | **Privilege Escalation** | Linux, Windows, Active Directory |
 | **Cloud** | AWS, GCP, Azure misconfigurations |
@@ -25,6 +25,8 @@ Context-aware XSS payload generation with encoding options (URL, HTML, Unicode, 
 | **Post-Exploitation** | Persistence, lateral movement, credential harvesting, C2 |
 | **Payloads** | XSS, SQLi, SSRF, SSTI, command injection libraries |
 | **Cheatsheets** | Nmap, FFUF, Burp Suite, reverse shells |
+| **Methodologies (2026)** | Novel early-warning commit monitoring, hacktivity trends, dynamic scope detection, long-tail logic, signal-guard validation, LLM-assisted hunting, two-eye approach |
+| **Web3** | Reentrancy (all variants), flash-loan amplification, proxy/upgrade vulns, DeFi business logic, oracle manipulation |
 
 Every document includes **Deep Dig Prompts** — LLM-ready templates you can feed to AI with target-specific data for guided vulnerability discovery.
 

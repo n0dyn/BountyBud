@@ -13,7 +13,7 @@ updated: "2026-03-30"
 
 # BountyBud — AI Assistant Usage Guide
 
-You have access to BountyBud, a comprehensive bug bounty and red teaming knowledge base with 115+ documents and 600+ searchable chunks covering techniques, payloads, tools, methodologies, and cheatsheets.
+You have access to BountyBud, a comprehensive bug bounty and red teaming knowledge base with 110+ documents and 550+ searchable chunks covering techniques, payloads, tools, methodologies, and cheatsheets.
 
 ## How to Use This System
 
@@ -30,8 +30,8 @@ Tool: list_documents
 ```
 
 **Categories available:**
-- `reconnaissance` — subdomain enumeration, URL collection, directory discovery, OSINT, parameter discovery, JavaScript analysis, information disclosure
-- `web-application` — XSS, SQLi, SSRF, IDOR, CSRF, XXE, deserialization, prototype pollution, request smuggling, cache poisoning, file upload, path traversal, race conditions, business logic, auth bypass, CORS, CRLF, WebSocket, NoSQL injection, mass assignment, open redirect, AI/LLM security
+- `reconnaissance` — subdomain enumeration, URL collection, directory discovery, OSINT, parameter discovery, JavaScript analysis, information disclosure, ASN enumeration, cloud asset enumeration
+- `web-application` — XSS (PDF/SVG/hex bypasses), SQLi, SSRF, IDOR (10 patterns + UUID bypass), CSRF, XXE, deserialization, prototype pollution, request smuggling (H2 variants), cache poisoning, file upload, path traversal, race conditions, advanced business logic (price manip/workflow bypass/coupon abuse/parallel races), auth bypass (WebAuthn/Passkey), advanced CORS (7 patterns 2026), CRLF escalation, WebSocket, NoSQL injection, mass assignment, open redirect chains, CSP bypasses, WAF bypass techniques, HTTP/3 & QUIC attacks, AI/LLM security, Thymeleaf SSTI RCE
 - `network` — port scanning, service exploitation, wireless attacks
 - `cloud` — AWS/GCP/Azure misconfigurations
 - `mobile` — Frida, APK analysis, runtime hooking
@@ -39,13 +39,15 @@ Tool: list_documents
 - `privilege-escalation` — Linux, Windows, Active Directory
 - `post-exploitation` — persistence, lateral movement, credential harvesting, C2
 - `social-engineering` — phishing, pretexting, vishing
-- `reporting` — report templates, payout maximization, false positive elimination, AI calibration
+- `cms` — WordPress advanced (plugins, XML-RPC, REST API, supply chain)
+- `reporting` — report templates, payout maximization, false positive elimination, AI calibration, LLM-assisted hunting
+- `web3` — Reentrancy (classic/read-only/cross-function/cross-contract), flash-loan facilitated (oracle/rounding/donation/compositional), proxy & upgradeability (UUPS/storage collisions/initialization), DeFi business logic, oracle manipulation, access control, arithmetic issues
 
 **Content types:**
 - `technique` — deep-dive attack guides with commands, payloads, and deep dig prompts
 - `tool` — security tool documentation with command references
 - `payload` — ready-to-use payload libraries (XSS, SQLi, SSRF, SSTI, command injection)
-- `methodology` — end-to-end workflows (recon pipeline, attack synthesis, smart hunting, false positive elimination)
+- `methodology` — end-to-end workflows (recon pipeline, attack synthesis, smart hunting, false positive elimination, novel 2026: early warning commit/PR monitoring, hacktivity trend analysis, dynamic scope detection, long tail logic, signal guard validation)
 - `cheatsheet` — quick-reference cards (nmap, ffuf, Burp Suite, reverse shells, info disclosure)
 - `report-template` — reporting and payout maximization templates
 
