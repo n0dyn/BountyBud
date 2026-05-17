@@ -131,3 +131,6 @@ credentials.json
 *.pem
 *.key
 *.crt
+
+# BountyBud local data (project-specific storage, learning DB, etc.)
+.bountybud/

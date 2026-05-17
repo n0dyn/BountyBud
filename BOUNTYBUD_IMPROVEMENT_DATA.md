@@ -1,6 +1,12 @@
 # BOUNTYBUD IMPROVEMENT DATA
-**Session Date:** April 2026
+**Session Date:** May 2026
 **Hunter:** n0dyn
+
+## Implemented: Project-Local Data Portability (2026-05-05)
+- MCP server now uses `./.bountybud/` by default (CWD-relative).
+- Auto-migrates from global `~/.bountybud/`.
+- Enables seamless IDE/machine switching while keeping hunt state per-project.
+- Docs updated in README.md, BOUNTYBUD_GUIDE.md.
 
 ## Strategic Intelligence Roadmap
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/n0dyn/dev/BountyBud/venv/bin/python3
 """BountyBud MCP Server — verification-driven bug bounty AI agent.
 
 Local stdio bridge with tool execution, target profiling, finding verification,
@@ -30,7 +30,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from notifications import send_telegram_msg
+
 
 logger = logging.getLogger("BountyBudMCP")
 
@@ -57,7 +57,6 @@ _extra_paths = [
     os.path.expanduser("~/go/bin"),
     os.path.expanduser("~/.local/bin"),
     os.path.expanduser("~/.cargo/bin"),
-    os.path.expanduser("~/.bountybud-tools/bin"),
 ]
 _current_path = os.environ.get("PATH", "")
 for _p in _extra_paths:
@@ -66,8 +65,47 @@ for _p in _extra_paths:
 os.environ["PATH"] = _current_path
 
 # ── Persistent Data Directory ─────────────────────────────────
-DATA_DIR = os.path.expanduser("~/.bountybud")
+def _resolve_data_dir() -> str:
+    """Resolve project-local data directory, prioritizing CWD/.bountybud."""
+    cwd = os.getcwd()
+    # Optional config override (future-proof)
+    config_candidates = [
+        os.path.join(cwd, "bountybud.json"),
+        os.path.join(cwd, ".bountybud", "config.json"),
+        os.path.join(cwd, ".bountybudrc"),
+    ]
+    for cfg in config_candidates:
+        if os.path.exists(cfg):
+            try:
+                with open(cfg, 'r') as f:
+                    data = json.load(f)
+                if "data_dir" in data:
+                    return os.path.abspath(os.path.join(cwd, data["data_dir"]))
+            except Exception:
+                logger.warning(f"Failed to load config {cfg}")
+                continue
+    # Strict local-first: project/.bountybud
+    return os.path.join(cwd, ".bountybud")
+
+DATA_DIR = _resolve_data_dir()
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# One-time migration from global dir if local is empty
+global_dir = os.path.expanduser("~/.bountybud")
+if os.path.isdir(global_dir) and len(os.listdir(DATA_DIR)) == 0:
+    logger.info("Migrating data from global ~/.bountybud to local...")
+    subs = ["primitives", "findings", "sessions", "targets", "huntlogs"]
+    for sub in subs:
+        src = os.path.join(global_dir, sub)
+        dst = os.path.join(DATA_DIR, sub)
+        if os.path.isdir(src) and os.listdir(src):
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+    learning_src = os.path.join(global_dir, "learning.jsonl")
+    if os.path.exists(learning_src):
+        shutil.copy2(learning_src, os.path.join(DATA_DIR, "learning.jsonl"))
+    logger.info("Migration complete.")
+
+# Create subdirectories
 os.makedirs(os.path.join(DATA_DIR, "primitives"), exist_ok=True)
 os.makedirs(os.path.join(DATA_DIR, "findings"), exist_ok=True)
 os.makedirs(os.path.join(DATA_DIR, "sessions"), exist_ok=True)
@@ -489,7 +527,6 @@ TOOLBELT = {
     "gobuster":       {"bin": "gobuster",        "cat": "recon",    "desc": "Directory/DNS/vhost brute-forcer"},
     "dirsearch":      {"bin": "dirsearch",       "cat": "recon",    "desc": "Web path scanner with extension support"},
     "dirb":           {"bin": "dirb",            "cat": "recon",    "desc": "Classic URL bruteforcer"},
-    "wfuzz":          {"bin": "wfuzz",           "cat": "recon",    "desc": "Web fuzzer for parameters, dirs, headers"},
     # ── Parameter Discovery ──
     "arjun":          {"bin": "arjun",           "cat": "recon",    "desc": "Hidden HTTP parameter discovery (GET/POST/JSON)"},
     "paramspider":    {"bin": "paramspider",     "cat": "recon",    "desc": "Mine parameters from web archives"},
@@ -507,26 +544,21 @@ TOOLBELT = {
     # ── Vulnerability Scanning ──
     "nuclei":         {"bin": "nuclei",          "cat": "vuln",     "desc": "Template-based vuln scanner — 7000+ CVE/misconfig/exposure checks"},
     "nikto":          {"bin": "nikto",           "cat": "vuln",     "desc": "Web server scanner for dangerous files and outdated software"},
-    "zaproxy":        {"bin": "zap-cli",         "cat": "vuln",     "desc": "OWASP ZAP — web app security scanner (spider + active scan)"},
+    "zaproxy":        {"bin": "zaproxy",         "cat": "vuln",     "desc": "OWASP ZAP — web app security scanner (spider + active scan)"},
     # ── SQL Injection ──
     "sqlmap":         {"bin": "sqlmap",          "cat": "vuln",     "desc": "Automated SQL injection detection and exploitation"},
-    "ghauri":         {"bin": "ghauri",          "cat": "vuln",     "desc": "Advanced SQL injection detection (sqlmap alternative)"},
-    "nosqlmap":       {"bin": "nosqlmap",        "cat": "vuln",     "desc": "NoSQL injection and exploitation tool"},
     # ── XSS ──
     "dalfox":         {"bin": "dalfox",          "cat": "vuln",     "desc": "Parameter analysis and XSS scanner with DOM mining"},
     "kxss":           {"bin": "kxss",            "cat": "vuln",     "desc": "Reflected parameter finder for XSS testing"},
     # ── SSTI ──
-    "tplmap":         {"bin": "tplmap",          "cat": "vuln",     "desc": "Server-Side Template Injection detection and exploitation"},
     # ── CMS ──
     "wpscan":         {"bin": "wpscan",          "cat": "cms",      "desc": "WordPress vulnerability scanner (plugins, themes, users)"},
     "droopescan":     {"bin": "droopescan",      "cat": "cms",      "desc": "Drupal/Joomla/SilverStripe scanner"},
     "joomscan":       {"bin": "joomscan",        "cat": "cms",      "desc": "Joomla vulnerability scanner"},
     # ── OSINT ──
-    "theharvester":   {"bin": "theHarvester",    "cat": "osint",    "desc": "Email, subdomain, and name harvester from public sources"},
+    "theharvester":   {"bin": "theharvester",    "cat": "osint",    "desc": "Email, subdomain, and name harvester from public sources"},
     "shodan":         {"bin": "shodan",          "cat": "osint",    "desc": "Shodan CLI — search internet-connected devices"},
-    "spiderfoot":     {"bin": "spiderfoot",      "cat": "osint",    "desc": "OSINT automation with 200+ data sources"},
     "sherlock":       {"bin": "sherlock",        "cat": "osint",    "desc": "Find social media accounts by username"},
-    "recon-ng":       {"bin": "recon-ng",        "cat": "osint",    "desc": "Full-featured OSINT framework with modules"},
     # ── Cloud ──
     "s3scanner":      {"bin": "s3scanner",       "cat": "cloud",    "desc": "S3 bucket permission scanner"},
     "prowler":        {"bin": "prowler",         "cat": "cloud",    "desc": "AWS/Azure/GCP security assessment"},
@@ -538,15 +570,13 @@ TOOLBELT = {
     # ── Secrets ──
     "trufflehog":     {"bin": "trufflehog",      "cat": "recon",    "desc": "Find leaked credentials in git repos and filesystems"},
     # ── Auth & Crypto ──
-    "jwt-tool":       {"bin": "jwt_tool",        "cat": "vuln",     "desc": "JWT testing — none alg, key confusion, claim tampering"},
+    "jwt-tool":       {"bin": "jwt-tool",        "cat": "vuln",     "desc": "JWT testing — none alg, key confusion, claim tampering"},
     "hashcat":        {"bin": "hashcat",         "cat": "auth",     "desc": "GPU-accelerated password/hash cracker"},
     "john":           {"bin": "john",            "cat": "auth",     "desc": "John the Ripper — password hash cracker"},
     "hydra":          {"bin": "hydra",           "cat": "auth",     "desc": "Online password brute-forcer (SSH, FTP, HTTP, etc.)"},
     "medusa":         {"bin": "medusa",          "cat": "auth",     "desc": "Parallel login brute-forcer"},
     # ── Network Services ──
-    "enum4linux-ng":  {"bin": "enum4linux-ng",   "cat": "network",  "desc": "SMB/NetBIOS enumeration (users, shares, policies)"},
     "smbmap":         {"bin": "smbmap",          "cat": "network",  "desc": "SMB share enumeration and access testing"},
-    "netexec":        {"bin": "netexec",         "cat": "network",  "desc": "Network service exploitation (SMB, LDAP, WinRM, etc.)"},
     "rpcclient":      {"bin": "rpcclient",       "cat": "network",  "desc": "Windows RPC client for domain enumeration"},
     "evil-winrm":     {"bin": "evil-winrm",      "cat": "network",  "desc": "WinRM shell for Windows post-exploitation"},
     # ── Proxy & Interception ──
@@ -554,7 +584,6 @@ TOOLBELT = {
     "burpsuite":      {"bin": "burpsuite",       "cat": "proxy",    "desc": "Web security testing platform (GUI)"},
     # ── Binary / RE ──
     "binwalk":        {"bin": "binwalk",         "cat": "binary",   "desc": "Firmware analysis and extraction"},
-    "checksec":       {"bin": "checksec",        "cat": "binary",   "desc": "Check binary security properties (NX, PIE, RELRO, etc.)"},
     "strings":        {"bin": "strings",         "cat": "binary",   "desc": "Extract printable strings from binary files"},
     "objdump":        {"bin": "objdump",         "cat": "binary",   "desc": "Disassemble and inspect binary object files"},
     # ── Forensics ──
@@ -1611,9 +1640,8 @@ def _mitm_api_get(path: str) -> dict:
 def _http_request(method: str, url: str, headers: dict | None = None, body: str = "") -> dict:
     """Make an HTTP request and return response with status, headers, body."""
     req = urllib.request.Request(url, method=method)
-    if headers:
-        for k, v in headers.items():
-            req.add_header(k, v)
+    for k, v in headers.items():
+        req.add_header(k, v)
     if body:
         req.data = body.encode()
 
@@ -3515,7 +3543,11 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
             alert_msg += f"*Title:* {title}\n"
             alert_msg += f"\n*Confidence:* {conf}%\n"
             alert_msg += f"*Impact:* {impact[:200]}..."
-            send_telegram_msg(alert_msg)
+            try:
+                from notifications import send_telegram_msg
+                send_telegram_msg(alert_msg)
+            except Exception:
+                logger.warning("Telegram notification skipped (requests or config missing)")
         elif status == "high_confidence":
             text += "**NEXT:** Manually verify in browser, then report if confirmed.\n"
         elif status == "needs_review":
@@ -4207,19 +4239,30 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
     elif name == "capture_requests":
         try:
             flows = _mitm_api_get("/flows")
-            if not flows:
+            if not flows or not isinstance(flows, list):
                 return [{"type": "text", "text": "No requests captured yet. Browse the target through the proxy."}]
 
-            lines = [f"**{len(flows)} requests captured:**\n"]
-            for flow in flows[-30:]:  # Last 30
+            lines_out = [f"**{len(flows)} requests captured:**\n"]
+            for flow in flows[-30:]:
+                if not isinstance(flow, dict): continue
                 req = flow.get("request", {})
                 resp = flow.get("response", {})
                 method = req.get("method", "?")
                 url = req.get("pretty_url", "?")
                 status = resp.get("status_code", "?")
-                content_type = resp.get("headers", {}).get("content-type", "")[:30] if resp.get("headers") else ""
-                lines.append(f"- `{method} {url}` → {status} {content_type}")
-            return [{"type": "text", "text": "\n".join(lines)}]
+                headers = resp.get("headers", {})
+                content_type = ""
+                if headers:
+                    # mitmproxy headers can be list of lists or dict
+                    if isinstance(headers, list):
+                        for h in headers:
+                            if h[0].lower() == "content-type":
+                                content_type = h[1][:30]
+                                break
+                    else:
+                        content_type = headers.get("content-type", "")[:30]
+                lines_out.append(f"- `{method} {url}` → {status} {content_type}")
+            return [{"type": "text", "text": "\n".join(lines_out)}]
         except Exception as e:
             return [{"type": "text", "text": f"Error (is mitmproxy running?): {e}"}]
 

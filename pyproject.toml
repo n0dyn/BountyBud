@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "requests>=2.32.0",
     "flask>=3.1.2",
     "gunicorn>=23.0.0",
     "python-frontmatter>=1.1.0",

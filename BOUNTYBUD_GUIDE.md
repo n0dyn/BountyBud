@@ -17,10 +17,29 @@ BountyBud is a RAG-ready security knowledge base with **116+ documents and 600+ 
 
 ## Setup
 
+### **New: Project-Local Data Portability**
+BountyBud now stores all persistent data (learning DB, targets, findings, sessions, hunt logs) in `./.bountybud/` relative to where you launch `mcp_server.py`. 
+
+- **Zero-config:** Open any project folder in your IDE → run MCP → data stays local to that project.
+- **Portable:** Switch machines/IDEs opening the same folder → resume exactly where you left off.
+- **Git-ignored:** `.bountybud/` is in `.gitignore`.
+- **Migration:** Global `~/.bountybud/` data auto-migrates once if local is empty.
+
+**Local-First Workflow:**
+```
+cd my-bounty-project/
+python3 mcp_server.py  # Uses ./my-bounty-project/.bountybud/
+```
+
 ### Claude Code (Recommended)
 
+**Local MCP Server (Recommended for full features):**
+1. Run `realpath venv/bin/python mcp_server.py` to get absolute paths.
+2. Update kilo.jsonc or claude_desktop_config.json with those paths (see README.md).
+3. Launch from any project folder — uses local .bountybud/ automatically.
+
+**Remote SSE (read-only knowledge base):**
 ```bash
-# Add BountyBud as an MCP server
 claude mcp add --transport sse bountybud https://bb.nxit.cc/mcp/sse?api_key=YOUR_KEY
 ```
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "bountybud": {
+      "type": "local",
+      "command": ["/usr/bin/python3.14", "/home/n0dyn/dev/BountyBud/mcp_server.py"],
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
+  "permission": {
+    "bountybud_*": "allow"
+  }
+}

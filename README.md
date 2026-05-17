@@ -107,6 +107,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 # or: pip install flask gunicorn python-frontmatter markdown pygments
 
+# **New: Project-local data storage**
+# All BountyBud state (targets, findings, learning DB, sessions) is now stored in ./.bountybud/
+# - Portable across IDEs/machines when opening the same project folder
+# - Git-ignored automatically (.bountybud/ in .gitignore)
+# - Optional override: BOUNTYBUD_ROOT=/path/to/custom/dir (rarely needed)
+
 # Set MCP API key (required for MCP access)
 export MCP_API_KEY="your-secret-key-here"
 
@@ -115,6 +121,23 @@ python3 app.py
 ```
 
 Open `http://localhost:5000` in your browser.
+
+**MCP Server Portability Note:** When launching `mcp_server.py` from any IDE/CLI in a project folder, it automatically uses `./.bountybud/` for all persistent data (learning, targets, etc.). No config needed—state stays with the project.
+
+**Registering BountyBud MCP in Any IDE:** Run `realpath venv/bin/python mcp_server.py` once on your local BountyBud checkout to get absolute paths, then paste into your IDE's MCP config (kilo.jsonc, claude_desktop_config.json, etc.). Example for kilo.jsonc:
+
+```jsonc
+{
+  "mcp": {
+    "bountybud": {
+      "type": "local",
+      "command": ["/absolute/path/to/python", "/absolute/path/to/BountyBud/mcp_server.py"],
+      "enabled": true
+    }
+  }
+}
+```
+
 
 ## Project Structure
 
