@@ -1,47 +1,54 @@
 #!/bin/bash
 # ==============================================================================
-# BOUNTYBUD ULTIMATE - THE 100% TOTAL WAR SETUP (DEFINITIVE)
+# BOUNTYBUD ULTIMATE - THE 100% TOTAL WAR SETUP (ISOLATED VENV)
 # ==============================================================================
-# Installs and maps ALL 80 TOOLS | Isolated | Safe | Distro-Agnostic
+# Installs ALL 80 TOOLS | Isolated | Safe | Patches MCP Server Automatically
+# Designed to be run ONCE on initial system setup.
 # ==============================================================================
 
 set -e
 
 # --- Configuration ---
-BIN_DIR="$HOME/.local/bin"
 TOOLS_DIR="$HOME/bounty_tools"
 PY_VENV="$TOOLS_DIR/venv"
 GO_BIN="$HOME/go/bin"
-mkdir -p "$BIN_DIR" "$TOOLS_DIR"
-export PATH="$BIN_DIR:$GO_BIN:$HOME/.cargo/bin:$PATH"
+# Dedicated isolated bin directory to never conflict with user's .local/bin
+BB_BIN="$TOOLS_DIR/bin"
+MCP_SERVER_FILE="$HOME/dev/BountyBud/mcp_server.py"
 
-echo "🚀 Starting The Definitive 100% BountyBud Setup..."
+mkdir -p "$BB_BIN" "$TOOLS_DIR"
 
-# --- 0. System Integrity Protection ---
-echo "🧹 Purging any previous interpreter shadows..."
-rm -f "$BIN_DIR/python"* "$BIN_DIR/pip"* "$BIN_DIR/activate"*
+# Ensure we don't accidentally export our isolated bin paths before we need to
+# We only want BountyBud to use BB_BIN, the user system shouldn't need it.
+
+echo "🚀 Starting The Definitive 100% BountyBud Setup (Single Pass)..."
+
+# --- 0. System Integrity Cleanup ---
+echo "🧹 Ensuring no Python shadows exist in local paths..."
+rm -f "$HOME/.local/bin/python"* "$HOME/.local/bin/pip"* "$HOME/.local/bin/activate"*
+rm -f "$BB_BIN/python"* "$BB_BIN/pip"* "$BB_BIN/activate"*
 
 # --- 1. System Dependencies & Specialized Tools ---
 echo "📦 Installing system and AUR packages..."
 if [ -f /etc/arch-release ]; then
-    # Core system tools
     sudo pacman -S --noconfirm --needed \
         base-devel git go python python-pip rust cargo ruby \
         nmap masscan perl-image-exiftool john hashcat hydra medusa \
         proxychains-ng subversion metasploit wget curl jq xxd unzip \
-        foremost steghide binwalk zaproxy burpsuite
+        foremost steghide binwalk zaproxy
     
-    # AUR tools (Handling the missing ones)
     if command -v paru &> /dev/null; then
-        paru -S --noconfirm --needed dirb dnsenum whatweb kube-bench-bin kube-hunter-bin
+        paru -S --noconfirm --needed dirb dnsenum2 whatweb kube-bench-bin kube-hunter-bin burpsuite
     elif command -v yay &> /dev/null; then
-        yay -S --noconfirm --needed dirb dnsenum whatweb kube-bench-bin kube-hunter-bin
+        yay -S --noconfirm --needed dirb dnsenum2 whatweb kube-bench-bin kube-hunter-bin burpsuite
     fi
 fi
 
 # --- 2. Isolated Python Arsenal ---
 echo "🐍 Building isolated Python environment..."
-[ ! -d "$PY_VENV" ] && python3 -m venv "$PY_VENV"
+[ ! -d "$PY_VENV" ] && /usr/bin/python3 -m venv "$PY_VENV"
+
+# Use the specific venv pip, with a clean path to avoid NoMachine issues
 env -i HOME="$HOME" PATH="/usr/bin:/bin" "$PY_VENV/bin/pip" install --upgrade pip setuptools wheel
 
 PYTHON_TOOLS=(
@@ -54,7 +61,7 @@ for tool in "${PYTHON_TOOLS[@]}"; do
 done
 
 # GitHub Python Tools
-echo "  -> linkfinder, jwt-tool, paramspider, joomscan"
+echo "  -> Fetching specialized GitHub Python tools..."
 git clone --depth 1 https://github.com/GerbenJavado/LinkFinder "$TOOLS_DIR/linkfinder" 2>/dev/null || (cd "$TOOLS_DIR/linkfinder" && git pull)
 git clone --depth 1 https://github.com/ticarpi/jwt_tool "$TOOLS_DIR/jwt_tool_repo" 2>/dev/null || (cd "$TOOLS_DIR/jwt_tool_repo" && git pull)
 git clone --depth 1 https://github.com/devanshbatham/ParamSpider "$TOOLS_DIR/paramspider" 2>/dev/null || (cd "$TOOLS_DIR/paramspider" && git pull)
@@ -85,37 +92,43 @@ GO_TOOLS=(
     "github.com/Emoe/kxss@latest"
     "github.com/bp0lr/gauplus@latest"
     "github.com/tomnomnom/httprobe@latest"
-    "github.com/OWASP/Amass/v3/...@master"
+    "github.com/owasp-amass/amass/v4/...@master"
 )
+export GOPATH="$HOME/go"
 for tool in "${GO_TOOLS[@]}"; do
     go install -v "$tool" || true
 done
 
-# Findomain (Static binary fallback)
-if ! command -v findomain &> /dev/null; then
-    wget https://github.com/Findomain/Findomain/releases/latest/download/findomain-linux.zip
-    unzip -o findomain-linux.zip -d "$BIN_DIR/" && chmod +x "$BIN_DIR/findomain" && rm findomain-linux.zip
+# Findomain
+if [ ! -f "$BB_BIN/findomain" ]; then
+    wget -q https://github.com/Findomain/Findomain/releases/latest/download/findomain-linux.zip
+    unzip -qo findomain-linux.zip -d "$BB_BIN/" && chmod +x "$BB_BIN/findomain" && rm findomain-linux.zip
 fi
 
 # --- 4. Rust & Ruby ---
 echo "🦀 Building Rust & Ruby tools..."
 cargo install rustscan feroxbuster || true
 gem install wpscan evil-winrm || true
-curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$BIN_DIR"
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$BB_BIN"
 
 # --- 5. THE ULTIMATE MAPPING ---
-echo "🔗 Mapping all 80 binaries safely..."
+echo "🔗 Mapping all 80 binaries safely to $BB_BIN..."
 
 mk_safe_wrap() {
     local alias_name=$1
     local source_bin=$2
     [ -z "$source_bin" ] || [ ! -f "$source_bin" ] && return
-    rm -f "$BIN_DIR/$alias_name"
-    cat <<EOF > "$BIN_DIR/$alias_name"
+    
+    # CRITICAL: We NEVER create wrappers for python, pip, or activate
+    if [[ "$alias_name" == "python"* || "$alias_name" == "pip"* || "$alias_name" == "activate"* ]]; then
+        return
+    fi
+    
+    cat <<WRAPPER > "$BB_BIN/$alias_name"
 #!/bin/bash
 env -u LD_PRELOAD "$source_bin" "\$@"
-EOF
-    chmod +x "$BIN_DIR/$alias_name"
+WRAPPER
+    chmod +x "$BB_BIN/$alias_name"
 }
 
 V_BIN="$PY_VENV/bin"
@@ -130,27 +143,65 @@ mk_safe_wrap "theharvester" "$V_BIN/theHarvester"
 mk_safe_wrap "scout-suite" "$V_BIN/scout"
 mk_safe_wrap "sherlock" "$V_BIN/sherlock"
 
-# Manual Python Tools
-[ -f "$TOOLS_DIR/linkfinder/linkfinder.py" ] && echo -e "#!/bin/bash\nenv -u LD_PRELOAD $V_PY $TOOLS_DIR/linkfinder/linkfinder.py \"\$@\"" > "$BIN_DIR/linkfinder" && chmod +x "$BIN_DIR/linkfinder"
-[ -f "$TOOLS_DIR/jwt_tool_repo/jwt_tool.py" ] && echo -e "#!/bin/bash\nenv -u LD_PRELOAD $V_PY $TOOLS_DIR/jwt_tool_repo/jwt_tool.py \"\$@\"" > "$BIN_DIR/jwt-tool" && chmod +x "$BIN_DIR/jwt-tool"
-[ -f "$TOOLS_DIR/paramspider/paramspider.py" ] && echo -e "#!/bin/bash\nenv -u LD_PRELOAD $V_PY $TOOLS_DIR/paramspider/paramspider.py \"\$@\"" > "$BIN_DIR/paramspider" && chmod +x "$BIN_DIR/paramspider"
-[ -f "$TOOLS_DIR/joomscan/joomscan.pl" ] && echo -e "#!/bin/bash\nperl $TOOLS_DIR/joomscan/joomscan.pl \"\$@\"" > "$BIN_DIR/joomscan" && chmod +x "$BIN_DIR/joomscan"
+# Manual Python Tools (Explicitly calling venv python)
+[ -f "$TOOLS_DIR/linkfinder/linkfinder.py" ] && cat <<WRAPPER > "$BB_BIN/linkfinder"
+#!/bin/bash
+env -u LD_PRELOAD "$V_PY" "$TOOLS_DIR/linkfinder/linkfinder.py" "\$@"
+WRAPPER
+[ -f "$TOOLS_DIR/linkfinder/linkfinder.py" ] && chmod +x "$BB_BIN/linkfinder"
 
-# Direct links for everything else (Safe because they don't shadow python)
-DIRECT_LINKS=(
-    "$HOME/go/bin/subfinder" "$HOME/go/bin/httpx" "$HOME/go/bin/nuclei" "$HOME/go/bin/katana"
-    "$HOME/go/bin/dnsx" "$HOME/go/bin/ffuf" "$HOME/go/bin/amass" "$HOME/go/bin/gauplus"
-    "$HOME/go/bin/httprobe" "$HOME/go/bin/subjs" "$HOME/go/bin/interactsh-client"
-    "/usr/bin/nmap" "/usr/bin/masscan" "/usr/bin/msfconsole" "/usr/bin/dirb" "/usr/bin/dnsenum"
-    "/usr/bin/whatweb" "/usr/bin/foremost" "/usr/bin/steghide" "/usr/bin/binwalk"
-    "/usr/bin/kube-bench" "/usr/bin/kube-hunter" "/usr/bin/zaproxy" "/usr/bin/burpsuite"
-)
+[ -f "$TOOLS_DIR/jwt_tool_repo/jwt_tool.py" ] && cat <<WRAPPER > "$BB_BIN/jwt-tool"
+#!/bin/bash
+env -u LD_PRELOAD "$V_PY" "$TOOLS_DIR/jwt_tool_repo/jwt_tool.py" "\$@"
+WRAPPER
+[ -f "$TOOLS_DIR/jwt_tool_repo/jwt_tool.py" ] && chmod +x "$BB_BIN/jwt-tool"
 
-# Map direct links to their expected BountyBud names
-ln -sf "$HOME/go/bin/subjs" "$BIN_DIR/getjs" 2>/dev/null || true
-ln -sf "$HOME/go/bin/interactsh-client" "$BIN_DIR/interactsh" 2>/dev/null || true
-for link in "${DIRECT_LINKS[@]}"; do
-    [ -f "$link" ] && ln -sf "$link" "$BIN_DIR/$(basename "$link")"
-done
+[ -f "$TOOLS_DIR/paramspider/paramspider.py" ] && cat <<WRAPPER > "$BB_BIN/paramspider"
+#!/bin/bash
+env -u LD_PRELOAD "$V_PY" "$TOOLS_DIR/paramspider/paramspider.py" "\$@"
+WRAPPER
+[ -f "$TOOLS_DIR/paramspider/paramspider.py" ] && chmod +x "$BB_BIN/paramspider"
 
-echo "✅ DONE. 80-tool Arsenal is Armed, Isolated, and Complete."
+[ -f "$TOOLS_DIR/joomscan/joomscan.pl" ] && cat <<WRAPPER > "$BB_BIN/joomscan"
+#!/bin/bash
+perl "$TOOLS_DIR/joomscan/joomscan.pl" "\$@"
+WRAPPER
+[ -f "$TOOLS_DIR/joomscan/joomscan.pl" ] && chmod +x "$BB_BIN/joomscan"
+
+# Go Wrappers
+GO_LIST=("subfinder" "httpx" "nuclei" "katana" "dnsx" "ffuf" "amass" "gauplus" "httprobe" "subjs" "interactsh-client" "gau" "waybackurls" "anew" "qsreplace" "unfurl" "assetfinder" "dalfox" "gospider" "hakrawler" "kxss" "subjack")
+for g in "${GO_LIST[@]}"; do mk_safe_wrap "$g" "$HOME/go/bin/$g"; done
+ln -sf "$BB_BIN/subjs" "$BB_BIN/getjs" 2>/dev/null || true
+ln -sf "$BB_BIN/interactsh-client" "$BB_BIN/interactsh" 2>/dev/null || true
+
+# System/GUI Packages
+SYSLIST=("nmap" "masscan" "msfconsole" "dirb" "dnsenum" "whatweb" "foremost" "steghide" "binwalk" "kube-bench" "kube-hunter" "zaproxy" "burpsuite" "exiftool" "hashcat" "hydra" "john" "medusa")
+for s in "${SYSLIST[@]}"; do mk_safe_wrap "$s" "/usr/bin/$s"; done
+# Handle potential dnsenum2 alternative naming from AUR
+[ -f "/usr/bin/dnsenum2" ] && mk_safe_wrap "dnsenum" "/usr/bin/dnsenum2"
+
+# --- 6. GLOBAL PERSISTENCE & MCP PATCHING ---
+echo "🌍 Configuring global paths and patching BountyBud MCP server..."
+
+# We ONLY add BB_BIN to bashrc/fishrc. We DO NOT add the VENV bin folder.
+# This prevents the system python from ever being shadowed.
+grep -q "$BB_BIN" "$HOME/.bashrc" || echo "export PATH=\"$BB_BIN:\$PATH\"" >> "$HOME/.bashrc"
+if [ -d "$HOME/.config/fish" ]; then
+    grep -q "$BB_BIN" "$HOME/.config/fish/config.fish" || echo "set -gx PATH \"$BB_BIN\" \$PATH" >> "$HOME/.config/fish/config.fish"
+fi
+
+# Patch mcp_server.py inline if it exists
+if [ -f "$MCP_SERVER_FILE" ]; then
+    if ! grep -q "os.path.expanduser(\"~/bounty_tools/bin\")" "$MCP_SERVER_FILE"; then
+        sed -i 's|os.path.expanduser("~/.local/bin"),|os.path.expanduser("~/bounty_tools/bin"),\n    os.path.expanduser("~/.local/bin"),|g' "$MCP_SERVER_FILE"
+        echo "✅ Patched $MCP_SERVER_FILE with persistent tool paths."
+    else
+        echo "✅ $MCP_SERVER_FILE already correctly configured."
+    fi
+else
+    echo "⚠️ MCP Server file not found at $MCP_SERVER_FILE. Ensure path is correct."
+fi
+
+echo "=============================================================================="
+echo "✅ SETUP COMPLETE. BountyBud is Permanently Armed with 80 Isolated Tools."
+echo "=============================================================================="

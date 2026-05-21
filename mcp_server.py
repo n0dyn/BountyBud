@@ -1,3 +1,10 @@
+import json
+
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
+import asyncio
+import uuid
 #!/home/n0dyn/dev/BountyBud/venv/bin/python3
 """BountyBud MCP Server — verification-driven bug bounty AI agent.
 
@@ -17,7 +24,8 @@ Environment variables:
 
 import datetime
 import hashlib
-import json
+
+import glob
 import logging
 import os
 import re
@@ -32,7 +40,16 @@ import urllib.parse
 import urllib.request
 
 
+
+# CRITICAL STABILITY LOGGING
+MCP_LOG = os.path.expanduser("~/.bountybud/mcp_debug.log")
+os.makedirs(os.path.dirname(MCP_LOG), exist_ok=True)
+def debug_log(msg):
+    with open(MCP_LOG, "a") as f:
+        f.write(f"{datetime.datetime.now().isoformat()} - {msg}\n")
+
 logger = logging.getLogger("BountyBudMCP")
+
 
 # Load .env from BountyBud directory
 _env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -66,26 +83,14 @@ os.environ["PATH"] = _current_path
 
 # ── Persistent Data Directory ─────────────────────────────────
 def _resolve_data_dir() -> str:
-    """Resolve project-local data directory, prioritizing CWD/.bountybud."""
+    """Resolve project-local data directory, prioritizing ENV > CWD/.bountybud."""
+    env_dir = os.getenv("MCP_DATA_DIR")
+    if env_dir:
+        return os.path.abspath(env_dir)
+    
     cwd = os.getcwd()
-    # Optional config override (future-proof)
-    config_candidates = [
-        os.path.join(cwd, "bountybud.json"),
-        os.path.join(cwd, ".bountybud", "config.json"),
-        os.path.join(cwd, ".bountybudrc"),
-    ]
-    for cfg in config_candidates:
-        if os.path.exists(cfg):
-            try:
-                with open(cfg, 'r') as f:
-                    data = json.load(f)
-                if "data_dir" in data:
-                    return os.path.abspath(os.path.join(cwd, data["data_dir"]))
-            except Exception:
-                logger.warning(f"Failed to load config {cfg}")
-                continue
-    # Strict local-first: project/.bountybud
     return os.path.join(cwd, ".bountybud")
+
 
 DATA_DIR = _resolve_data_dir()
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -2144,6 +2149,17 @@ _ALL_TOOLS = [
         },
     },
     {
+        "name": "sync_bountyscope",
+        "description": "Fetch scope and program details from BountyScope and sync to memory.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "program": {"type": "string", "description": "Program name (e.g., 'Tripadvisor')"}
+            },
+            "required": ["program"]
+        },
+    },
+    {
         "name": "get_swarm_status",
         "description": (
             "Returns the real-time status of all active and completed hunts on the Workhorse rig. "
@@ -2789,6 +2805,10 @@ def _api_get(path: str, params: dict | None = None) -> dict:
 def _execute_tool(name: str, arguments: dict) -> list[dict]:
     """Execute a tool via the REST API or locally and return MCP content blocks."""
     global _active_session
+    
+    import subprocess
+    import datetime
+    import glob
 
     if name == "search_knowledge":
         query = arguments.get("query", "")
@@ -3052,7 +3072,6 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         cat_tools = [_TOOL_BY_NAME[name] for name in sorted(cat_info["tools"]) if name in _TOOL_BY_NAME]
         if not cat_tools:
             return [{"type": "text", "text": f"No tools found in category '{category}'."}]
-
         import json as _json
         lines = [f"# {category} tools — {cat_info['description']}\n"]
         if cat_info.get("when"):
@@ -4456,50 +4475,77 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
 
         return [{"type": "text", "text": text}]
 
-    elif name == "get_swarm_status":
+    elif name == "sync_bountyscope":
+        program = arguments.get("program")
+        if not program:
+            return [{"type": "text", "text": "Program name is required."}]
+        
         try:
-            workhorse_ip = os.getenv("WORKHORSE_IP", "127.0.0.1")
-            api_url = f"http://{workhorse_ip}:5000/status"
+            script_path = os.path.expanduser("~/dev/BountyBud/scripts/bountyscope.py")
+            venv_py = os.path.expanduser("~/dev/BountyBud/venv/bin/python3")
+            result = subprocess.run([venv_py, script_path, program], capture_output=True, text=True, timeout=120)
             
-            print(f"[BountyBud] Querying Swarm Status from {api_url}...", file=sys.stderr)
-            resp = requests.get(api_url, timeout=10)
-            data = resp.json()
+            json_files = glob.glob(f"/tmp/{program.replace(' ', '_')}_rag.json")
+            if not json_files:
+                return [{"type": "text", "text": f"BountyScope sync failed.\n{result.stdout}"}]
             
-            text = f"🛡️ **BountyBud Workhorse Swarm Status ($workhorse_ip)**\n"
-            text += f"Active Tasks: {data.get('active_tasks_count')} | Swarm Capacity: {data.get('swarm_size')}\n\n"
+            with open(json_files[0], 'r') as f:
+                rag_data = json.load(f)
             
-            tasks = data.get("tasks", {})
-            if not tasks:
-                text += "The swarm is currently idle. No active hunts found."
-            else:
-                for tid, tinfo in tasks.items():
-                    text += f"- `{tinfo['target']}`: **{tinfo['status']}** (Profile: {tinfo['profile']} | Started: {tinfo['start_time']})\n"
+            program_entry = next((item for item in rag_data if program.lower() in item.get('program', '').lower()), None)
+            if not program_entry:
+                return [{"type": "text", "text": f"Program '{program}' not found in RAG data."}]
             
-            return [{"type": "text", "text": text}]
+            in_scope = program_entry.get("in_scope", [])
+            primary_target = "www.tripadvisor.com"
+            for s in in_scope:
+                if "www." in s or "api." in s:
+                    primary_target = s.replace("https://", "").replace("http://", "").split("/")[0]
+                    break
+            
+            ctx = _load_target(primary_target) or {}
+            ctx.update({
+                "program": program,
+                "scope": in_scope,
+                "guidelines": program_entry.get("guidelines", ""),
+                "last_sync": datetime.datetime.now().isoformat()
+            })
+            _save_target(primary_target, ctx)
+            
+            hunt_log_msg = f"Synchronized scope for {program}. {len(in_scope)} assets imported."
+            _append_huntlog(primary_target, {"type": "status", "phase": "setup", "message": hunt_log_msg, "timestamp": datetime.datetime.now().isoformat()})
+            
+            return [{"type": "text", "text": f"Successfully synced {program} into Bounty Bud memory.\nPrimary Target: {primary_target}"}]
         except Exception as e:
-            return [{"type": "text", "text": f"Error querying swarm status: {e}"}]
+            return [{"type": "text", "text": f"Error syncing BountyScope: {e}"}]
+
+    elif name == "get_swarm_status":
+        return [{"type": "text", "text": "Swarm is offline. Using IDE Orchestration mode."}]
 
     elif name == "call_local_worker":
         role = arguments.get("role")
         prompt = arguments.get("prompt")
-        sys_prompt = arguments.get("system_prompt", "")
+        
+        prompts = {
+            "archivist": "You are the Archivist. Find Hot Zones.",
+            "researcher": "You are the Researcher. Map tech stacks.",
+            "brain": "You are the Brain. Find root causes.",
+            "hand": "You are the Hand. Write PoCs.",
+            "strategist": "You are the Strategist. Verify truth."
+        }
+        
+        sys_prompt = prompts.get(role, "Specialized sub-agent.")
+        instructions = f"""<activated_skill>
+<instructions>
+[ROLE ASSUMPTION REQUIRED]
+{sys_prompt}
 
-        try:
-            from orchestrator import ModelRouter
-            # Ensure the router knows we are hitting a remote machine
-            router = ModelRouter()
-            
-            # Dynamically overwrite localhost with the Workhorse IP from environment
-            workhorse_ip = os.getenv("WORKHORSE_IP", "127.0.0.1")
-            for key in router.endpoints:
-                router.endpoints[key] = router.endpoints[key].replace("localhost", workhorse_ip)
-
-            logger.info(f"Delegating {role} reasoning to remote Workhorse at {workhorse_ip}...")
-            result = router.call_model(role, prompt, system_prompt=sys_prompt)
-            
-            return [{"type": "text", "text": result}] # Return raw for the calling agent to consume
-        except Exception as e:
-            return [{"type": "text", "text": f"Error delegating to remote worker: {e}"}]
+[TASK]
+{prompt}
+</instructions>
+</activated_skill>"""
+        
+        return [{"type": "text", "text": instructions}]
 
     elif name == "check_scope_updates":
         try:
@@ -4540,57 +4586,34 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
     elif name == "run_autonomous_hunt":
         target = arguments.get("target", "")
         log_file = arguments.get("log_file", "")
-        profile = arguments.get("profile", "STEALTH")
 
         if not target:
             return [{"type": "text", "text": "Target domain is required."}]
 
-        try:
-            from orchestrator import BountyBudPipeline
-            pipeline = BountyBudPipeline(target, profile=profile)
+        raw_logs = ""
+        mitm_log = os.path.expanduser("~/.bountybud/proxy_logs.json")
+        if log_file and os.path.exists(log_file):
+            try:
+                with open(log_file, 'r') as f: raw_logs = f.read(5000)
+            except: pass
+        elif os.path.exists(mitm_log):
+            try:
+                with open(mitm_log, 'r') as f: raw_logs = f.read(5000)
+            except: pass
 
-            # Fetch logs
-            raw_logs = ""
-            if log_file and os.path.exists(log_file):
-                with open(log_file, 'r') as f:
-                    raw_logs = f.read(10_000_000)
-            else:
-                # Fallback to mitmproxy logs if they exist
-                mitm_log = os.path.expanduser("~/.bountybud/proxy_logs.json")
-                if os.path.exists(mitm_log):
-                    with open(mitm_log, 'r') as f:
-                        raw_logs = f.read(10_000_000)
-                else:
-                    return [{"type": "text", "text": "No traffic logs found. Please browse the target with mitmproxy first or provide a log_file."}]
+        instruction = f"""--- IDE ORCHESTRATION INITIATED ---
+The monolithic Python orchestration loop has been deprecated. 
+You (the IDE) are now the Orchestrator and the Models.
 
-            # Run the autonomous pipeline
-            findings = pipeline.run_autonomous_funnel(raw_logs)
+Please follow these steps manually using your tools:
+1. Read the RAW LOG DATA EXTRACT below to identify 'Hot Zones'.
+2. Then, call 'call_local_worker(role=\"researcher\", prompt=\"...\")' to transition personas.
 
-            if not findings:
-                return [{"type": "text", "text": "Autonomous pipeline completed. No vulnerabilities confirmed by the Strategist."}]
+=== RAW LOG DATA EXTRACT ===
+{raw_logs}
+...[TRUNCATED]..."""
 
-            lines = [f"**🔥 {len(findings)} VULNERABILITIES CONFIRMED BY THE STRATEGIST 🔥**\n"]
-            for f in findings:
-                hyp = f["hypothesis"]
-                ass = f["assessment"]
-                lines.append(f"### Finding in Zone {f['zone']}")
-                lines.append(f"**Hypothesis:** {hyp.get('hypothesis')}")
-                lines.append(f"**Confidence:** {ass.get('confidence') * 100:.1f}%")
-                lines.append(f"**Reasoning:** {ass.get('reasoning')}")
-                lines.append(f"**False Positive Check:** {ass.get('false_positive_check')}")
-                lines.append("---")
-
-            # Log success to hunt log
-            _append_huntlog(target, {
-                "type": "status", "phase": "verification",
-                "message": f"Autonomous pipeline completed. Found {len(findings)} confirmed vulnerabilities.",
-            })
-
-            return [{"type": "text", "text": "\n".join(lines)}]
-
-        except Exception as e:
-            return [{"type": "text", "text": f"Error running autonomous pipeline: {e}"}]
-
+        return [{"type": "text", "text": instruction}]
     elif name == "auth_bypass_test":
         url = arguments.get("url", "")
         technique = arguments.get("technique", "no-auth")
@@ -4744,23 +4767,76 @@ def _handle_message(msg: dict) -> dict | None:
 
 # ── Stdio Transport ─────────────────────────────────────────
 
-def main():
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            msg = json.loads(line)
-        except json.JSONDecodeError:
-            err = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
-            sys.stdout.write(json.dumps(err) + "\n")
-            sys.stdout.flush()
-            continue
 
-        response = _handle_message(msg)
-        if response is not None:
-            sys.stdout.write(json.dumps(response) + "\n")
-            sys.stdout.flush()
+
+app = FastAPI(title="BountyBud MCP SSE Server")
+
+# Map of session_id -> asyncio.Queue
+_sessions = {}
+_main_loop = None
+
+@app.on_event("startup")
+async def startup_event():
+    global _main_loop
+    _main_loop = asyncio.get_running_loop()
+
+@app.get("/sse")
+async def sse_endpoint(request: Request):
+    session_id = str(uuid.uuid4())
+    queue = asyncio.Queue()
+    _sessions[session_id] = queue
+    
+    async def event_generator():
+        # First event: tell the client their session ID
+        yield {"event": "endpoint", "data": f"/messages?session_id={session_id}"}
+        
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                
+                try:
+                    msg = await asyncio.wait_for(queue.get(), timeout=1.0)
+                    yield {"data": json.dumps(msg)}
+                except asyncio.TimeoutError:
+                    continue
+        finally:
+            if session_id in _sessions:
+                del _sessions[session_id]
+
+    return EventSourceResponse(event_generator())
+
+@app.post("/messages")
+async def messages_endpoint(request: Request, session_id: str):
+    if session_id not in _sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        msg = await request.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
+
+    # Process message in a separate thread to avoid blocking the event loop
+    def process_and_respond():
+        try:
+            response = _handle_message(msg)
+            if response and _main_loop:
+                # Use threadsafe call to put response in the queue
+                asyncio.run_coroutine_threadsafe(_sessions[session_id].put(response), _main_loop)
+        except Exception as e:
+            error_msg = {"jsonrpc": "2.0", "id": msg.get("id"), "error": {"code": -32603, "message": str(e)}}
+            if _main_loop:
+                asyncio.run_coroutine_threadsafe(_sessions[session_id].put(error_msg), _main_loop)
+
+    asyncio.get_running_loop().run_in_executor(None, process_and_respond)
+    
+    return JSONResponse(content={"status": "accepted"})
+
+def main():
+    import uvicorn
+    port = int(os.getenv("MCP_PORT", 8000))
+    print(f"Starting SSE MCP Server on port {port}...")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 
 
 if __name__ == "__main__":

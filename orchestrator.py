@@ -1,3 +1,4 @@
+import subprocess
 import os
 import json
 import logging
@@ -186,6 +187,17 @@ class ModelRouter:
         return "{}"
 
 class BountyBudPipeline:
+    def _run_command(self, command: str) -> str:
+        import logging
+        logger = logging.getLogger('BountyBudOrchestrator')
+        logger.info(f'Executing: {command}')
+        env = os.environ.copy()
+        env['PATH'] = f'{os.path.expanduser("~/.local/bin")}:{env.get("PATH", "")}'
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120, env=env)
+            return f'STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}'
+        except Exception as e:
+            return f'Error: {e}'
     """
     The Context Funnel Orchestration Engine.
     Implements the Wide Lens (Archivist) -> Microscope (Brain) workflow.
@@ -251,7 +263,7 @@ class BountyBudPipeline:
         """Query the internal BountyBud Knowledge Base for expert techniques."""
         try:
             # Connect to the local Flask API for RAG
-            url = f"http://localhost:5000/api/kb/search?q={query}&limit=3"
+            url = f"https://bb.nxit.cc/api/kb/search?q={query}&limit=3"
             resp = requests.get(url, timeout=5)
             data = resp.json().get("data", [])
             context = "\n".join([f"--- {d['title']} ---\n{d['content'][:1000]}" for d in data])
@@ -425,7 +437,7 @@ class BountyBudPipeline:
                     poc = json.loads(hand_resp)
                     
                     # EXECUTION & FEEDBACK
-                    poc_result = f"Simulation Result for {poc.get('poc_command')}" # In real: call _run_command
+                    poc_result = self._run_command(poc.get('poc_command'))
                     
                     # STEP 5: THE STRATEGIST (Verification)
                     strat_resp = self.router.call_model("strategist", f"Verify: {poc_result}")
