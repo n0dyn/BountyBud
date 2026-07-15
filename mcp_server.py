@@ -2177,7 +2177,7 @@ _ALL_TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "role": {"type": "string", "enum": ["archivist", "researcher", "brain", "hand", "strategist"]},
+                "role": {"type": "string", "description": "The role to assign (e.g. hand, brain)."},
                 "prompt": {"type": "string", "description": "The specific task or snippet for the model to process."},
                 "system_prompt": {"type": "string", "description": "Optional: Override the default persona for this task."}
             },
@@ -4535,17 +4535,27 @@ def _execute_tool(name: str, arguments: dict) -> list[dict]:
         }
         
         sys_prompt = prompts.get(role, "Specialized sub-agent.")
-        instructions = f"""<activated_skill>
-<instructions>
-[ROLE ASSUMPTION REQUIRED]
-{sys_prompt}
-
-[TASK]
-{prompt}
-</instructions>
-</activated_skill>"""
+        payload = {
+            "model": "qwythos-subagents",
+            "messages": [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 8192
+        }
         
-        return [{"type": "text", "text": instructions}]
+        req = urllib.request.Request(
+            "http://127.0.0.1:4001/v1/chat/completions",
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json', 'Authorization': 'Bearer sk-local-agent'}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                resp_data = json.loads(resp.read().decode('utf-8'))
+                result_text = resp_data['choices'][0]['message']['content']
+                return [{"type": "text", "text": result_text}]
+        except Exception as e:
+            return [{"type": "text", "text": f"Error calling subagent GPU pool: {e}"}]
 
     elif name == "check_scope_updates":
         try:
